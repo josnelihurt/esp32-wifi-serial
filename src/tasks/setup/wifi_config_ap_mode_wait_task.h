@@ -1,7 +1,7 @@
 #pragma once
 
 #include "interfaces/itask.h"
-#include "wifi_manager.h"
+#include "domain/network/wifi_manager.h"
 #include <Arduino.h>
 
 namespace jrb::wifi_serial {

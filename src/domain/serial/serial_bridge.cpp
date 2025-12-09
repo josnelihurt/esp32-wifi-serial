@@ -1,7 +1,7 @@
 #include "serial_bridge.h"
 #include "config.h"
 #include "serial_log.h"
-#include "mqtt_client.h"
+#include "interfaces/imqtt_client.h"
 
 namespace jrb::wifi_serial {
 
@@ -88,7 +88,7 @@ void SerialBridge::setLogs(SerialLog& log0, SerialLog& log1) {
     serial1Log = &log1;
 }
 
-void SerialBridge::setMqttHandler(MqttClient* client) {
+void SerialBridge::setMqttHandler(IMqttClient* client) {
     mqttClient = client;
 }
 

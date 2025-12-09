@@ -14,6 +14,7 @@
 #include "tasks/loop/mqtt_reconnect_task.h"
 #include "tasks/loop/mqtt_info_publish_task.h"
 #include "tasks/loop/serial_bridge_task.h"
+#include "domain/network/mqtt_client.h"
 #include <Arduino.h>
 
 namespace jrb::wifi_serial {
@@ -100,7 +101,7 @@ void Application::registerSetupTasks() {
 }
 
 void Application::registerLoopTasks() {
-    // NOTE: MqttReconnectTask receives MqttClient* which may be nullptr at registration time.
+    // NOTE: MqttReconnectTask receives IMqttClient* which may be nullptr at registration time.
     // This is OK because it checks for nullptr before use. However, NetworkLoopTask MUST
     // receive DependencyContainer& to get MqttClient dynamically, as MqttClient is created
     // AFTER loop tasks are registered (in MqttHandlerCreateTask::setup()).

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "preferences_storage.h"
-#include "serial_log.h"
+#include "interfaces/iweb_config_server.h"
+#include "domain/config/preferences_storage.h"
+#include "domain/serial/serial_log.h"
 #include <WebServer.h>
 #include <DNSServer.h>
 #include <Arduino.h>
@@ -9,7 +10,7 @@
 
 namespace jrb::wifi_serial {
 
-class WebConfigServer final {
+class WebConfigServer final : public IWebConfigServer {
 public:
     using SerialSendCallback = std::function<void(int portIndex, const String& data)>;
     
@@ -17,15 +18,15 @@ public:
                     SerialSendCallback sendCallback);
     ~WebConfigServer();
     
-    void begin();
-    void loop();
+    void begin() override;
+    void loop() override;
     
     void setWiFiConfig(const String& ssid, const String& password, const String& deviceName,
                       const String& mqttBroker, int mqttPort, const String& mqttUser,
-                      const String& mqttPassword);
+                      const String& mqttPassword) override;
     
-    void setAPMode(bool apMode);
-    void setAPIP(const IPAddress& ip);
+    void setAPMode(bool apMode) override;
+    void setAPIP(const IPAddress& ip) override;
 
 private:
     PreferencesStorage& preferencesStorage;

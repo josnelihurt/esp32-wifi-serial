@@ -2,9 +2,9 @@
 
 #include "interfaces/itask.h"
 #include "config.h"
-#include "serial_bridge.h"
-#include "serial_log.h"
-#include "mqtt_client.h"
+#include "domain/serial/serial_bridge.h"
+#include "domain/serial/serial_log.h"
+#include "interfaces/imqtt_client.h"
 #include <Arduino.h>
 
 namespace jrb::wifi_serial {
@@ -15,7 +15,7 @@ private:
     SerialBridge& serialBridge;
     SerialLog& serialLog;
     char* serialBuffer;
-    MqttClient* mqttClient;
+    IMqttClient* mqttClient;
     bool& debugEnabled;
 
     bool available() const {
@@ -40,7 +40,7 @@ public:
     }
     
     SerialBridgeTask(SerialBridge& bridge, SerialLog& log, char* buffer, 
-                       MqttClient* client, bool& debug)
+                       IMqttClient* client, bool& debug)
         : serialBridge(bridge), serialLog(log), serialBuffer(buffer), 
           mqttClient(client), debugEnabled(debug) {}
     

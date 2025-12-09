@@ -1,42 +1,43 @@
 #pragma once
 
 #include "config.h"
+#include "interfaces/imqtt_client.h"
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <Arduino.h>
 
 namespace jrb::wifi_serial {
 
-class MqttClient final{
+class MqttClient final : public IMqttClient {
 public:
     MqttClient(WiFiClient& wifiClient);
     ~MqttClient();
 
-    void setDeviceName(const String& name);
+    void setDeviceName(const String& name) override;
     void setTopics(const String& tty0Rx, const String& tty0Tx, 
-                   const String& tty1Rx, const String& tty1Tx);
+                   const String& tty1Rx, const String& tty1Tx) override;
     void setCallbacks(void (*tty0)(const char*, unsigned int),
-                      void (*tty1)(const char*, unsigned int));
+                      void (*tty1)(const char*, unsigned int)) override;
 
     bool connect(const char* broker, int port, const char* user = nullptr, 
-                const char* password = nullptr);
-    void disconnect();
-    bool reconnect();
-    void loop();
+                const char* password = nullptr) override;
+    void disconnect() override;
+    bool reconnect() override;
+    void loop() override;
 
-    bool publishTty0(const char* data, unsigned int length);
-    bool publishTty1(const char* data, unsigned int length);
-    bool publishTty0(const String& data);
-    bool publishTty1(const String& data);
-    bool publishInfo(const String& data);
+    bool publishTty0(const char* data, unsigned int length) override;
+    bool publishTty1(const char* data, unsigned int length) override;
+    bool publishTty0(const String& data) override;
+    bool publishTty1(const String& data) override;
+    bool publishInfo(const String& data) override;
 
-    bool isConnected() const { return connected; }
-    void setConnected(bool state) { connected = state; }
+    bool isConnected() const override { return connected; }
+    void setConnected(bool state) override { connected = state; }
     PubSubClient* getMqttClient() const { return mqttClient; }
 
-    void appendToBuffer(int portIndex, const char* data, unsigned int length);
-    void flushBuffer(int portIndex);
-    bool shouldFlushBuffer(int portIndex) const;
+    void appendToBuffer(int portIndex, const char* data, unsigned int length) override;
+    void flushBuffer(int portIndex) override;
+    bool shouldFlushBuffer(int portIndex) const override;
 
 private:
     PubSubClient* mqttClient;

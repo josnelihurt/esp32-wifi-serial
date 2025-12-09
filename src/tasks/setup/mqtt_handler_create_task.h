@@ -1,8 +1,8 @@
 #pragma once
 
 #include "interfaces/itask.h"
-#include "mqtt_client.h"
-#include "preferences_storage.h"
+#include "domain/network/mqtt_client.h"
+#include "domain/config/preferences_storage.h"
 #include "dependency_container.h"
 #include <WiFiClient.h>
 #include <functional>

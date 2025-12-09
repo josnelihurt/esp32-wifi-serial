@@ -2,7 +2,7 @@
 
 #include "interfaces/itask.h"
 #include "config.h"
-#include "serial_bridge.h"
+#include "domain/serial/serial_bridge.h"
 #include <Arduino.h>
 
 namespace jrb::wifi_serial {

@@ -1,16 +1,17 @@
 #pragma once
 
 #include "task_registry.h"
-#include "wifi_manager.h"
-#include "serial_bridge.h"
-#include "serial_log.h"
-#include "preferences_storage.h"
-#include "mqtt_client.h"
-#include "handlers/serial_command_handler.h"
-#include "handlers/button_handler.h"
+#include "domain/network/wifi_manager.h"
+#include "domain/serial/serial_bridge.h"
+#include "domain/serial/serial_log.h"
+#include "domain/config/preferences_storage.h"
+#include "domain/network/mqtt_client.h"
+#include "infrastructure/hardware/serial_command_handler.h"
+#include "infrastructure/hardware/button_handler.h"
 #include "system_info.h"
 #include "ota_manager.h"
-#include "web_config_server.h"
+#include "infrastructure/web/web_config_server.h"
+#include "interfaces/imqtt_client.h"
 #include <WiFiClient.h>
 #include <Preferences.h>
 #include "config.h"
@@ -26,8 +27,8 @@ public:
     
     TaskRegistry& getRegistry() { return registry; }
     WiFiManager& getWiFiManager() { return wifiManager; }
-    MqttClient* getMqttClient() { return mqttClient; }
-    void setMqttClient(MqttClient* client) { mqttClient = client; }
+    IMqttClient* getMqttClient() { return mqttClient; }
+    void setMqttClient(IMqttClient* client) { mqttClient = client; }
     PreferencesStorage& getPreferencesStorage() { return preferencesStorage; }
     SerialBridge& getSerialBridge() { return serialBridge; }
     SerialLog& getSerial0Log() { return serial0Log; }
@@ -37,7 +38,7 @@ public:
     char* getSerialBuffer(int portIndex) { 
         return (portIndex >= 0 && portIndex < 2) ? serialBuffer[portIndex] : nullptr;
     }
-    Preferences& getPreferences() { return preferences; }
+    ::Preferences& getPreferences() { return preferences; }
     WiFiClient& getWiFiClient() { return wifiClient; }
     SystemInfo* getSystemInfo() { return systemInfo; }
     ButtonHandler* getButtonHandler() { return buttonHandler; }
@@ -46,11 +47,11 @@ public:
     SerialCommandHandler* getSerialCommandHandler() { return serialCmdHandler; }
     
 private:
-    Preferences preferences;
+    ::Preferences preferences;
     PreferencesStorage preferencesStorage;
     WiFiManager wifiManager;
     WiFiClient wifiClient;
-    MqttClient* mqttClient{};
+    IMqttClient* mqttClient{};
     SerialBridge serialBridge;
     SerialLog serial0Log;
     SerialLog serial1Log;

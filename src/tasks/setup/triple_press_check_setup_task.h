@@ -1,7 +1,7 @@
 #pragma once
 
 #include "interfaces/itask.h"
-#include "handlers/button_handler.h"
+#include "infrastructure/hardware/button_handler.h"
 #include <Arduino.h>
 #include <functional>
 

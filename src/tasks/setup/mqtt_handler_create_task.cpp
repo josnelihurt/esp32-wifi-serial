@@ -30,7 +30,7 @@ MqttHandlerCreateTask::MqttHandlerCreateTask(DependencyContainer& cont, WiFiClie
 
 void MqttHandlerCreateTask::setup() {
     MqttClient* client = new MqttClient(wifiClient);
-    container.setMqttClient(client);
+    container.setMqttClient(static_cast<IMqttClient*>(client));
     
     client->setDeviceName(preferencesStorage.deviceName());
     client->setTopics(preferencesStorage.topicTty0Rx(), preferencesStorage.topicTty0Tx(),

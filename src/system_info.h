@@ -1,7 +1,7 @@
 #pragma once
 
-#include "preferences_storage.h"
-#include "mqtt_client.h"
+#include "domain/config/preferences_storage.h"
+#include "interfaces/imqtt_client.h"
 #include <WiFi.h>
 #include <Arduino.h>
 
@@ -10,11 +10,11 @@ namespace jrb::wifi_serial {
 class SystemInfo final {
 private:
     PreferencesStorage& preferencesStorage;
-    MqttClient* mqttClient;
+    IMqttClient* mqttClient;
     bool& otaEnabled;
 
 public:
-    SystemInfo(PreferencesStorage& storage, MqttClient* client, bool& ota)
+    SystemInfo(PreferencesStorage& storage, IMqttClient* client, bool& ota)
         : preferencesStorage(storage), mqttClient(client), otaEnabled(ota) {}
     
     void printWelcomeMessage();

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "interfaces/itask.h"
-#include "preferences_storage.h"
+#include "domain/config/preferences_storage.h"
 
 namespace jrb::wifi_serial {
 

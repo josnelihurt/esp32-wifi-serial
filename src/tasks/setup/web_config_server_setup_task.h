@@ -1,8 +1,8 @@
 #pragma once
 
 #include "interfaces/itask.h"
-#include "web_config_server.h"
-#include "wifi_manager.h"
+#include "infrastructure/web/web_config_server.h"
+#include "domain/network/wifi_manager.h"
 
 namespace jrb::wifi_serial {
 

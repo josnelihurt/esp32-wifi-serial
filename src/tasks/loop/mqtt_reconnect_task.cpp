@@ -21,8 +21,7 @@ void MqttReconnectTask::loop() {
     
     bool result = mqttClient->connect(preferencesStorage.mqttBroker().c_str(), preferencesStorage.mqttPort(), user, pass);
     if (!result) {
-        Serial.print("[MQTT] Reconnect failed, state: ");
-        Serial.println(mqttClient->getMqttClient() ? mqttClient->getMqttClient()->state() : -1);
+        Serial.println("[MQTT] Reconnect failed");
         return;
     } 
     Serial.println("[MQTT] Reconnected successfully!");

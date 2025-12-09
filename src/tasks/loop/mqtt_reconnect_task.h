@@ -1,18 +1,18 @@
 #pragma once
 
 #include "interfaces/itask.h"
-#include "mqtt_client.h"
-#include "preferences_storage.h"
+#include "interfaces/imqtt_client.h"
+#include "domain/config/preferences_storage.h"
 
 namespace jrb::wifi_serial {
 
 class MqttReconnectTask final : public ITask {
 private:
-    MqttClient* mqttClient;
+    IMqttClient* mqttClient;
     PreferencesStorage& preferencesStorage;
 
 public:
-    MqttReconnectTask(MqttClient* client, PreferencesStorage& storage)
+    MqttReconnectTask(IMqttClient* client, PreferencesStorage& storage)
         : mqttClient(client), preferencesStorage(storage) {}
     
     void loop() override;

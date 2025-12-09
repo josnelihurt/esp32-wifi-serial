@@ -2,8 +2,8 @@
 
 #include "interfaces/itask.h"
 #include "config.h"
-#include "wifi_manager.h"
-#include "preferences_storage.h"
+#include "domain/network/wifi_manager.h"
+#include "domain/config/preferences_storage.h"
 
 namespace jrb::wifi_serial {
 

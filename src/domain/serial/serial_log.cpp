@@ -1,4 +1,5 @@
 #include "serial_log.h"
+#include "config.h"
 
 namespace jrb::wifi_serial {
 

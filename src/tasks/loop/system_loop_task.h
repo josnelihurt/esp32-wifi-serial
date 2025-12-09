@@ -1,7 +1,7 @@
 #pragma once
 
 #include "interfaces/itask.h"
-#include "handlers/serial_command_handler.h"
+#include "infrastructure/hardware/serial_command_handler.h"
 
 namespace jrb::wifi_serial {
 

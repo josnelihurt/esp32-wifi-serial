@@ -1,4 +1,5 @@
 #include "preferences_storage.h"
+#include "config.h"
 
 namespace jrb::wifi_serial {
 

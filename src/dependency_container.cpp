@@ -1,9 +1,9 @@
 #include "dependency_container.h"
 #include "system_info.h"
-#include "handlers/serial_command_handler.h"
-#include "handlers/button_handler.h"
+#include "infrastructure/hardware/serial_command_handler.h"
+#include "infrastructure/hardware/button_handler.h"
 #include "ota_manager.h"
-#include "web_config_server.h"
+#include "infrastructure/web/web_config_server.h"
 #include <Arduino.h>
 
 namespace jrb::wifi_serial {

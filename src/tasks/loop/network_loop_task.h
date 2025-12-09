@@ -1,8 +1,8 @@
 #pragma once
 
 #include "interfaces/itask.h"
-#include "wifi_manager.h"
-#include "mqtt_client.h"
+#include "domain/network/wifi_manager.h"
+#include "interfaces/imqtt_client.h"
 #include "dependency_container.h"
 #include <ArduinoOTA.h>
 
@@ -24,7 +24,7 @@ public:
         // This is critical because MqttClient is created AFTER this task is registered
         // (in MqttHandlerCreateTask::setup()). If we stored MqttClient* in constructor,
         // it would be nullptr and never updated, causing MQTT messages to never be processed.
-        MqttClient* mqttClient = container.getMqttClient();
+        IMqttClient* mqttClient = container.getMqttClient();
         if (mqttClient) {
             mqttClient->loop();
         }

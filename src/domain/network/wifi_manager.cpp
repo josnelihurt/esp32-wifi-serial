@@ -1,5 +1,6 @@
 #include "wifi_manager.h"
 #include "config.h"
+#include <Preferences.h>
 
 namespace jrb::wifi_serial {
 
@@ -13,7 +14,7 @@ WiFiManager::WiFiManager()
 WiFiManager::~WiFiManager() {
 }
 
-void WiFiManager::begin(Preferences* prefs) {
+void WiFiManager::begin(::Preferences* prefs) {
     preferences = prefs;
     
     preferences->begin("esp32bridge", true);

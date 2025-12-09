@@ -1,4 +1,5 @@
 #include "button_handler.h"
+#include "config.h"
 
 namespace jrb::wifi_serial {
 

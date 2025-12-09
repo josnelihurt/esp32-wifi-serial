@@ -1,6 +1,6 @@
 #include "web_config_server.h"
-#include "preferences_storage.h"
-#include "serial_log.h"
+#include "domain/config/preferences_storage.h"
+#include "domain/serial/serial_log.h"
 #include <Preferences.h>
 #include <Arduino.h>
 
