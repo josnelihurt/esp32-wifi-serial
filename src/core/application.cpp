@@ -1,4 +1,5 @@
 #include "application.h"
+#include "domain/serial/serial_bridge.h"
 #include "tasks/setup/hardware_setup_task.h"
 #include "tasks/setup/config_setup_task.h"
 #include "tasks/setup/triple_press_check_setup_task.h"

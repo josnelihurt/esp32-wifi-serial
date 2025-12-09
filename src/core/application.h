@@ -2,7 +2,6 @@
 
 #include "dependency_container.h"
 #include "task_registry.h"
-#include "domain/serial/serial_bridge.h"
 #include <Arduino.h>
 #include <functional>
 

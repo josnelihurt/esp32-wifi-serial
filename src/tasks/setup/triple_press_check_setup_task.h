@@ -1,7 +1,7 @@
 #pragma once
 
 #include "interfaces/itask.h"
-#include "infrastructure/hardware/button_handler.h"
+#include "interfaces/ibutton_handler.h"
 #include <Arduino.h>
 #include <functional>
 
@@ -9,11 +9,11 @@ namespace jrb::wifi_serial {
 
 class TriplePressCheckSetupTask final : public ITask {
 private:
-    ButtonHandler& buttonHandler;
+    IButtonHandler& buttonHandler;
     std::function<void()> resetFunc;
 
 public:
-    TriplePressCheckSetupTask(ButtonHandler& handler, std::function<void()> reset)
+    TriplePressCheckSetupTask(IButtonHandler& handler, std::function<void()> reset)
         : buttonHandler(handler), resetFunc(reset) {}
     
     void setup() override;
