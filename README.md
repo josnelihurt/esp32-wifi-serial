@@ -107,7 +107,27 @@ The device includes a built-in web server accessible at `http://192.168.4.1` (AP
 
 The interface uses a clean, minimalist design with yellow accents - functional without being overly polished, perfect for a fun homelab project.
 
-> **Note**: To capture a screenshot of the web interface, connect to the device's WiFi network and navigate to the device IP address in your browser.
+### Web Interface Screenshot
+
+The web interface provides a clean, functional design with yellow accents. To capture a screenshot:
+
+**Option 1: From real device**
+1. Flash the firmware to your ESP32-C3 device
+2. Connect to the WiFi access point created by the device (default IP: `192.168.4.1`)
+3. Open your browser and navigate to `http://192.168.4.1`
+4. Take a screenshot and save as `screenshots/web-interface.png`
+
+**Option 2: Preview example interface**
+Open `screenshots/web-interface-example.html` in your browser to see a preview of the interface design.
+
+The interface includes three tabs:
+- **Configuration**: WiFi and MQTT settings form with topic displays
+- **ttyS0**: Serial console for the connected ARM device (USB)
+- **ttyS1**: Additional serial port (UART)
+
+![Web Interface](screenshots/web-interface.png)
+
+*Screenshot above shows the example interface. For production use, capture from your actual device at `http://192.168.4.1`*
 
 ## Configuration
 

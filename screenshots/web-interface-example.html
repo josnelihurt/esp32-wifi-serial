@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32-C3 Configuration - Example</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body{font-family:Arial,sans-serif;margin:0;padding:20px;background:#FFFFFF;color:#333333;}
+        h2,h3{color:#FFC107;margin-top:0;}
+        a{color:#FFC107;text-decoration:none;}
+        a:hover{color:#FFA000;text-decoration:underline;}
+        input{width:100%;padding:10px;margin:5px 0;box-sizing:border-box;border:2px solid #666666;border-radius:4px;color:#000000;background:#FFFFFF;font-size:14px;}
+        input:focus{border-color:#FFC107;outline:none;border-width:2px;box-shadow:0 0 5px rgba(255,193,7,0.3);}
+        button{background:#FFC107;color:#333333;padding:15px;width:100%;border:none;cursor:pointer;border-radius:4px;font-weight:bold;}
+        button:hover{background:#FFA000;color:#FFFFFF;}
+        .tabs{border-bottom:2px solid #CCCCCC;margin-bottom:20px;}
+        .tab{display:inline-block;padding:10px 20px;cursor:pointer;border:1px solid #CCCCCC;background:#FFFFFF;color:#FFC107;border-bottom:none;margin-right:5px;border-radius:4px 4px 0 0;}
+        .tab:hover{background:#FFF9C4;}
+        .tab.active{background:#FFC107;color:#333333;border-color:#FFC107;font-weight:bold;}
+        .tab-content{display:none;padding:20px;background:#FFFFFF;}
+        .tab-content.active{display:block;}
+        .serial-output{width:100%;height:400px;padding:10px;box-sizing:border-box;border:1px solid #CCCCCC;font-family:monospace;background:#FFFFFF;color:#333333;overflow-y:auto;white-space:pre-wrap;word-wrap:break-word;border-radius:4px;}
+        .serial-input{width:calc(100% - 100px);padding:10px;margin-right:10px;box-sizing:border-box;border:2px solid #666666;border-radius:4px;color:#000000;background:#FFFFFF;font-size:14px;}
+        .serial-input:focus{border-color:#FFC107;outline:none;border-width:2px;box-shadow:0 0 5px rgba(255,193,7,0.3);}
+        .send-btn{width:90px;padding:10px;background:#FFC107;color:#333333;border:none;cursor:pointer;border-radius:4px;font-weight:bold;}
+        .send-btn:hover{background:#FFA000;color:#FFFFFF;}
+        .input-group{display:flex;margin-top:10px;}
+        label{display:block;margin-top:10px;font-weight:bold;color:#333333;}
+        form{margin-bottom:20px;}
+        .reset-btn{background:#f44336;color:#FFFFFF;padding:15px;width:100%;border:none;cursor:pointer;border-radius:4px;font-weight:bold;margin-top:10px;}
+        .reset-btn:hover{background:#d32f2f;}
+        .topic-display{padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;}
+    </style>
+</head>
+<body>
+    <h2>ESP32-C3 Configuration</h2>
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab(0)">Configuration</div>
+        <div class="tab" onclick="switchTab(1)">ttyS0</div>
+        <div class="tab" onclick="switchTab(2)">ttyS1</div>
+    </div>
+    <div id="tab-config" class="tab-content active">
+        <h3>Configuration</h3>
+        <form>
+            <label>WiFi SSID:</label>
+            <input type="text" name="ssid" value="MyWiFiNetwork" required>
+            <label>WiFi Password:</label>
+            <input type="password" name="password" value="********" placeholder="Leave empty to keep current">
+            <label>Device Name:</label>
+            <input type="text" name="device" value="esp32c3-bridge">
+            <label>MQTT Broker:</label>
+            <input type="text" name="broker" value="mqtt.example.com">
+            <label>MQTT Topics ttyS0:</label>
+            <label style="margin-top:5px;font-size:12px;color:#666666;">RX (ESP32 → MQTT):</label>
+            <div class="topic-display">wifi_serial/esp32c3-bridge/ttyS0/rx</div>
+            <label style="margin-top:5px;font-size:12px;color:#666666;">TX (MQTT → ESP32):</label>
+            <div class="topic-display">wifi_serial/esp32c3-bridge/ttyS0/tx</div>
+            <label>MQTT Topics ttyS1:</label>
+            <label style="margin-top:5px;font-size:12px;color:#666666;">RX (ESP32 → MQTT):</label>
+            <div class="topic-display">wifi_serial/esp32c3-bridge/ttyS1/rx</div>
+            <label style="margin-top:5px;font-size:12px;color:#666666;">TX (MQTT → ESP32):</label>
+            <div class="topic-display">wifi_serial/esp32c3-bridge/ttyS1/tx</div>
+            <label>MQTT Port:</label>
+            <input type="number" name="port" value="1883">
+            <label>MQTT User (optional):</label>
+            <input type="text" name="user" value="">
+            <label>MQTT Password (optional):</label>
+            <input type="password" name="mqttpass" value="" placeholder="Leave empty to keep current">
+            <button type="submit">Save Configuration</button>
+        </form>
+        <button class="reset-btn" onclick="alert('Device resetting...')">Reset Device</button>
+    </div>
+    <div id="tab-serial0" class="tab-content">
+        <h3>Serial Port ttyS0 (USB)</h3>
+        <div id="output0" class="serial-output">[2024-01-15 10:30:45] Device initialized
+[2024-01-15 10:30:46] WiFi connected: MyWiFiNetwork
+[2024-01-15 10:30:47] MQTT connected to mqtt.example.com
+[2024-01-15 10:30:48] Serial bridge ready
+[2024-01-15 10:30:50] ARM device connected on ttyS0
+> </div>
+        <div class="input-group">
+            <input type="text" id="input0" class="serial-input" placeholder="Enter command..." value="">
+            <button class="send-btn" onclick="sendCommand(0)">Send</button>
+        </div>
+    </div>
+    <div id="tab-serial1" class="tab-content">
+        <h3>Serial Port ttyS1 (UART)</h3>
+        <div id="output1" class="serial-output">[2024-01-15 10:30:45] UART Serial initialized
+[2024-01-15 10:30:46] Waiting for device connection...
+> </div>
+        <div class="input-group">
+            <input type="text" id="input1" class="serial-input" placeholder="Enter command..." value="">
+            <button class="send-btn" onclick="sendCommand(1)">Send</button>
+        </div>
+    </div>
+    <script>
+        function switchTab(index){
+            document.querySelectorAll('.tab').forEach((t,i)=>{t.classList.toggle('active',i===index);});
+            document.querySelectorAll('.tab-content').forEach((c,i)=>{c.classList.toggle('active',i===index);});
+        }
+        function sendCommand(port){
+            const input = document.getElementById('input'+port);
+            const output = document.getElementById('output'+port);
+            if(input.value){
+                output.textContent += '\n> ' + input.value + '\n';
+                output.scrollTop = output.scrollHeight;
+                input.value = '';
+            }
+        }
+        document.getElementById('input0').addEventListener('keypress', function(e){
+            if(e.key === 'Enter') sendCommand(0);
+        });
+        document.getElementById('input1').addEventListener('keypress', function(e){
+            if(e.key === 'Enter') sendCommand(1);
+        });
+    </script>
+</body>
+</html>
+

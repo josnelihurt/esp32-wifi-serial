@@ -1,0 +1,1 @@
+# Screenshots Directory\n\nPlace web interface screenshots here.\n\nTo capture a screenshot:\n1. Connect to device WiFi AP\n2. Navigate to http://192.168.4.1\n3. Take screenshot\n4. Save as web-interface.png
