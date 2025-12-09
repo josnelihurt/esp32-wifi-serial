@@ -1,0 +1,1 @@
+Read https://dredyson.com/how-i-fixed-the-platformio-ide-not-activating-error-in-cursor-a-step-by-step-workaround/ cursor has an issue with this extension
