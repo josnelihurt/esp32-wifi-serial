@@ -4,7 +4,9 @@
 
 namespace jrb::wifi_serial {
 
-MqttClient* MqttClient::instance{};
+// Static pointer to MqttClient instance for C-style callback from PubSubClient.
+// PubSubClient requires a C function pointer, so we use this to access instance data.
+static MqttClient* g_mqttInstance{};
 
 MqttClient::MqttClient(WiFiClient& wifiClient)
     : mqttClient{new PubSubClient(wifiClient)}
@@ -21,10 +23,13 @@ MqttClient::MqttClient(WiFiClient& wifiClient)
     mqttClient->setCallback(mqttCallback);
     mqttClient->setKeepAlive(60);
     mqttClient->setSocketTimeout(15);
-    instance = this;
+    g_mqttInstance = this;
 }
 
 MqttClient::~MqttClient() {
+    if (g_mqttInstance == this) {
+        g_mqttInstance = nullptr;
+    }
     if (!mqttClient) return;
     delete mqttClient;
 }
@@ -250,7 +255,7 @@ bool MqttClient::shouldFlushBuffer(int portIndex) const {
 }
 
 void MqttClient::mqttCallback(char* topic, byte* payload, unsigned int length) {
-    if (!instance) return;
+    if (!g_mqttInstance) return;
     if (length >= 512) return;
 
     static char buffer[512];
@@ -259,20 +264,16 @@ void MqttClient::mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     String topicStr = String(topic);
     
-    if ((topicStr == instance->topicTty0Tx || strcmp(topic, instance->topicTty0Tx.c_str()) == 0)) {
-        if (instance->onTty0Callback) {
-            instance->onTty0Callback(buffer, length);
-        } else {
-            Serial.println("[MQTT] Warning: Received message on tty0Tx but callback is NULL");
+    if ((topicStr == g_mqttInstance->topicTty0Tx || strcmp(topic, g_mqttInstance->topicTty0Tx.c_str()) == 0)) {
+        if (g_mqttInstance->onTty0Callback) {
+            g_mqttInstance->onTty0Callback(buffer, length);
         }
         return;
     }
     
-    if ((topicStr == instance->topicTty1Tx || strcmp(topic, instance->topicTty1Tx.c_str()) == 0)) {
-        if (instance->onTty1Callback) {
-            instance->onTty1Callback(buffer, length);
-        } else {
-            Serial.println("[MQTT] Warning: Received message on tty1Tx but callback is NULL");
+    if ((topicStr == g_mqttInstance->topicTty1Tx || strcmp(topic, g_mqttInstance->topicTty1Tx.c_str()) == 0)) {
+        if (g_mqttInstance->onTty1Callback) {
+            g_mqttInstance->onTty1Callback(buffer, length);
         }
         return;
     }

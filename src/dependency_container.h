@@ -22,19 +22,12 @@ public:
     DependencyContainer();
     ~DependencyContainer();
     
-    void initialize();
-    void setup();
-    void loop();
-    
-    void onTty0(const char* data, unsigned int length);
-    void onTty1(const char* data, unsigned int length);
-    void resetConfig();
-    
-    void handleWebToSerialAndMqtt(int portIndex, const String& data);
+    void createHandlers(std::function<void(int, const String&)> webToSerialCallback);
     
     TaskRegistry& getRegistry() { return registry; }
     WiFiManager& getWiFiManager() { return wifiManager; }
     MqttClient* getMqttClient() { return mqttClient; }
+    void setMqttClient(MqttClient* client) { mqttClient = client; }
     PreferencesStorage& getPreferencesStorage() { return preferencesStorage; }
     SerialBridge& getSerialBridge() { return serialBridge; }
     SerialLog& getSerial0Log() { return serial0Log; }
@@ -44,9 +37,14 @@ public:
     char* getSerialBuffer(int portIndex) { 
         return (portIndex >= 0 && portIndex < 2) ? serialBuffer[portIndex] : nullptr;
     }
+    Preferences& getPreferences() { return preferences; }
+    WiFiClient& getWiFiClient() { return wifiClient; }
+    SystemInfo* getSystemInfo() { return systemInfo; }
+    ButtonHandler* getButtonHandler() { return buttonHandler; }
+    OTAManager* getOTAManager() { return otaManager; }
+    WebConfigServer* getWebConfigServer() { return webServer; }
+    SerialCommandHandler* getSerialCommandHandler() { return serialCmdHandler; }
     
-    static DependencyContainer* instance;
-
 private:
     Preferences preferences;
     PreferencesStorage preferencesStorage;
@@ -59,7 +57,6 @@ private:
     
     bool otaEnabled{false};
     unsigned long lastInfoPublish{0};
-    bool configResetRequested{false};
     bool debugEnabled{false};
     char serialBuffer[2][SERIAL_BUFFER_SIZE];
     
@@ -70,10 +67,6 @@ private:
     WebConfigServer* webServer{};
     
     TaskRegistry registry;
-    
-    void createHandlers();
-    void registerSetupTasks();
-    void registerLoopTasks();
 };
 
 }  // namespace jrb::wifi_serial

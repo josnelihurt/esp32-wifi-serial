@@ -11,19 +11,22 @@ namespace jrb::wifi_serial {
 class NetworkLoopTask final : public ITask {
 private:
     WiFiManager& wifiManager;
+    DependencyContainer& container;
 
 public:
-    explicit NetworkLoopTask(WiFiManager& wifi)
-        : wifiManager(wifi) {}
+    NetworkLoopTask(WiFiManager& wifi, DependencyContainer& cont)
+        : wifiManager(wifi), container(cont) {}
     
     void loop() override {
         wifiManager.loop();
         
-        if (DependencyContainer::instance) {
-            MqttClient* mqttClient = DependencyContainer::instance->getMqttClient();
-            if (mqttClient) {
-                mqttClient->loop();
-            }
+        // IMPORTANT: Get MqttClient from container each loop() call, not stored as pointer.
+        // This is critical because MqttClient is created AFTER this task is registered
+        // (in MqttHandlerCreateTask::setup()). If we stored MqttClient* in constructor,
+        // it would be nullptr and never updated, causing MQTT messages to never be processed.
+        MqttClient* mqttClient = container.getMqttClient();
+        if (mqttClient) {
+            mqttClient->loop();
         }
         
         ArduinoOTA.handle();

@@ -59,7 +59,6 @@ private:
 
     static void mqttCallback(char* topic, byte* payload, unsigned int length);
     bool publish(int portIndex, const char* data, unsigned int length);
-    static MqttClient* instance;
 };
 
 }  // namespace jrb::wifi_serial
