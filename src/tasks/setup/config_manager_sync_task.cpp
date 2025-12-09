@@ -3,17 +3,17 @@
 namespace jrb::wifi_serial {
 
 void ConfigManagerSyncTask::setup() {
-    configManager.deviceName(wifiConfig.getDeviceName());
-    configManager.mqttBroker(wifiConfig.getMqttBroker());
-    configManager.mqttPort(wifiConfig.getMqttPort());
-    configManager.mqttUser(wifiConfig.getMqttUser());
-    configManager.mqttPassword(wifiConfig.getMqttPassword());
+    preferencesStorage.deviceName(wifiManager.getDeviceName());
+    preferencesStorage.mqttBroker(wifiManager.getMqttBroker());
+    preferencesStorage.mqttPort(wifiManager.getMqttPort());
+    preferencesStorage.mqttUser(wifiManager.getMqttUser());
+    preferencesStorage.mqttPassword(wifiManager.getMqttPassword());
     
-    if (configManager.deviceName().length() == 0) {
-        configManager.deviceName(DEFAULT_DEVICE_NAME);
+    if (preferencesStorage.deviceName().length() == 0) {
+        preferencesStorage.deviceName(DEFAULT_DEVICE_NAME);
     }
-    if (configManager.mqttPort() == 0) {
-        configManager.mqttPort(DEFAULT_MQTT_PORT);
+    if (preferencesStorage.mqttPort() == 0) {
+        preferencesStorage.mqttPort(DEFAULT_MQTT_PORT);
     }
     
     // Topics are now generated automatically in PreferencesStorage::generateDefaultTopics()

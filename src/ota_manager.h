@@ -7,12 +7,12 @@ namespace jrb::wifi_serial {
 
 class OTAManager final {
 private:
-    PreferencesStorage& configManager;
+    PreferencesStorage& preferencesStorage;
     bool& otaEnabled;
 
 public:
-    OTAManager(PreferencesStorage& config, bool& ota)
-        : configManager(config), otaEnabled(ota) {}
+    OTAManager(PreferencesStorage& storage, bool& ota)
+        : preferencesStorage(storage), otaEnabled(ota) {}
     
     void setup();
 };

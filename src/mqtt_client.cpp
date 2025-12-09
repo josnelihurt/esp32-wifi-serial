@@ -259,13 +259,21 @@ void MqttClient::mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     String topicStr = String(topic);
     
-    if ((topicStr == instance->topicTty0Tx || strcmp(topic, instance->topicTty0Tx.c_str()) == 0) && instance->onTty0Callback) {
-        instance->onTty0Callback(buffer, length);
+    if ((topicStr == instance->topicTty0Tx || strcmp(topic, instance->topicTty0Tx.c_str()) == 0)) {
+        if (instance->onTty0Callback) {
+            instance->onTty0Callback(buffer, length);
+        } else {
+            Serial.println("[MQTT] Warning: Received message on tty0Tx but callback is NULL");
+        }
         return;
     }
     
-    if ((topicStr == instance->topicTty1Tx || strcmp(topic, instance->topicTty1Tx.c_str()) == 0) && instance->onTty1Callback) {
-        instance->onTty1Callback(buffer, length);
+    if ((topicStr == instance->topicTty1Tx || strcmp(topic, instance->topicTty1Tx.c_str()) == 0)) {
+        if (instance->onTty1Callback) {
+            instance->onTty1Callback(buffer, length);
+        } else {
+            Serial.println("[MQTT] Warning: Received message on tty1Tx but callback is NULL");
+        }
         return;
     }
 }

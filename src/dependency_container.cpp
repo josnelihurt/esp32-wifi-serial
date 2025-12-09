@@ -1,22 +1,16 @@
 #include "dependency_container.h"
-#include "tasks/setup/pin_mode_setup_task.h"
-#include "tasks/setup/serial_begin_task.h"
-#include "tasks/setup/load_config_task.h"
-#include "tasks/setup/print_welcome_task.h"
+#include "tasks/setup/hardware_setup_task.h"
+#include "tasks/setup/config_setup_task.h"
 #include "tasks/setup/triple_press_check_setup_task.h"
-#include "tasks/setup/wifi_config_begin_task.h"
+#include "tasks/setup/network_setup_task.h"
 #include "tasks/setup/wifi_config_ap_mode_wait_task.h"
 #include "tasks/setup/config_manager_sync_task.h"
 #include "tasks/setup/save_config_task.h"
-#include "tasks/setup/ota_setup_task.h"
 #include "tasks/setup/mqtt_handler_create_task.h"
-#include "tasks/setup/serial_bridge_begin_task.h"
 #include "tasks/setup/web_config_server_setup_task.h"
-#include "tasks/loop/wifi_config_task.h"
-#include "tasks/loop/arduino_ota_task.h"
-#include "tasks/loop/serial_commands_task.h"
+#include "tasks/loop/network_loop_task.h"
+#include "tasks/loop/system_loop_task.h"
 #include "tasks/loop/triple_press_check_task.h"
-#include "tasks/loop/mqtt_handler_task.h"
 #include "tasks/loop/mqtt_reconnect_task.h"
 #include "tasks/loop/mqtt_info_publish_task.h"
 #include "tasks/loop/serial_bridge_task.h"
@@ -73,23 +67,23 @@ void DependencyContainer::handleWebToSerialAndMqtt(int portIndex, const String& 
 }
 
 void DependencyContainer::resetConfig() {
-    configManager.clear();
-    wifiConfig.resetSettings();
+    preferencesStorage.clear();
+    wifiManager.resetSettings();
     configResetRequested = true;
 }
 
 void DependencyContainer::createHandlers() {
-    systemInfo = new SystemInfo(configManager, mqttHandler, otaEnabled);
+    systemInfo = new SystemInfo(preferencesStorage, mqttClient, otaEnabled);
     serialCmdHandler = new SerialCommandHandler(
-        configManager, mqttHandler, debugEnabled,
+        preferencesStorage, mqttClient, debugEnabled,
         [this]() { systemInfo->printWelcomeMessage(); }
     );
     buttonHandler = new ButtonHandler(
         [this]() { systemInfo->printWelcomeMessage(); }
     );
-    otaManager = new OTAManager(configManager, otaEnabled);
+    otaManager = new OTAManager(preferencesStorage, otaEnabled);
     webServer = new WebConfigServer(
-        configManager, serial0Log, serial1Log,
+        preferencesStorage, serial0Log, serial1Log,
         [this](int portIndex, const String& data) {
             handleWebToSerialAndMqtt(portIndex, data);
         }
@@ -97,64 +91,50 @@ void DependencyContainer::createHandlers() {
 }
 
 void DependencyContainer::registerSetupTasks() {
-    static PinModeSetupTask pinModeCmd;
-    static SerialBeginTask serialBeginCmd;
-    static LoadConfigTask loadConfigCmd(configManager);
-    static PrintWelcomeTask printWelcomeCmd1(*systemInfo);
+    static HardwareSetupTask hardwareSetupCmd(serialBridge);
+    static ConfigSetupTask configSetupCmd(preferencesStorage, *systemInfo);
     
     static TriplePressCheckSetupTask triplePressCheckCmd(*buttonHandler, resetConfigWrapper);
     
-    static WiFiConfigBeginTask wifiBeginCmd(wifiConfig, preferences);
-    static WiFiConfigAPModeWaitTask wifiAPWaitCmd(wifiConfig);
-    static ConfigManagerSyncTask configSyncCmd(wifiConfig, configManager);
-    static SaveConfigTask saveConfigCmd(configManager);
-    static PrintWelcomeTask printWelcomeCmd2(*systemInfo);
-    static OTASetupTask otaSetupCmd(*otaManager);
+    static NetworkSetupTask networkSetupCmd(wifiManager, preferences, *otaManager, *systemInfo);
+    static WiFiConfigAPModeWaitTask wifiAPWaitCmd(wifiManager);
+    static ConfigManagerSyncTask configSyncCmd(wifiManager, preferencesStorage);
+    static SaveConfigTask saveConfigCmd(preferencesStorage);
     
-    static MqttHandlerCreateTask mqttCreateCmd(mqttHandler, wifiClient, 
-                                                  configManager, 
+    static MqttHandlerCreateTask mqttCreateCmd(mqttClient, wifiClient, 
+                                                  preferencesStorage, 
                                                   onTty0Wrapper,
                                                   onTty1Wrapper);
-    static SerialBridgeBeginTask serialBridgeBeginCmd(serialBridge);
-    static WebConfigServerSetupTask webServerSetupCmd(*webServer, wifiConfig);
+    static WebConfigServerSetupTask webServerSetupCmd(*webServer, wifiManager);
     
-    registry.registerTask(&pinModeCmd);
-    registry.registerTask(&serialBeginCmd);
-    registry.registerTask(&loadConfigCmd);
-    registry.registerTask(&printWelcomeCmd1);
+    registry.registerTask(&hardwareSetupCmd);
+    registry.registerTask(&configSetupCmd);
     registry.registerTask(&triplePressCheckCmd);
-    registry.registerTask(&wifiBeginCmd);
+    registry.registerTask(&networkSetupCmd);
     registry.registerTask(&wifiAPWaitCmd);
     registry.registerTask(&configSyncCmd);
     registry.registerTask(&saveConfigCmd);
-    registry.registerTask(&printWelcomeCmd2);
-    registry.registerTask(&otaSetupCmd);
     registry.registerTask(&mqttCreateCmd);
-    registry.registerTask(&serialBridgeBeginCmd);
     registry.registerTask(&webServerSetupCmd);
 }
 
 void DependencyContainer::registerLoopTasks() {
-    static WiFiConfigTask wifiLoopCmd(wifiConfig);
-    static ArduinoOTATask otaCmd;
-    static SerialCommandsTask serialCmd(serialCmdHandler);
+    static MqttReconnectTask mqttReconnectCmd(mqttClient, preferencesStorage);
+    static NetworkLoopTask networkLoopCmd(wifiManager);
+    static SystemLoopTask systemLoopCmd(serialCmdHandler);
     
     static TriplePressCheckTask triplePressCmd(buttonHandler, resetConfigWrapper);
     
-    static MqttHandlerTask mqttLoopCmd;
-    static MqttReconnectTask mqttReconnectCmd(mqttHandler, configManager);
-    static MqttInfoPublishTask mqttInfoCmd(mqttHandler, configManager, lastInfoPublish);
+    static MqttInfoPublishTask mqttInfoCmd(mqttClient, preferencesStorage, lastInfoPublish);
     static SerialBridge0Task serial0Cmd(serialBridge, serial0Log, serialBuffer[0], 
-                                           mqttHandler, debugEnabled);
+                                           mqttClient, debugEnabled);
     static SerialBridge1Task serial1Cmd(serialBridge, serial1Log, serialBuffer[1], 
-                                           mqttHandler, debugEnabled);
+                                           mqttClient, debugEnabled);
     
-    registry.registerTask(&wifiLoopCmd);
-    registry.registerTask(&otaCmd);
-    registry.registerTask(&serialCmd);
-    registry.registerTask(&triplePressCmd);
-    registry.registerTask(&mqttLoopCmd);
     registry.registerTask(&mqttReconnectCmd);
+    registry.registerTask(&networkLoopCmd);
+    registry.registerTask(&systemLoopCmd);
+    registry.registerTask(&triplePressCmd);
     registry.registerTask(&mqttInfoCmd);
     registry.registerTask(&serial0Cmd);
     registry.registerTask(&serial1Cmd);
@@ -167,7 +147,7 @@ void DependencyContainer::initialize() {
 
 void DependencyContainer::setup() {
     registry.setupAll();
-    serialBridge.setMqttHandler(mqttHandler);
+    serialBridge.setMqttHandler(mqttClient);
     Serial.println("Setup complete!");
 }
 
@@ -178,10 +158,10 @@ void DependencyContainer::loop() {
         webServer->loop();
     }
     
-    if (mqttHandler) {
+    if (mqttClient) {
         for (int i = 0; i < 2; i++) {
-            if (mqttHandler->shouldFlushBuffer(i)) {
-                mqttHandler->flushBuffer(i);
+            if (mqttClient->shouldFlushBuffer(i)) {
+                mqttClient->flushBuffer(i);
             }
         }
     }

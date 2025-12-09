@@ -1,0 +1,32 @@
+#pragma once
+
+#include "interfaces/itask.h"
+#include "wifi_manager.h"
+#include "ota_manager.h"
+#include "system_info.h"
+#include <Preferences.h>
+
+namespace jrb::wifi_serial {
+
+class NetworkSetupTask final : public ITask {
+private:
+    WiFiManager& wifiManager;
+    Preferences& preferences;
+    OTAManager& otaManager;
+    SystemInfo& systemInfo;
+
+public:
+    NetworkSetupTask(WiFiManager& wifi, Preferences& prefs, OTAManager& ota, SystemInfo& info)
+        : wifiManager(wifi), preferences(prefs), otaManager(ota), systemInfo(info) {}
+    
+    void setup() override {
+        wifiManager.begin(&preferences);
+        otaManager.setup();
+        systemInfo.printWelcomeMessage();
+    }
+    
+    void loop() override {}
+};
+
+}  // namespace jrb::wifi_serial
+

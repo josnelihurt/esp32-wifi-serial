@@ -3,21 +3,21 @@
 namespace jrb::wifi_serial {
 
 void MqttHandlerCreateTask::setup() {
-    mqttHandler = new MqttClient(wifiClient);
-    mqttHandler->setDeviceName(configManager.deviceName());
-    mqttHandler->setTopics(configManager.topicTty0Rx(), configManager.topicTty0Tx(),
-                          configManager.topicTty1Rx(), configManager.topicTty1Tx());
-    mqttHandler->setCallbacks(onTty0, onTty1);
+    mqttClient = new MqttClient(wifiClient);
+    mqttClient->setDeviceName(preferencesStorage.deviceName());
+    mqttClient->setTopics(preferencesStorage.topicTty0Rx(), preferencesStorage.topicTty0Tx(),
+                          preferencesStorage.topicTty1Rx(), preferencesStorage.topicTty1Tx());
+    mqttClient->setCallbacks(onTty0, onTty1);
     
     Serial.print("[MQTT] Callbacks set - onTty0: ");
     Serial.println(onTty0 ? "SET" : "NULL");
     Serial.print("[MQTT] Callbacks set - onTty1: ");
     Serial.println(onTty1 ? "SET" : "NULL");
     
-    if (configManager.mqttBroker().length() > 0) {
-        const char* user = configManager.mqttUser().length() > 0 ? configManager.mqttUser().c_str() : nullptr;
-        const char* pass = configManager.mqttPassword().length() > 0 ? configManager.mqttPassword().c_str() : nullptr;
-        mqttHandler->connect(configManager.mqttBroker().c_str(), configManager.mqttPort(), user, pass);
+    if (preferencesStorage.mqttBroker().length() > 0) {
+        const char* user = preferencesStorage.mqttUser().length() > 0 ? preferencesStorage.mqttUser().c_str() : nullptr;
+        const char* pass = preferencesStorage.mqttPassword().length() > 0 ? preferencesStorage.mqttPassword().c_str() : nullptr;
+        mqttClient->connect(preferencesStorage.mqttBroker().c_str(), preferencesStorage.mqttPort(), user, pass);
     }
 }
 

@@ -7,12 +7,12 @@ namespace jrb::wifi_serial {
 
 class SaveConfigTask final : public ITask {
 private:
-    PreferencesStorage& configManager;
+    PreferencesStorage& preferencesStorage;
 
 public:
-    explicit SaveConfigTask(PreferencesStorage& config) : configManager(config) {}
+    explicit SaveConfigTask(PreferencesStorage& storage) : preferencesStorage(storage) {}
     void setup() override {
-        configManager.save();
+        preferencesStorage.save();
     }
     void loop() override {}
 };

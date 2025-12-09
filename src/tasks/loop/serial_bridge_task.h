@@ -15,11 +15,11 @@ private:
     SerialBridge& serialBridge;
     SerialLog& serialLog;
     char* serialBuffer;
-    MqttClient* mqttHandler;
+    MqttClient* mqttClient;
     bool& debugEnabled;
 
     bool available() const {
-        if constexpr (PortIndex == 0) {
+        if (PortIndex == 0) {
             return serialBridge.available0();
         } else {
             return serialBridge.available1();
@@ -27,7 +27,7 @@ private:
     }
 
     int readSerial(char* buffer, int maxLen) {
-        if constexpr (PortIndex == 0) {
+        if (PortIndex == 0) {
             return serialBridge.readSerial0(buffer, maxLen);
         } else {
             return serialBridge.readSerial1(buffer, maxLen);
@@ -40,9 +40,9 @@ public:
     }
     
     SerialBridgeTask(SerialBridge& bridge, SerialLog& log, char* buffer, 
-                       MqttClient* handler, bool& debug)
+                       MqttClient* client, bool& debug)
         : serialBridge(bridge), serialLog(log), serialBuffer(buffer), 
-          mqttHandler(handler), debugEnabled(debug) {}
+          mqttClient(client), debugEnabled(debug) {}
     
     void loop() override {
         if (!available()) return;

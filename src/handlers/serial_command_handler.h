@@ -10,16 +10,16 @@ namespace jrb::wifi_serial {
 
 class SerialCommandHandler final {
 private:
-    PreferencesStorage& configManager;
-    MqttClient* mqttHandler;
+    PreferencesStorage& preferencesStorage;
+    MqttClient* mqttClient;
     bool& debugEnabled;
     bool cmdPrefixReceived{false};
     std::function<void()> printWelcomeFunc;
 
 public:
-    SerialCommandHandler(PreferencesStorage& config, MqttClient* handler, 
+    SerialCommandHandler(PreferencesStorage& storage, MqttClient* client, 
                         bool& debug, std::function<void()> printWelcome)
-        : configManager(config), mqttHandler(handler), debugEnabled(debug), 
+        : preferencesStorage(storage), mqttClient(client), debugEnabled(debug), 
           printWelcomeFunc(printWelcome) {}
     
     void handle();

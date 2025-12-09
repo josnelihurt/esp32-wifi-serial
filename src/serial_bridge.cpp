@@ -88,8 +88,8 @@ void SerialBridge::setLogs(SerialLog& log0, SerialLog& log1) {
     serial1Log = &log1;
 }
 
-void SerialBridge::setMqttHandler(MqttClient* handler) {
-    mqttHandler = handler;
+void SerialBridge::setMqttHandler(MqttClient* client) {
+    mqttClient = client;
 }
 
 void SerialBridge::writeToSerialAndLog(int portIndex, const String& serialData, const String& logData) {
@@ -114,8 +114,8 @@ void SerialBridge::handleSerialToMqttAndWeb(int portIndex, const char* data, uns
         log->append(data, length);
     }
     
-    if (mqttHandler) {
-        mqttHandler->appendToBuffer(portIndex, data, length);
+    if (mqttClient) {
+        mqttClient->appendToBuffer(portIndex, data, length);
     }
 }
 
@@ -125,20 +125,20 @@ void SerialBridge::handleWebToSerialAndMqtt(int portIndex, const String& data) {
     
     writeToSerialAndLog(portIndex, dataWithNewline, webMsg);
     
-    if (!mqttHandler) {
-        Serial.println("MQTT handler not found");
+    if (!mqttClient) {
+        Serial.println("MQTT client not found");
         return;
     }
 
-    if (!mqttHandler->isConnected()) {
-        Serial.println("MQTT handler not connected");
+    if (!mqttClient->isConnected()) {
+        Serial.println("MQTT client not connected");
         return;
     }
 
     if (portIndex == 0) {
-        mqttHandler->publishTty0(webMsg);
+        mqttClient->publishTty0(webMsg);
     } else {
-        mqttHandler->publishTty1(webMsg);
+        mqttClient->publishTty1(webMsg);
     }
 }
 

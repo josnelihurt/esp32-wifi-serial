@@ -9,13 +9,13 @@ namespace jrb::wifi_serial {
 
 class SystemInfo final {
 private:
-    PreferencesStorage& configManager;
-    MqttClient* mqttHandler;
+    PreferencesStorage& preferencesStorage;
+    MqttClient* mqttClient;
     bool& otaEnabled;
 
 public:
-    SystemInfo(PreferencesStorage& config, MqttClient* handler, bool& ota)
-        : configManager(config), mqttHandler(handler), otaEnabled(ota) {}
+    SystemInfo(PreferencesStorage& storage, MqttClient* client, bool& ota)
+        : preferencesStorage(storage), mqttClient(client), otaEnabled(ota) {}
     
     void printWelcomeMessage();
 };

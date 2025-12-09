@@ -8,10 +8,10 @@ namespace jrb::wifi_serial {
 
 class WiFiConfigAPModeWaitTask final : public ITask {
 private:
-    WiFiManager& wifiConfig;
+    WiFiManager& wifiManager;
 
 public:
-    explicit WiFiConfigAPModeWaitTask(WiFiManager& config) : wifiConfig(config) {}
+    explicit WiFiConfigAPModeWaitTask(WiFiManager& wifi) : wifiManager(wifi) {}
     
     void setup() override;
     void loop() override {}

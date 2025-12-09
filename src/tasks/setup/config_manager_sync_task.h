@@ -9,12 +9,12 @@ namespace jrb::wifi_serial {
 
 class ConfigManagerSyncTask final : public ITask {
 private:
-    WiFiManager& wifiConfig;
-    PreferencesStorage& configManager;
+    WiFiManager& wifiManager;
+    PreferencesStorage& preferencesStorage;
 
 public:
-    ConfigManagerSyncTask(WiFiManager& wifi, PreferencesStorage& config)
-        : wifiConfig(wifi), configManager(config) {}
+    ConfigManagerSyncTask(WiFiManager& wifi, PreferencesStorage& storage)
+        : wifiManager(wifi), preferencesStorage(storage) {}
     
     void setup() override;
     void loop() override {}

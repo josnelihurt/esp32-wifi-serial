@@ -3,10 +3,10 @@
 namespace jrb::wifi_serial {
 
 void OTAManager::setup() {
-    ArduinoOTA.setHostname(configManager.deviceName().c_str());
+    ArduinoOTA.setHostname(preferencesStorage.deviceName().c_str());
     
-    if (configManager.mqttPassword().length() > 0) {
-        ArduinoOTA.setPassword(configManager.mqttPassword().c_str());
+    if (preferencesStorage.mqttPassword().length() > 0) {
+        ArduinoOTA.setPassword(preferencesStorage.mqttPassword().c_str());
     }
     
     ArduinoOTA.onStart([]() {

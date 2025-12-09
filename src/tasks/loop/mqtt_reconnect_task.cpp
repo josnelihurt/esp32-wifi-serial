@@ -3,9 +3,9 @@
 namespace jrb::wifi_serial {
 
 void MqttReconnectTask::loop() {
-    if (!mqttHandler) return;
-    if (configManager.mqttBroker().length() == 0) return;
-    if (mqttHandler->isConnected()) return;
+    if (!mqttClient) return;
+    if (preferencesStorage.mqttBroker().length() == 0) return;
+    if (mqttClient->isConnected()) return;
     
     static unsigned long lastReconnectAttempt = 0;
     unsigned long now = millis();
@@ -16,13 +16,13 @@ void MqttReconnectTask::loop() {
     lastReconnectAttempt = now;
     
     Serial.println("[MQTT] Attempting to reconnect...");
-    const char* user = configManager.mqttUser().length() > 0 ? configManager.mqttUser().c_str() : nullptr;
-    const char* pass = configManager.mqttPassword().length() > 0 ? configManager.mqttPassword().c_str() : nullptr;
+    const char* user = preferencesStorage.mqttUser().length() > 0 ? preferencesStorage.mqttUser().c_str() : nullptr;
+    const char* pass = preferencesStorage.mqttPassword().length() > 0 ? preferencesStorage.mqttPassword().c_str() : nullptr;
     
-    bool result = mqttHandler->connect(configManager.mqttBroker().c_str(), configManager.mqttPort(), user, pass);
+    bool result = mqttClient->connect(preferencesStorage.mqttBroker().c_str(), preferencesStorage.mqttPort(), user, pass);
     if (!result) {
         Serial.print("[MQTT] Reconnect failed, state: ");
-        Serial.println(mqttHandler->getMqttClient() ? mqttHandler->getMqttClient()->state() : -1);
+        Serial.println(mqttClient->getMqttClient() ? mqttClient->getMqttClient()->state() : -1);
         return;
     } 
     Serial.println("[MQTT] Reconnected successfully!");

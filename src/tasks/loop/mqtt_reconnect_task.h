@@ -8,12 +8,12 @@ namespace jrb::wifi_serial {
 
 class MqttReconnectTask final : public ITask {
 private:
-    MqttClient* mqttHandler;
-    PreferencesStorage& configManager;
+    MqttClient* mqttClient;
+    PreferencesStorage& preferencesStorage;
 
 public:
-    MqttReconnectTask(MqttClient* handler, PreferencesStorage& config)
-        : mqttHandler(handler), configManager(config) {}
+    MqttReconnectTask(MqttClient* client, PreferencesStorage& storage)
+        : mqttClient(client), preferencesStorage(storage) {}
     
     void loop() override;
 };

@@ -9,18 +9,18 @@ namespace jrb::wifi_serial {
 
 class MqttHandlerCreateTask final : public ITask {
 private:
-    MqttClient*& mqttHandler;
+    MqttClient*& mqttClient;
     WiFiClient& wifiClient;
-    PreferencesStorage& configManager;
+    PreferencesStorage& preferencesStorage;
     void (*onTty0)(const char*, unsigned int);
     void (*onTty1)(const char*, unsigned int);
 
 public:
-    MqttHandlerCreateTask(MqttClient*& handler, WiFiClient& client, 
-                             PreferencesStorage& config,
+    MqttHandlerCreateTask(MqttClient*& client, WiFiClient& wifi, 
+                             PreferencesStorage& storage,
                              void (*tty0)(const char*, unsigned int),
                              void (*tty1)(const char*, unsigned int))
-        : mqttHandler(handler), wifiClient(client), configManager(config),
+        : mqttClient(client), wifiClient(wifi), preferencesStorage(storage),
           onTty0(tty0), onTty1(tty1) {}
     
     void setup() override;

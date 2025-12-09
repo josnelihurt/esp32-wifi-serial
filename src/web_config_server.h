@@ -13,7 +13,7 @@ class WebConfigServer final {
 public:
     using SerialSendCallback = std::function<void(int portIndex, const String& data)>;
     
-    WebConfigServer(PreferencesStorage& config, SerialLog& serial0Log, SerialLog& serial1Log,
+    WebConfigServer(PreferencesStorage& storage, SerialLog& serial0Log, SerialLog& serial1Log,
                     SerialSendCallback sendCallback);
     ~WebConfigServer();
     
@@ -28,7 +28,7 @@ public:
     void setAPIP(const IPAddress& ip);
 
 private:
-    PreferencesStorage& configStorage;
+    PreferencesStorage& preferencesStorage;
     SerialLog& serial0Log;
     SerialLog& serial1Log;
     SerialSendCallback sendCallback;

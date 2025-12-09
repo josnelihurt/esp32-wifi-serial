@@ -33,9 +33,9 @@ public:
     void handleWebToSerialAndMqtt(int portIndex, const String& data);
     
     TaskRegistry& getRegistry() { return registry; }
-    WiFiManager& getWiFiConfig() { return wifiConfig; }
-    MqttClient* getMqttHandler() { return mqttHandler; }
-    PreferencesStorage& getConfigManager() { return configManager; }
+    WiFiManager& getWiFiManager() { return wifiManager; }
+    MqttClient* getMqttClient() { return mqttClient; }
+    PreferencesStorage& getPreferencesStorage() { return preferencesStorage; }
     SerialBridge& getSerialBridge() { return serialBridge; }
     SerialLog& getSerial0Log() { return serial0Log; }
     SerialLog& getSerial1Log() { return serial1Log; }
@@ -49,10 +49,10 @@ public:
 
 private:
     Preferences preferences;
-    PreferencesStorage configManager;
-    WiFiManager wifiConfig;
+    PreferencesStorage preferencesStorage;
+    WiFiManager wifiManager;
     WiFiClient wifiClient;
-    MqttClient* mqttHandler{};
+    MqttClient* mqttClient{};
     SerialBridge serialBridge;
     SerialLog serial0Log;
     SerialLog serial1Log;

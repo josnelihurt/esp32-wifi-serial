@@ -3,18 +3,18 @@
 namespace jrb::wifi_serial {
 
 void MqttInfoPublishTask::loop() {
-    if (!mqttHandler) return;
-    if (!mqttHandler->isConnected()) return;
+    if (!mqttClient) return;
+    if (!mqttClient->isConnected()) return;
     if (millis() - lastInfoPublish < INFO_PUBLISH_INTERVAL) return;
     
     String macAddress = WiFi.macAddress();
     String ipAddress = WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : "Not connected";
     String ssid = WiFi.status() == WL_CONNECTED ? WiFi.SSID() : "Not configured";
     
-    String infoJson = "{\"device\":\"" + configManager.deviceName() + "\",\"ip\":\"" + ipAddress + 
+    String infoJson = "{\"device\":\"" + preferencesStorage.deviceName() + "\",\"ip\":\"" + ipAddress + 
                      "\",\"mac\":\"" + macAddress + "\",\"ssid\":\"" + ssid + 
-                     "\",\"mqtt\":\"" + (configManager.mqttBroker().length() > 0 ? "connected" : "disconnected") + "\"}";
-    mqttHandler->publishInfo(infoJson);
+                     "\",\"mqtt\":\"" + (preferencesStorage.mqttBroker().length() > 0 ? "connected" : "disconnected") + "\"}";
+    mqttClient->publishInfo(infoJson);
     lastInfoPublish = millis();
 }
 

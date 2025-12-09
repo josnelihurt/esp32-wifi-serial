@@ -6,9 +6,9 @@
 
 namespace jrb::wifi_serial {
 
-WebConfigServer::WebConfigServer(PreferencesStorage& config, SerialLog& serial0Log, 
+WebConfigServer::WebConfigServer(PreferencesStorage& storage, SerialLog& serial0Log, 
                                   SerialLog& serial1Log, SerialSendCallback sendCallback)
-    : configStorage(config)
+    : preferencesStorage(storage)
     , serial0Log(serial0Log)
     , serial1Log(serial1Log)
     , sendCallback(sendCallback)
@@ -259,20 +259,20 @@ String WebConfigServer::getConfigHTML() {
             <label>MQTT Topics ttyS0:</label>
             <label style="margin-top:5px;font-size:12px;color:#666666;">RX (ESP32 → MQTT):</label>
             <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML")
-    + escapeHTML(configStorage.topicTty0Rx())
+    + escapeHTML(preferencesStorage.topicTty0Rx())
     + String(R"HTML(</div>
             <label style="margin-top:5px;font-size:12px;color:#666666;">TX (MQTT → ESP32):</label>
             <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML")
-    + escapeHTML(configStorage.topicTty0Tx())
+    + escapeHTML(preferencesStorage.topicTty0Tx())
     + String(R"HTML(</div>
             <label>MQTT Topics ttyS1:</label>
             <label style="margin-top:5px;font-size:12px;color:#666666;">RX (ESP32 → MQTT):</label>
             <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML")
-    + escapeHTML(configStorage.topicTty1Rx())
+    + escapeHTML(preferencesStorage.topicTty1Rx())
     + String(R"HTML(</div>
             <label style="margin-top:5px;font-size:12px;color:#666666;">TX (MQTT → ESP32):</label>
             <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML")
-    + escapeHTML(configStorage.topicTty1Tx())
+    + escapeHTML(preferencesStorage.topicTty1Tx())
     + String(R"HTML(</div>
             <label>MQTT Port:</label>
             <input type="number" name="port" value=")HTML")

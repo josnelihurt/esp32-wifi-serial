@@ -19,7 +19,7 @@ private:
     
     SerialLog* serial0Log{};
     SerialLog* serial1Log{};
-    MqttClient* mqttHandler{};
+    MqttClient* mqttClient{};
 
 public:
     SerialBridge();
@@ -29,7 +29,7 @@ public:
     void begin(int baud0, int baud1);
     
     void setLogs(SerialLog& log0, SerialLog& log1);
-    void setMqttHandler(MqttClient* handler);
+    void setMqttHandler(MqttClient* client);
     
     int readSerial0(char* buffer, int maxLen);
     int readSerial1(char* buffer, int maxLen);

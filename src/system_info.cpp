@@ -16,7 +16,7 @@ void SystemInfo::printWelcomeMessage() {
     Serial.print("MAC: ");
     Serial.println(macAddress);
     Serial.print("Device Name: ");
-    Serial.println(configManager.deviceName());
+    Serial.println(preferencesStorage.deviceName());
     
     if (WiFi.status() == WL_CONNECTED) {
         Serial.print("IP Address: ");
@@ -29,26 +29,26 @@ void SystemInfo::printWelcomeMessage() {
     }
     
     Serial.print("MQTT Broker: ");
-    if (configManager.mqttBroker().length() > 0) {
-        Serial.print(configManager.mqttBroker());
+    if (preferencesStorage.mqttBroker().length() > 0) {
+        Serial.print(preferencesStorage.mqttBroker());
         Serial.print(":");
-        Serial.println(configManager.mqttPort());
+        Serial.println(preferencesStorage.mqttPort());
     } else {
         Serial.println("Not configured");
     }
     
     Serial.println("MQTT Topics:");
     Serial.print("  ttyS0 RX: ");
-    Serial.println(configManager.topicTty0Rx());
+    Serial.println(preferencesStorage.topicTty0Rx());
     Serial.print("  ttyS0 TX: ");
-    Serial.println(configManager.topicTty0Tx());
+    Serial.println(preferencesStorage.topicTty0Tx());
     Serial.print("  ttyS1 RX: ");
-    Serial.println(configManager.topicTty1Rx());
+    Serial.println(preferencesStorage.topicTty1Rx());
     Serial.print("  ttyS1 TX: ");
-    Serial.println(configManager.topicTty1Tx());
+    Serial.println(preferencesStorage.topicTty1Tx());
     
     Serial.print("MQTT Status: ");
-    if (mqttHandler && mqttHandler->isConnected()) {
+    if (mqttClient && mqttClient->isConnected()) {
         Serial.println("Connected");
     } else {
         Serial.println("Disconnected");
