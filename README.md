@@ -91,9 +91,15 @@ graph TB
 
 ## Pinout and Connections
 
-> **📌 Note:** This project uses the **ESP32-C3 SuperMini**. Download the pinout diagram from the [ESP32-C3 SuperMini GitHub repository](https://github.com/wuxx/ESP32-C3-SuperMini) or search for "ESP32-C3 SuperMini pinout" online and save it as `screenshots/esp32-c3-supermini-pinout.png`.
+> **📌 Image Required:** This project uses the **ESP32-C3 SuperMini**. You need to download the pinout diagram manually:
+> - Visit the [ESP32-C3 SuperMini GitHub repository](https://github.com/wuxx/ESP32-C3-SuperMini)
+> - Look for pinout images in the `docs/` folder or README
+> - Or search for "ESP32-C3 SuperMini pinout" online
+> - Save the image as `screenshots/esp32-c3-supermini-pinout.png`
 
 ![ESP32-C3 SuperMini Pinout](screenshots/esp32-c3-supermini-pinout.png)
+
+*The image above will appear once you download and save the pinout diagram.*
 
 ### Required Pin Connections
 
