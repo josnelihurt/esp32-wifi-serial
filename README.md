@@ -89,6 +89,39 @@ graph TB
 - USB cable for debugging (built into ESP32-C3)
 - WiFi network (or use AP mode)
 
+## Pinout and Connections
+
+![ESP32-C3-DevKitM-1 Pinout](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/_images/esp32-c3-devkitm-1-v1-pinout.png)
+
+### Required Pin Connections
+
+The ESP32-C3-DevKitM-1 requires soldering headers to the following pins for this project:
+
+**Serial Port 1 (UART) - Connect to ARM Device:**
+- **GPIO 4** → RX (Receive from ARM device)
+- **GPIO 5** → TX (Transmit to ARM device)
+- **GND** → Ground (common ground with ARM device)
+
+**Built-in Components (No soldering required):**
+- **GPIO 8** → LED (built-in on board)
+- **GPIO 9** → BOOT Button (built-in on board)
+
+**Serial Port 0 (USB):**
+- Uses native USB-C port (no external pins needed)
+- Used for debugging and programming
+
+### Connection Diagram
+
+```
+ESP32-C3-DevKitM-1          ARM Device (Raspberry Pi/Orange Pi)
+──────────────────          ──────────────────────────────
+GPIO 5 (TX) ───────────────> UART RX
+GPIO 4 (RX) <─────────────── UART TX
+GND         ──────────────── GND
+```
+
+**Note:** Ensure you connect TX to RX and RX to TX between the devices (crossed connection).
+
 ## Software Stack
 
 - Platform: ESP32-C3 (Arduino framework)
