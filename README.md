@@ -75,19 +75,21 @@ graph TB
 
 ## Quick Start
 
-1. Flash the firmware to your ESP32-C3 device using PlatformIO
+1. Flash the firmware to your ESP32-C3 device using PlatformIO (configured for ESP32-C3 DevKitM-1)
 2. On first boot, the device creates a WiFi access point (default IP: `192.168.4.1`)
 3. Connect to the AP and navigate to `http://192.168.4.1` in your browser
 4. Configure WiFi credentials and MQTT broker settings via the web interface
-5. Connect your ARM devices to the serial ports (USB/UART)
+5. Connect your ARM devices to the serial ports (USB/UART) using GPIO 0 (RX) and GPIO 1 (TX)
 6. Access serial consoles via MQTT topics or the web interface tabs
 
 ## Hardware Requirements
 
-- ESP32-C3 SuperMini (or compatible ESP32-C3 board)
+- ESP32-C3 SuperMini (primary target) or ESP32-C3 DevKitM-1 (tested configuration)
 - One ARM embedded device (Raspberry Pi, Orange Pi, etc.) connected via UART
 - USB cable for debugging (built into ESP32-C3)
 - WiFi network (or use AP mode)
+
+**Note:** The firmware uses GPIO 0 (RX) and GPIO 1 (TX) for Serial1, which are standard UART pins on ESP32-C3 boards. The PlatformIO configuration is set for ESP32-C3 DevKitM-1, but the pin mappings should work on most ESP32-C3 boards including the SuperMini.
 
 ## Pinout and Connections
 
@@ -106,8 +108,8 @@ graph TB
 Based on the code analysis, the ESP32-C3 SuperMini requires soldering headers to the following pins:
 
 **Serial Port 1 (UART) - Connect to ARM Device:**
-- **GPIO 3** (Physical Pin) → RX (Receive from ARM device) - **MUST SOLDER**
-- **GPIO 4** (Physical Pin) → TX (Transmit to ARM device) - **MUST SOLDER**
+- **GPIO 0** (RX Pin) → Receives data from ARM device's TX pin - **MUST SOLDER**
+- **GPIO 1** (TX Pin) → Transmits data to ARM device's RX pin - **MUST SOLDER**
 - **GND** → Ground (common ground with ARM device) - **MUST SOLDER**
 
 **Built-in Components (No soldering required - already on board):**
@@ -118,15 +120,15 @@ Based on the code analysis, the ESP32-C3 SuperMini requires soldering headers to
 - Uses native USB-C port (no external pins needed)
 - Used for debugging and programming via USB
 
-**⚠️ Important:** Check the pinout diagram above to identify the physical pin locations for GPIO 3 and GPIO 4 on your ESP32-C3 SuperMini board. These pins are on the same side for easier wiring. The GPIO numbers are typically marked on the bottom side of the board.
+**⚠️ Important:** Check the pinout diagram above to identify the physical pin locations for GPIO 0 and GPIO 1 on your ESP32-C3 SuperMini board. These pins are on the same side for easier wiring. The GPIO numbers are typically marked on the bottom side of the board.
 
 ### Connection Diagram
 
 ```
 ESP32-C3 SuperMini          ARM Device (Raspberry Pi/Orange Pi)
 ──────────────────          ──────────────────────────────
-GPIO 4 (TX) ───────────────> UART RX
-GPIO 3 (RX) <─────────────── UART TX
+GPIO 1 (TX) ───────────────> UART RX
+GPIO 0 (RX) <─────────────── UART TX
 GND         ──────────────── GND
 ```
 
