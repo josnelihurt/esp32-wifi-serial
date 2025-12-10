@@ -8,6 +8,9 @@ namespace jrb::wifi_serial {
 #define SERIAL0_BAUD 115200
 #define SERIAL1_BAUD 115200
 
+#define SERIAL1_RX_PIN 0
+#define SERIAL1_TX_PIN 1
+
 #define BUTTON_DEBOUNCE_MS 50
 
 }  // namespace jrb::wifi_serial

@@ -103,28 +103,30 @@ graph TB
 
 ### Required Pin Connections
 
-The ESP32-C3 SuperMini requires soldering headers to the following pins for this project:
+Based on the code analysis, the ESP32-C3 SuperMini requires soldering headers to the following pins:
 
 **Serial Port 1 (UART) - Connect to ARM Device:**
-- **GPIO 4** → RX (Receive from ARM device)
-- **GPIO 5** → TX (Transmit to ARM device)
-- **GND** → Ground (common ground with ARM device)
+- **GPIO 3** (Physical Pin) → RX (Receive from ARM device) - **MUST SOLDER**
+- **GPIO 4** (Physical Pin) → TX (Transmit to ARM device) - **MUST SOLDER**
+- **GND** → Ground (common ground with ARM device) - **MUST SOLDER**
 
-**Built-in Components (No soldering required):**
-- **GPIO 8** → LED (built-in on board)
-- **GPIO 9** → BOOT Button (built-in on board)
+**Built-in Components (No soldering required - already on board):**
+- **GPIO 8** → LED (built-in, no header needed)
+- **GPIO 9** → BOOT Button (built-in, no header needed)
 
 **Serial Port 0 (USB):**
 - Uses native USB-C port (no external pins needed)
-- Used for debugging and programming
+- Used for debugging and programming via USB
+
+**⚠️ Important:** Check the pinout diagram above to identify the physical pin locations for GPIO 3 and GPIO 4 on your ESP32-C3 SuperMini board. These pins are on the same side for easier wiring. The GPIO numbers are typically marked on the bottom side of the board.
 
 ### Connection Diagram
 
 ```
 ESP32-C3 SuperMini          ARM Device (Raspberry Pi/Orange Pi)
 ──────────────────          ──────────────────────────────
-GPIO 5 (TX) ───────────────> UART RX
-GPIO 4 (RX) <─────────────── UART TX
+GPIO 4 (TX) ───────────────> UART RX
+GPIO 3 (RX) <─────────────── UART TX
 GND         ──────────────── GND
 ```
 

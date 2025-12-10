@@ -22,7 +22,7 @@ void SerialBridge::begin(int baud0, int baud1) {
     
     if (baud1 > 0) {
         serial1 = new HardwareSerial(1);
-        serial1->begin(baud1, SERIAL_8N1, 4, 5);
+        serial1->begin(baud1, SERIAL_8N1, SERIAL1_RX_PIN, SERIAL1_TX_PIN);
     }
 }
 
