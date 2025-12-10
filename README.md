@@ -91,9 +91,9 @@ graph TB
 
 ## Pinout and Connections
 
-> **📌 Image Required:** Download the ESP32-C3-DevKitM-1 pinout diagram from the [official Espressif documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/hw-reference/esp32c3/user-guide-devkitm-1.html) and save it as `screenshots/esp32-c3-devkitm-1-pinout.png`. Alternatively, search for "ESP32-C3-DevKitM-1 pinout" online and save any diagram showing GPIO pin locations.
-
 ![ESP32-C3-DevKitM-1 Pinout](screenshots/esp32-c3-devkitm-1-pinout.png)
+
+*Pinout diagram from [Espressif official documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/hw-reference/esp32c3/user-guide-devkitm-1.html)*
 
 ### Required Pin Connections
 
