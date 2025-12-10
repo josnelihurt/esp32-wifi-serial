@@ -84,20 +84,20 @@ graph TB
 
 ## Hardware Requirements
 
-- ESP32-C3-DevKitM-1 (or compatible ESP32-C3 board)
+- ESP32-C3 SuperMini (or compatible ESP32-C3 board)
 - One ARM embedded device (Raspberry Pi, Orange Pi, etc.) connected via UART
 - USB cable for debugging (built into ESP32-C3)
 - WiFi network (or use AP mode)
 
 ## Pinout and Connections
 
-![ESP32-C3-DevKitM-1 Pinout](screenshots/esp32-c3-devkitm-1-pinout.png)
+> **📌 Note:** This project uses the **ESP32-C3 SuperMini**. Download the pinout diagram from the [ESP32-C3 SuperMini GitHub repository](https://github.com/wuxx/ESP32-C3-SuperMini) or search for "ESP32-C3 SuperMini pinout" online and save it as `screenshots/esp32-c3-supermini-pinout.png`.
 
-*Pinout diagram from [Espressif official documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/hw-reference/esp32c3/user-guide-devkitm-1.html)*
+![ESP32-C3 SuperMini Pinout](screenshots/esp32-c3-supermini-pinout.png)
 
 ### Required Pin Connections
 
-The ESP32-C3-DevKitM-1 requires soldering headers to the following pins for this project:
+The ESP32-C3 SuperMini requires soldering headers to the following pins for this project:
 
 **Serial Port 1 (UART) - Connect to ARM Device:**
 - **GPIO 4** → RX (Receive from ARM device)
@@ -115,7 +115,7 @@ The ESP32-C3-DevKitM-1 requires soldering headers to the following pins for this
 ### Connection Diagram
 
 ```
-ESP32-C3-DevKitM-1          ARM Device (Raspberry Pi/Orange Pi)
+ESP32-C3 SuperMini          ARM Device (Raspberry Pi/Orange Pi)
 ──────────────────          ──────────────────────────────
 GPIO 5 (TX) ───────────────> UART RX
 GPIO 4 (RX) <─────────────── UART TX
