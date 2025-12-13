@@ -112,14 +112,14 @@ private:
     WiFiManager wifiManager{preferencesStorage};
     WiFiClient wifiClient;
     MqttClient mqttClient{wifiClient};
-    SerialBridge serialBridge;
+    SerialBridge serialBridge{mqttClient};
     SerialLog serial0Log;
     SerialLog serial1Log;
-    SystemInfo systemInfo{preferencesStorage, &mqttClient, otaEnabled};
+    SystemInfo systemInfo{preferencesStorage, mqttClient, otaEnabled};
 
     // Heap objects (lazy init in constructor)
     SerialCommandHandler* serialCmdHandler{nullptr};
-    ButtonHandler* buttonHandler{nullptr};
+    ButtonHandler buttonHandler;
     OTAManager* otaManager{nullptr};
     WebConfigServer* webServer{nullptr};
 

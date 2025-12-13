@@ -23,10 +23,9 @@ Application::Application() {
 
     // Create heap-allocated handlers
     serialCmdHandler = new SerialCommandHandler(
-        preferencesStorage, &mqttClient, debugEnabled,
+        preferencesStorage, mqttClient, debugEnabled,
         [this]() { systemInfo.logSystemInformation(); }
     );
-    buttonHandler = new ButtonHandler();
     otaManager = new OTAManager(preferencesStorage, otaEnabled);
     webServer = new WebConfigServer(
         preferencesStorage, serial0Log, serial1Log,
@@ -38,7 +37,6 @@ Application::Application() {
 
 Application::~Application() {
     delete serialCmdHandler;
-    delete buttonHandler;
     delete otaManager;
     delete webServer;
 }
@@ -101,10 +99,6 @@ void Application::setup() {
 
     // MQTT setup (from MqttHandlerCreateTask)
     setupMqttCallbacks();
-
-    // Serial bridge setup
-    serialBridge.setMqttHandler(mqttClient);
-
     // Save preferences
     preferencesStorage.save();
 
@@ -127,19 +121,16 @@ void Application::setup() {
 }
 
 void Application::loop() {
-    // Button handling
-    if(buttonHandler->checkTriplePress()) {
+    if(buttonHandler.checkTriplePress()) {
         Log.infoln("Triple press detected! Resetting configuration and restarting...");
         preferencesStorage.clear();
         ESP.restart();
     }
 
-    // Serial command handling
     if (serialCmdHandler) {
         serialCmdHandler->handle();
     }
 
-    // Network tasks (from NetworkLoopTask)
     wifiManager.loop();
     mqttClient.loop();
     ArduinoOTA.handle();
@@ -147,11 +138,9 @@ void Application::loop() {
     reconnectMqttIfNeeded();
     publishInfoIfNeeded();
 
-    // Serial bridge tasks (from SerialBridge0Task and SerialBridge1Task)
     handleSerialPort0();
     handleSerialPort1();
 
-    // MQTT buffer flushing
     for (int i = 0; i < 2; i++) {
         if (mqttClient.shouldFlushBuffer(i)) {
             mqttClient.flushBuffer(i);

@@ -7,7 +7,7 @@
 namespace jrb::wifi_serial {
 
 class SerialLog;
-class IMqttClient;
+class MqttClient;
 
 /**
  * @brief Manages bidirectional communication between serial ports, logs, and MQTT.
@@ -17,7 +17,7 @@ class IMqttClient;
  */
 class SerialBridge final {
 public:
-    SerialBridge();
+    SerialBridge(MqttClient& mqttClient);
     ~SerialBridge() = default;
 
     /**
@@ -35,12 +35,6 @@ public:
      */
     void setLogs(SerialLog& log0, SerialLog& log1) ;
 
-    /**
-     * @brief Sets the MQTT client used by the bridge for publishing and subscribing.
-     *
-     * @param client Reference to an `IMqttClient` implementation.
-     */
-    void setMqttHandler(IMqttClient& client) ;
     
     /**
      * @brief Reads data from the first serial interface into a provided buffer.
@@ -133,7 +127,7 @@ private:
     
     SerialLog* serial0Log{};
     SerialLog* serial1Log{};
-    IMqttClient* mqttClient{};
+    MqttClient& mqttClient;
     
     /**
      * @brief Converts special control characters to visible representations.

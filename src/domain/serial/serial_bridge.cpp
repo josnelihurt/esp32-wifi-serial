@@ -1,11 +1,11 @@
 #include "serial_bridge.h"
 #include "config.h"
-#include "interfaces/imqtt_client.h"
+#include "domain/network/mqtt_client.h"
 #include "serial_log.h"
 #include <ArduinoLog.h>
 namespace jrb::wifi_serial {
 
-SerialBridge::SerialBridge() : serial1{}, buffer0Index{0}, buffer1Index{0} {
+SerialBridge::SerialBridge(MqttClient& mqttClient) : mqttClient(mqttClient), serial1{}, buffer0Index{0}, buffer1Index{0} {
   Log.traceln(__PRETTY_FUNCTION__);
 }
 
@@ -83,11 +83,6 @@ void SerialBridge::setLogs(SerialLog &log0, SerialLog &log1) {
   serial1Log = &log1;
 }
 
-void SerialBridge::setMqttHandler(IMqttClient &client) {
-  Log.traceln(__PRETTY_FUNCTION__);
-  mqttClient = &client;
-}
-
 void SerialBridge::writeToSerialAndLog(int portIndex, const String &serialData,
                                        const String &logData) {
   Log.traceln(__PRETTY_FUNCTION__);
@@ -116,17 +111,17 @@ void SerialBridge::handleSerialToMqttAndWeb(int portIndex, const char *data,
     log->append(data, length);
   }
 
-  if (!mqttClient)
+  if (!mqttClient.isConnected())
     return;
-  mqttClient->appendToBuffer(portIndex, data, length);
+  mqttClient.appendToBuffer(portIndex, data, length);
 
   // Also publish visible version for debugging
   String visibleData = makeSpecialCharsVisible(String(data, length));
   String debugMsg = "$serial$ " + visibleData;
   if (portIndex == 0) {
-    mqttClient->publishTty0(debugMsg);
+    mqttClient.publishTty0(debugMsg);
   } else {
-    mqttClient->publishTty1(debugMsg);
+    mqttClient.publishTty1(debugMsg);
   }
 }
 
@@ -138,20 +133,10 @@ void SerialBridge::handleWebToSerialAndMqtt(int portIndex, const String &data) {
 
   writeToSerialAndLog(portIndex, dataWithNewline, webMsg);
 
-  if (!mqttClient) {
-    return;
-  }
-
-  if (!mqttClient->isConnected()) {
-    Log.errorln("MQTT client not connected");
-    delay(1000);
-    return;
-  }
-
   if (portIndex == 0) {
-    mqttClient->publishTty0(webMsg);
+    mqttClient.publishTty0(webMsg);
   } else {
-    mqttClient->publishTty1(webMsg);
+    mqttClient.publishTty1(webMsg);
   }
 }
 
