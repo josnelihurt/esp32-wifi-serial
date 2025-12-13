@@ -2,7 +2,7 @@
 
 #include "domain/config/preferences_storage.h"
 #include "domain/serial/serial_log.h"
-#include <WebServer.h>
+#include <ESPAsyncWebServer.h>
 #include <Arduino.h>
 #include <functional>
 
@@ -31,13 +31,12 @@ private:
     SerialLog& serial0Log;
     SerialLog& serial1Log;
     SerialSendCallback sendCallback;
-    
-    WebServer* server;
+
+    AsyncWebServer* server;
     bool apMode;
     IPAddress apIP;
-    
-    
-    String getConfigHTML();
+
+    String processor(const String& var);
     String escapeHTML(const String& str);
 };
 

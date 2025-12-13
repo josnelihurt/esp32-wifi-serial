@@ -5,6 +5,8 @@
 #include <ArduinoLog.h>
 #include <Preferences.h>
 #include <WiFi.h>
+#include <LittleFS.h>
+#include <ESPAsyncWebServer.h>
 namespace jrb::wifi_serial {
 
 WebConfigServer::WebConfigServer(PreferencesStorage &storage,
@@ -18,15 +20,12 @@ WebConfigServer::WebConfigServer(PreferencesStorage &storage,
 
 WebConfigServer::~WebConfigServer() {
   if (server) {
-    server->stop();
     delete server;
   }
 }
 
 void WebConfigServer::loop() {
-  if (server) {
-    server->handleClient();
-  }
+  // No longer needed for AsyncWebServer - it handles requests asynchronously
 }
 
 void WebConfigServer::setWiFiConfig(const String &ssid, const String &password,
@@ -46,409 +45,225 @@ void WebConfigServer::setAPIP(const IPAddress &ip) {
 }
 
 void WebConfigServer::setup() {
+  // Initialize LittleFS
+  if (!LittleFS.begin(true)) {
+    Log.errorln("LittleFS mount failed");
+    return;
+  }
+  Log.infoln("LittleFS mounted successfully");
+
+  // Stop and delete old server if exists
   if (server) {
-    server->stop();
     delete server;
     server = nullptr;
   }
-  Log.infoln(__PRETTY_FUNCTION__, "Creating web server");
-  server = new WebServer(80);
 
-  server->on("/", HTTP_GET, [this]() {
-    Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling / request");
-    server->send(200, "text/html", this->getConfigHTML());
+  Log.infoln(__PRETTY_FUNCTION__, "Creating async web server");
+  server = new AsyncWebServer(80);
+
+  // Serve index.html with template processor
+  server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    Log.traceln("%s: Handling / request", __PRETTY_FUNCTION__);
+    request->send(LittleFS, "/index.html", "text/html", false,
+                  [this](const String& var) { return this->processor(var); });
   });
 
-   server->on("/save", HTTP_POST, [this]() {
-     Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling /save request");
-     if (server->hasArg("speed0")) {
-       int baudRate = server->arg("speed0").toInt();
-       if (baudRate <= 1) {
-         Log.errorln("Invalid baud rate %d (must be > 1), using default 115200", baudRate);
-         preferencesStorage.baudRateTty1 = DEFAULT_BAUD_RATE_TTY1;
-       } else {
-         preferencesStorage.baudRateTty1 = baudRate;
-       }
-     }
-    if (server->hasArg("ssid")) {
-      preferencesStorage.ssid = server->arg("ssid");
+  // Serve static CSS file (no template processing)
+  server->on("/style.css", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    Log.traceln("%s: Handling /style.css request", __PRETTY_FUNCTION__);
+    request->send(LittleFS, "/style.css", "text/css");
+  });
+
+  // Serve static JavaScript file (no template processing)
+  server->on("/script.js", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    Log.traceln("%s: Handling /script.js request", __PRETTY_FUNCTION__);
+    request->send(LittleFS, "/script.js", "application/javascript");
+  });
+
+  // Serve OTA HTML with template processor
+  server->on("/ota.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    Log.traceln("%s: Handling /ota.html request", __PRETTY_FUNCTION__);
+    request->send(LittleFS, "/ota.html", "text/html", false,
+                  [this](const String& var) { return this->processor(var); });
+  });
+
+  // Serve About HTML with template processor
+  server->on("/about.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    Log.traceln("%s: Handling /about.html request", __PRETTY_FUNCTION__);
+    request->send(LittleFS, "/about.html", "text/html", false,
+                  [this](const String& var) { return this->processor(var); });
+  });
+
+  // Handle configuration save
+  server->on("/save", HTTP_POST, [this](AsyncWebServerRequest *request) {
+    Log.traceln("%s: Handling /save request", __PRETTY_FUNCTION__);
+
+    // Process baud rate
+    if (request->hasParam("speed0", true)) {
+      int baudRate = request->getParam("speed0", true)->value().toInt();
+      if (baudRate <= 1) {
+        Log.errorln("Invalid baud rate %d (must be > 1), using default 115200", baudRate);
+        preferencesStorage.baudRateTty1 = 115200;
+      } else {
+        preferencesStorage.baudRateTty1 = baudRate;
+      }
     }
-    if (server->hasArg("password")) {
-      String newPassword = server->arg("password");
+
+    // Process WiFi settings
+    if (request->hasParam("ssid", true)) {
+      preferencesStorage.ssid = request->getParam("ssid", true)->value();
+    }
+    if (request->hasParam("password", true)) {
+      String newPassword = request->getParam("password", true)->value();
       if (newPassword.length() > 0 && newPassword != "********") {
         preferencesStorage.password = newPassword;
       }
     }
-    if (server->hasArg("device")) {
-      preferencesStorage.deviceName = server->arg("device");
-      preferencesStorage.topicTty0Rx =
-          "wifi_serial/" + preferencesStorage.deviceName + "/ttyS0/rx";
-      preferencesStorage.topicTty0Tx =
-          "wifi_serial/" + preferencesStorage.deviceName + "/ttyS0/tx";
-      preferencesStorage.topicTty1Rx =
-          "wifi_serial/" + preferencesStorage.deviceName + "/ttyS1/rx";
-      preferencesStorage.topicTty1Tx =
-          "wifi_serial/" + preferencesStorage.deviceName + "/ttyS1/tx";
+
+    // Process device name and MQTT topics
+    if (request->hasParam("device", true)) {
+      preferencesStorage.deviceName = request->getParam("device", true)->value();
+      preferencesStorage.topicTty0Rx = "wifi_serial/" + preferencesStorage.deviceName + "/ttyS0/rx";
+      preferencesStorage.topicTty0Tx = "wifi_serial/" + preferencesStorage.deviceName + "/ttyS0/tx";
+      preferencesStorage.topicTty1Rx = "wifi_serial/" + preferencesStorage.deviceName + "/ttyS1/rx";
+      preferencesStorage.topicTty1Tx = "wifi_serial/" + preferencesStorage.deviceName + "/ttyS1/tx";
     }
-    if (server->hasArg("broker")) {
-      preferencesStorage.mqttBroker = server->arg("broker");
+
+    // Process MQTT settings
+    if (request->hasParam("broker", true)) {
+      preferencesStorage.mqttBroker = request->getParam("broker", true)->value();
     }
-    if (server->hasArg("port")) {
-      preferencesStorage.mqttPort = server->arg("port").toInt();
+    if (request->hasParam("port", true)) {
+      preferencesStorage.mqttPort = request->getParam("port", true)->value().toInt();
     }
-    if (server->hasArg("user")) {
-      preferencesStorage.mqttUser = server->arg("user");
+    if (request->hasParam("user", true)) {
+      preferencesStorage.mqttUser = request->getParam("user", true)->value();
     }
-    if (server->hasArg("mqttpass")) {
-      String newMqttPassword = server->arg("mqttpass");
+    if (request->hasParam("mqttpass", true)) {
+      String newMqttPassword = request->getParam("mqttpass", true)->value();
       if (newMqttPassword.length() > 0 && newMqttPassword != "********") {
         preferencesStorage.mqttPassword = newMqttPassword;
       }
     }
+
     preferencesStorage.save();
-    server->send(200, "text/plain", "Configuration saved! Restarting...");
+    request->send(200, "text/plain", "Configuration saved! Restarting...");
     delay(1000);
     ESP.restart();
   });
 
-  server->on("/reset", HTTP_POST, [this]() {
-    Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling /reset request");
-    server->send(200, "text/plain", "Device resetting...");
+  // Handle device reset
+  server->on("/reset", HTTP_POST, [this](AsyncWebServerRequest *request) {
+    Log.traceln("%s: Handling /reset request", __PRETTY_FUNCTION__);
+    request->send(200, "text/plain", "Device resetting...");
     delay(500);
     ESP.restart();
   });
 
-  server->on("/serial0/poll", HTTP_GET, [this]() {
-    Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling /serial0/poll request");
+  // Serial0 polling - simplified for async
+  server->on("/serial0/poll", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    Log.traceln("%s: Handling /serial0/poll request", __PRETTY_FUNCTION__);
     static int lastPos0 = 0;
-    unsigned long startTime = millis();
-
-    while (millis() - startTime < 3000) {
-      String newData = serial0Log.getNewData(lastPos0);
-      if (newData.length() > 0) {
-        server->send(200, "text/plain", newData);
-        return;
-      }
-      delay(100);
-      server->handleClient();
-    }
-
-    server->send(200, "text/plain", "");
+    String newData = serial0Log.getNewData(lastPos0);
+    request->send(200, "text/plain", newData);
   });
 
-  server->on("/serial1/poll", HTTP_GET, [this]() {
-    Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling /serial1/poll request");
+  // Serial1 polling - simplified for async
+  server->on("/serial1/poll", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    Log.traceln("%s: Handling /serial1/poll request", __PRETTY_FUNCTION__);
     static int lastPos1 = 0;
-    unsigned long startTime = millis();
-
-    while (millis() - startTime < 3000) {
-      String newData = serial1Log.getNewData(lastPos1);
-      if (newData.length() > 0) {
-        server->send(200, "text/plain", newData);
-        return;
-      }
-      delay(100);
-      server->handleClient();
-    }
-
-    server->send(200, "text/plain", "");
+    String newData = serial1Log.getNewData(lastPos1);
+    request->send(200, "text/plain", newData);
   });
 
-  server->on("/serial0/send", HTTP_POST, [this]() {
-    Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling /serial0/send request");
-    if (!server->hasArg("data")) {
-      server->send(400, "text/plain", "Missing data");
+  // Serial0 send
+  server->on("/serial0/send", HTTP_POST, [this](AsyncWebServerRequest *request) {
+    Log.traceln("%s: Handling /serial0/send request", __PRETTY_FUNCTION__);
+    if (!request->hasParam("data", true)) {
+      request->send(400, "text/plain", "Missing data");
       return;
     }
-
-    String data = server->arg("data");
+    String data = request->getParam("data", true)->value();
     if (sendCallback) {
       sendCallback(0, data);
     }
-    server->send(200, "text/plain", "OK");
+    request->send(200, "text/plain", "OK");
   });
 
-  server->on("/serial1/send", HTTP_POST, [this]() {
-    Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling /serial1/send request");
-    if (!server->hasArg("data")) {
-      server->send(400, "text/plain", "Missing data");
+  // Serial1 send
+  server->on("/serial1/send", HTTP_POST, [this](AsyncWebServerRequest *request) {
+    Log.traceln("%s: Handling /serial1/send request", __PRETTY_FUNCTION__);
+    if (!request->hasParam("data", true)) {
+      request->send(400, "text/plain", "Missing data");
       return;
     }
-
-    String data = server->arg("data");
+    String data = request->getParam("data", true)->value();
     if (sendCallback) {
       sendCallback(1, data);
     }
-    server->send(200, "text/plain", "OK");
+    request->send(200, "text/plain", "OK");
   });
 
   server->begin();
+  Log.infoln("Async web server started");
 }
 
-String WebConfigServer::getConfigHTML() {
-  return String(R"HTML(
-<!DOCTYPE html>
-<html>
-<head>
-    <title>ESP32-C3 Configuration</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body{font-family:Arial,sans-serif;margin:0;padding:20px;background:#FFFFFF;color:#333333;}
-        h2,h3{color:#FFC107;margin-top:0;}
-        a{color:#FFC107;text-decoration:none;}
-        a:hover{color:#FFA000;text-decoration:underline;}
-        input{width:100%;padding:10px;margin:5px 0;box-sizing:border-box;border:2px solid #666666;border-radius:4px;color:#000000;background:#FFFFFF;font-size:14px;}
-        input:focus{border-color:#FFC107;outline:none;border-width:2px;box-shadow:0 0 5px rgba(255,193,7,0.3);}
-        button{background:#FFC107;color:#333333;padding:15px;width:100%;border:none;cursor:pointer;border-radius:4px;font-weight:bold;}
-        button:hover{background:#FFA000;color:#FFFFFF;}
-        .tabs{border-bottom:2px solid #CCCCCC;margin-bottom:20px;}
-        .tab{display:inline-block;padding:10px 20px;cursor:pointer;border:1px solid #CCCCCC;background:#FFFFFF;color:#FFC107;border-bottom:none;margin-right:5px;border-radius:4px 4px 0 0;}
-        .tab:hover{background:#FFF9C4;}
-        .tab.active{background:#FFC107;color:#333333;border-color:#FFC107;font-weight:bold;}
-        .tab-content{display:none;padding:20px;background:#FFFFFF;}
-        .tab-content.active{display:block;}
-        .serial-output{width:100%;height:400px;padding:10px;box-sizing:border-box;border:1px solid #CCCCCC;font-family:monospace;background:#FFFFFF;color:#333333;overflow-y:auto;white-space:pre-wrap;word-wrap:break-word;border-radius:4px;}
-        .serial-input{width:calc(100% - 100px);padding:10px;margin-right:10px;box-sizing:border-box;border:2px solid #666666;border-radius:4px;color:#000000;background:#FFFFFF;font-size:14px;}
-        .serial-input:focus{border-color:#FFC107;outline:none;border-width:2px;box-shadow:0 0 5px rgba(255,193,7,0.3);}
-        .send-btn{width:90px;padding:10px;background:#FFC107;color:#333333;border:none;cursor:pointer;border-radius:4px;font-weight:bold;}
-        .send-btn:hover{background:#FFA000;color:#FFFFFF;}
-        .input-group{display:flex;margin-top:10px;}
-        label{display:block;margin-top:10px;font-weight:bold;color:#333333;}
-        form{margin-bottom:20px;}
-        .reset-btn{background:#f44336;color:#FFFFFF;padding:15px;width:100%;border:none;cursor:pointer;border-radius:4px;font-weight:bold;margin-top:10px;}
-        .reset-btn:hover{background:#d32f2f;}
-        .clear-btn{background:#2196F3;color:#FFFFFF;padding:8px 12px;border:none;cursor:pointer;border-radius:4px;font-weight:bold;}
-        .clear-btn:hover{background:#1976D2;}
-        .special-btn{background:#4CAF50;color:#FFFFFF;padding:8px 12px;border:none;cursor:pointer;border-radius:4px;font-weight:bold;}
-        .special-btn:hover{background:#388E3C;}
-        .button-table{width:100%;border-collapse:collapse;margin-bottom:10px;}
-        .button-table td{padding:2px;}
-    </style>
-</head>
-<body>
-    <h2>ESP32-C3 Configuration</h2>
-    <div class="tabs">
-        <div class="tab active" onclick="switchTab(0)">Configuration</div>
-        <div class="tab" onclick="switchTab(1)">ttyS0 (USB)</div>
-        <div class="tab" onclick="switchTab(2)">ttyS1 (UART)</div>
-        <div class="tab" onclick="switchTab(3)">OTA Update</div>
-    </div>
-    <div id="tab-config" class="tab-content active">
-        <h3>Configuration</h3>
-        <form action="/save" method="POST">
-            <label>WiFi SSID:</label>
-            <input type="text" name="ssid" value=")HTML") +
-         escapeHTML(preferencesStorage.ssid) + String(R"HTML(" required>
-            <label>WiFi Password:</label>
-            <input type="password" name="password" id="wifi_password" value=")HTML") +
-         (preferencesStorage.password.length() > 0 ? String("********")
-                                                   : String("")) +
-         String(R"HTML(" placeholder="Leave empty to keep current">
-            <input type="hidden" id="wifi_password_has_value" value=")HTML") +
-         (preferencesStorage.password.length() > 0 ? String("1")
-                                                   : String("0")) +
-         String(R"HTML(">
-             <label>TTYS1 (UART) Speed (baud):</label>
-              <input type="number" name="speed0" min="2" value=")HTML") +
-           String(preferencesStorage.baudRateTty1) + String(R"HTML(">
-              <div style="font-size:12px;color:#666666;margin-top:5px;">Must be > 1 (e.g., 9600, 115200)</div>
-            <label>Device Name:</label>
-            <input type="text" name="device" value=")HTML") +
-         escapeHTML(preferencesStorage.deviceName.length() > 0
-                        ? preferencesStorage.deviceName
-                        : "esp32c3") +
-         String(R"HTML(">
-            <label>MQTT Broker:</label>
-            <input type="text" name="broker" value=")HTML") +
-         escapeHTML(preferencesStorage.mqttBroker) + String(R"HTML(">
-            <label>MQTT Topics ttyS0:</label>
-            <label style="margin-top:5px;font-size:12px;color:#666666;">RX (ESP32 -> MQTT):</label>
-            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML") +
-         escapeHTML(preferencesStorage.topicTty0Rx) + String(R"HTML(</div>
-            <label style="margin-top:5px;font-size:12px;color:#666666;">TX (MQTT -> ESP32):</label>
-            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML") +
-         escapeHTML(preferencesStorage.topicTty0Tx) + String(R"HTML(</div>
-            <label>MQTT Topics ttyS1:</label>
-            <label style="margin-top:5px;font-size:12px;color:#666666;">RX (ESP32 -> MQTT):</label>
-            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML") +
-         escapeHTML(preferencesStorage.topicTty1Rx) + String(R"HTML(</div>
-            <label style="margin-top:5px;font-size:12px;color:#666666;">TX (MQTT -> ESP32):</label>
-            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML") +
-         escapeHTML(preferencesStorage.topicTty1Tx) + String(R"HTML(</div>
-            <label>MQTT Port:</label>
-            <input type="number" name="port" value=")HTML") +
-         String(preferencesStorage.mqttPort > 0 ? preferencesStorage.mqttPort
-                                                : 1883) +
-         String(R"HTML(">
-            <label>MQTT User (optional):</label>
-            <input type="text" name="user" value=")HTML") +
-         escapeHTML(preferencesStorage.mqttUser) + String(R"HTML(">
-            <label>MQTT Password (optional):</label>
-            <input type="password" name="mqttpass" id="mqtt_password" value=")HTML") +
-         (preferencesStorage.mqttPassword.length() > 0 ? String("********")
-                                                       : String("")) +
-         String(R"HTML(" placeholder="Leave empty to keep current">
-            <input type="hidden" id="mqtt_password_has_value" value=")HTML") +
-         (preferencesStorage.mqttPassword.length() > 0 ? String("1")
-                                                       : String("0")) +
-         String(R"HTML(">
-            <button type="submit">Save Configuration</button>
-        </form>
-        <button class="reset-btn" onclick="if(confirm('Are you sure you want to reset the device? This will restart the ESP32.')){fetch('/reset',{method:'POST'}).then(()=>{alert('Device resetting...');});}">Reset Device</button>
-    </div>
-    <div id="tab-serial0" class="tab-content">
-        <h3>Serial Port ttyS0 (USB)</h3>
-        <div id="output0" class="serial-output"></div>
-        <table class="button-table">
-            <tr>
-                <td><button class="special-btn" onclick="sendSpecial(0, 'ESC')">ESC \e</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+BACKTICK')">Ctrl+` `</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(0, 'TAB')">TAB \t</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(0, 'ENTER')">ENTER \r\n</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+C')">Ctrl+C ^C</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+Z')">Ctrl+Z ^Z</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+D')">Ctrl+D ^D</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+A')">Ctrl+A ^A</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+E')">Ctrl+E ^E</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(0, 'BACKSPACE')">Backspace ^H</button></td>
-                <td><button class="clear-btn" onclick="clearOutput(0)">Clear</button></td>
-            </tr>
-        </table>
-        <div class="input-group">
-            <input type="text" id="input0" class="serial-input" placeholder="Enter command..." onkeypress="if(event.key==='Enter')sendCommand(0)">
-            <button class="send-btn" onclick="sendCommand(0)">Send</button>
-        </div>
-    </div>
-    <div id="tab-serial1" class="tab-content">
-        <h3>Serial Port ttyS1 (UART)</h3>
-        <div id="output1" class="serial-output"></div>
-        <table class="button-table">
-            <tr>
-                <td><button class="special-btn" onclick="sendSpecial(1, 'ESC')">ESC \e</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+BACKTICK')">Ctrl+` `</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(1, 'TAB')">TAB \t</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(1, 'ENTER')">ENTER \r\n</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+C')">Ctrl+C ^C</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+Z')">Ctrl+Z ^Z</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+D')">Ctrl+D ^D</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+A')">Ctrl+A ^A</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+E')">Ctrl+E ^E</button></td>
-                <td><button class="special-btn" onclick="sendSpecial(1, 'BACKSPACE')">Backspace ^H</button></td>
-                <td><button class="clear-btn" onclick="clearOutput(1)">Clear</button></td>
-            </tr>
-        </table>
-        <div class="input-group">
-            <input type="text" id="input1" class="serial-input" placeholder="Enter command..." onkeypress="if(event.key==='Enter')sendCommand(1)">
-            <button class="send-btn" onclick="sendCommand(1)">Send</button>
-        </div>
-    </div>
-    <div id="tab-ota" class="tab-content">
-        <h3>OTA (Over-The-Air) Update</h3>
-        <div style="background:#FFF9C4;padding:15px;border-radius:4px;margin-bottom:20px;border:2px solid #FFC107;">
-            <h4 style="margin-top:0;color:#333;">Network Information</h4>
-            <p style="margin:5px 0;"><strong>Device Name:</strong> )HTML") +
-         escapeHTML(preferencesStorage.deviceName) + String(R"HTML(</p>
-            <p style="margin:5px 0;"><strong>IP Address:</strong> )HTML") +
-         (apMode ? apIP.toString() : WiFi.localIP().toString()) + String(R"HTML(</p>
-            <p style="margin:5px 0;"><strong>Hostname:</strong> )HTML") +
-         escapeHTML(preferencesStorage.deviceName) + String(R"HTML(.local</p>
-            <p style="margin:5px 0;"><strong>OTA Port:</strong> 3232</p>
-            <p style="margin:5px 0;"><strong>OTA Password:</strong> )HTML") +
-         (preferencesStorage.mqttPassword.length() > 0 ? String("Configured (uses MQTT password)") : String("Not configured - OTA is unprotected!")) +
-         String(R"HTML(</p>
-        </div>
-        <div style="background:#E3F2FD;padding:15px;border-radius:4px;margin-bottom:20px;border:2px solid #2196F3;">
-            <h4 style="margin-top:0;color:#333;">PlatformIO Upload Command</h4>
-            <p style="margin:5px 0;">Use this command from your project directory to upload via OTA:</p>
-            <div style="background:#263238;color:#00E676;padding:12px;border-radius:4px;font-family:monospace;margin:10px 0;overflow-x:auto;">
-                pio run -t upload --upload-port )HTML") +
-         (apMode ? apIP.toString() : WiFi.localIP().toString()) + String(R"HTML(
-            </div>
-            <p style="margin:5px 0;font-size:12px;color:#666;">Note: Make sure your computer is on the same network as the ESP32.</p>
-        </div>
-        <div style="background:#FFEBEE;padding:15px;border-radius:4px;margin-bottom:20px;border:2px solid #f44336;">
-            <h4 style="margin-top:0;color:#333;">Important Notes</h4>
-            <ul style="margin:5px 0;padding-left:20px;">
-                <li>OTA updates only work when connected to WiFi (Station mode)</li>
-                <li>Ensure your firewall allows port 3232</li>
-                <li>The device will restart after a successful update</li>
-                <li>If OTA fails, you can still update via USB cable</li>
-            </ul>
-        </div>
-        <div style="background:#F5F5F5;padding:15px;border-radius:4px;border:2px solid #666;">
-            <h4 style="margin-top:0;color:#333;">Alternative Upload Methods</h4>
-            <p style="margin:5px 0;"><strong>Via Hostname (requires mDNS):</strong></p>
-            <div style="background:#263238;color:#00E676;padding:12px;border-radius:4px;font-family:monospace;margin:10px 0;overflow-x:auto;">
-                pio run -t upload --upload-port )HTML") +
-         escapeHTML(preferencesStorage.deviceName) + String(R"HTML(.local
-            </div>
-            <p style="margin:5px 0;"><strong>Via espota.py (manual):</strong></p>
-            <div style="background:#263238;color:#00E676;padding:12px;border-radius:4px;font-family:monospace;margin:10px 0;overflow-x:auto;">
-                python espota.py -i )HTML") +
-         (apMode ? apIP.toString() : WiFi.localIP().toString()) + String(R"HTML( -p 3232 -f firmware.bin
-            </div>
-        </div>
-    </div>
-    <script>
-        let lastPos0=0;let lastPos1=0;let polling0=false;let polling1=false;
-        function switchTab(index){
-            document.querySelectorAll('.tab').forEach((t,i)=>{t.classList.toggle('active',i===index);});
-            document.querySelectorAll('.tab-content').forEach((c,i)=>{c.classList.toggle('active',i===index);});
-            if(index===1&&!polling0){polling0=true;pollSerial(0);}else if(index!==1){polling0=false;}
-            if(index===2&&!polling1){polling1=true;pollSerial(1);}else if(index!==2){polling1=false;}
-        }
-        function pollSerial(port){
-            if((port===0&&!document.getElementById('tab-serial0').classList.contains('active'))||
-               (port===1&&!document.getElementById('tab-serial1').classList.contains('active'))){
-                if(port===0)polling0=false;if(port===1)polling1=false;return;}
-            fetch('/serial'+port+'/poll').then(r=>r.text()).then(d=>{
-                if(d.length>0){const o=document.getElementById('output'+port);o.textContent+=d;o.scrollTop=o.scrollHeight;}
-                setTimeout(()=>pollSerial(port),100);}).catch(e=>setTimeout(()=>pollSerial(port),1000));}
-         function sendCommand(port){
-             const i=document.getElementById('input'+port);const c=i.value;if(!c)return;
-             fetch('/serial'+port+'/send',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(c)})
-             .then(r=>r.text()).then(d=>{i.value='';}).catch(e=>console.error('Error:',e));}
-         function clearOutput(port){
-             document.getElementById('output'+port).textContent='';}
-         function sendSpecial(port, type){
-              let data='';
-              switch(type){
-                  case 'ESC': data='\x1b'; break;
-                  case 'CTRL+BACKTICK': data='\x60'; break;
-                  case 'TAB': data='\t'; break;
-                 case 'ENTER': data='\r\n'; break;
-                 case 'CTRL+C': data='\x03'; break;
-                 case 'CTRL+Z': data='\x1a'; break;
-                 case 'CTRL+D': data='\x04'; break;
-                 case 'CTRL+A': data='\x01'; break;
-                 case 'CTRL+E': data='\x05'; break;
-                 case 'BACKSPACE': data='\x08'; break;
-                 default: return;
-             }
-             fetch('/serial'+port+'/send',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(data)})
-             .then(r=>r.text()).then(d=>{}).catch(e=>console.error('Error:',e));}
-        document.querySelector('form').addEventListener('submit',function(e){
-            const wifiPwd=document.getElementById('wifi_password');
-            const wifiPwdHasValue=document.getElementById('wifi_password_has_value').value==='1';
-            const mqttPwd=document.getElementById('mqtt_password');
-            const mqttPwdHasValue=document.getElementById('mqtt_password_has_value').value==='1';
-            if(wifiPwdHasValue&&wifiPwd.value==='********'){
-                e.preventDefault();
-                alert('Invalid password: Please enter a new password or leave empty to keep current.');
-                return false;
-            }
-            if(mqttPwdHasValue&&mqttPwd.value==='********'){
-                e.preventDefault();
-                alert('Invalid password: Please enter a new password or leave empty to keep current.');
-                return false;
-            }
-            if(wifiPwd.value==='********')wifiPwd.value='';
-            if(mqttPwd.value==='********')mqttPwd.value='';
-        });
-    </script>
-</body>
-</html>
-)HTML");
+String WebConfigServer::processor(const String& var) {
+  // This function is called for each %VARIABLE% in the HTML template
+
+  if (var == "SSID") {
+    return escapeHTML(preferencesStorage.ssid);
+  }
+  if (var == "PASSWORD_DISPLAY") {
+    return preferencesStorage.password.length() > 0 ? "********" : "";
+  }
+  if (var == "PASSWORD_HAS_VALUE") {
+    return preferencesStorage.password.length() > 0 ? "1" : "0";
+  }
+  if (var == "DEVICE_NAME") {
+    return escapeHTML(preferencesStorage.deviceName.length() > 0
+                      ? preferencesStorage.deviceName : "esp32c3");
+  }
+  if (var == "MQTT_BROKER") {
+    return escapeHTML(preferencesStorage.mqttBroker);
+  }
+  if (var == "MQTT_PORT") {
+    return String(preferencesStorage.mqttPort > 0 ? preferencesStorage.mqttPort : 1883);
+  }
+  if (var == "MQTT_USER") {
+    return escapeHTML(preferencesStorage.mqttUser);
+  }
+  if (var == "MQTT_PASSWORD_DISPLAY") {
+    return preferencesStorage.mqttPassword.length() > 0 ? "********" : "";
+  }
+  if (var == "MQTT_PASSWORD_HAS_VALUE") {
+    return preferencesStorage.mqttPassword.length() > 0 ? "1" : "0";
+  }
+  if (var == "TOPIC_TTY0_RX") {
+    return escapeHTML(preferencesStorage.topicTty0Rx);
+  }
+  if (var == "TOPIC_TTY0_TX") {
+    return escapeHTML(preferencesStorage.topicTty0Tx);
+  }
+  if (var == "TOPIC_TTY1_RX") {
+    return escapeHTML(preferencesStorage.topicTty1Rx);
+  }
+  if (var == "TOPIC_TTY1_TX") {
+    return escapeHTML(preferencesStorage.topicTty1Tx);
+  }
+  if (var == "BAUD_RATE_TTY1") {
+    return String(preferencesStorage.baudRateTty1);
+  }
+  if (var == "IP_ADDRESS") {
+    return (apMode ? apIP.toString() : WiFi.localIP().toString());
+  }
+  if (var == "OTA_PASSWORD_STATUS") {
+    return preferencesStorage.mqttPassword.length() > 0
+           ? "Configured (uses MQTT password)"
+           : "Not configured - OTA is unprotected!";
+  }
+
+  return String(); // Return empty string for unknown variables
 }
 
 String WebConfigServer::escapeHTML(const String &str) {

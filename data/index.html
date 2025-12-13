@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32-C3 Configuration</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <h2>ESP32-C3 Configuration</h2>
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab(0)">Configuration</div>
+        <div class="tab" onclick="switchTab(1)">ttyS0 (USB)</div>
+        <div class="tab" onclick="switchTab(2)">ttyS1 (UART)</div>
+        <div class="tab" onclick="switchTab(3)">OTA Update</div>
+        <div class="tab" onclick="switchTab(4)">About</div>
+    </div>
+    <div id="tab-config" class="tab-content active">
+        <h3>Configuration</h3>
+        <form action="/save" method="POST">
+            <label>WiFi SSID:</label>
+            <input type="text" name="ssid" value="%SSID%" required>
+
+            <label>WiFi Password:</label>
+            <input type="password" name="password" id="wifi_password" value="%PASSWORD_DISPLAY%" placeholder="Leave empty to keep current">
+            <input type="hidden" id="wifi_password_has_value" value="%PASSWORD_HAS_VALUE%">
+
+            <label>TTYS1 (UART) Speed (baud):</label>
+            <input type="number" name="speed0" min="2" value="%BAUD_RATE_TTY1%">
+            <div style="font-size:12px;color:#666666;margin-top:5px;">Must be > 1 (e.g., 9600, 115200)</div>
+
+            <label>Device Name:</label>
+            <input type="text" name="device" value="%DEVICE_NAME%">
+
+            <label>MQTT Broker:</label>
+            <input type="text" name="broker" value="%MQTT_BROKER%">
+
+            <label>MQTT Topics ttyS0:</label>
+            <label style="margin-top:5px;font-size:12px;color:#666666;">RX (ESP32 -> MQTT):</label>
+            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">%TOPIC_TTY0_RX%</div>
+            <label style="margin-top:5px;font-size:12px;color:#666666;">TX (MQTT -> ESP32):</label>
+            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">%TOPIC_TTY0_TX%</div>
+
+            <label>MQTT Topics ttyS1:</label>
+            <label style="margin-top:5px;font-size:12px;color:#666666;">RX (ESP32 -> MQTT):</label>
+            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">%TOPIC_TTY1_RX%</div>
+            <label style="margin-top:5px;font-size:12px;color:#666666;">TX (MQTT -> ESP32):</label>
+            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">%TOPIC_TTY1_TX%</div>
+
+            <label>MQTT Port:</label>
+            <input type="number" name="port" value="%MQTT_PORT%">
+
+            <label>MQTT User (optional):</label>
+            <input type="text" name="user" value="%MQTT_USER%">
+
+            <label>MQTT Password (optional):</label>
+            <input type="password" name="mqttpass" id="mqtt_password" value="%MQTT_PASSWORD_DISPLAY%" placeholder="Leave empty to keep current">
+            <input type="hidden" id="mqtt_password_has_value" value="%MQTT_PASSWORD_HAS_VALUE%">
+
+            <button type="submit">Save Configuration</button>
+        </form>
+        <button class="reset-btn" onclick="if(confirm('Are you sure you want to reset the device? This will restart the ESP32.')){fetch('/reset',{method:'POST'}).then(()=>{alert('Device resetting...');});}">Reset Device</button>
+    </div>
+
+    <div id="tab-serial0" class="tab-content">
+        <h3>Serial Port ttyS0 (USB)</h3>
+        <div id="output0" class="serial-output"></div>
+        <table class="button-table">
+            <tr>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'ESC')">ESC \e</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+BACKTICK')">Ctrl+` `</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'TAB')">TAB \t</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'ENTER')">ENTER \r\n</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+C')">Ctrl+C ^C</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+Z')">Ctrl+Z ^Z</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+D')">Ctrl+D ^D</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+A')">Ctrl+A ^A</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+E')">Ctrl+E ^E</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'BACKSPACE')">Backspace ^H</button></td>
+                <td><button class="clear-btn" onclick="clearOutput(0)">Clear</button></td>
+            </tr>
+        </table>
+        <div class="input-group">
+            <input type="text" id="input0" class="serial-input" placeholder="Enter command..." onkeypress="if(event.key==='Enter')sendCommand(0)">
+            <button class="send-btn" onclick="sendCommand(0)">Send</button>
+        </div>
+    </div>
+
+    <div id="tab-serial1" class="tab-content">
+        <h3>Serial Port ttyS1 (UART)</h3>
+        <div id="output1" class="serial-output"></div>
+        <table class="button-table">
+            <tr>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'ESC')">ESC \e</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+BACKTICK')">Ctrl+` `</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'TAB')">TAB \t</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'ENTER')">ENTER \r\n</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+C')">Ctrl+C ^C</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+Z')">Ctrl+Z ^Z</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+D')">Ctrl+D ^D</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+A')">Ctrl+A ^A</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+E')">Ctrl+E ^E</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'BACKSPACE')">Backspace ^H</button></td>
+                <td><button class="clear-btn" onclick="clearOutput(1)">Clear</button></td>
+            </tr>
+        </table>
+        <div class="input-group">
+            <input type="text" id="input1" class="serial-input" placeholder="Enter command..." onkeypress="if(event.key==='Enter')sendCommand(1)">
+            <button class="send-btn" onclick="sendCommand(1)">Send</button>
+        </div>
+    </div>
+
+    <div id="tab-ota" class="tab-content">
+        <div id="ota-content">Loading OTA information...</div>
+    </div>
+
+    <div id="tab-about" class="tab-content">
+        <div id="about-content">Loading about information...</div>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html>

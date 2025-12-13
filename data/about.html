@@ -1,0 +1,52 @@
+<h3>About This Project</h3>
+<div style="background:#E8F5E9;padding:20px;border-radius:4px;margin-bottom:20px;border:2px solid #4CAF50;">
+    <h4 style="margin-top:0;color:#333;">ESP32 WiFi Serial Bridge</h4>
+    <p style="line-height:1.6;color:#333;">
+        This lightweight WiFi-to-Serial bridge provides emergency console access and remote administration
+        for ARM-based embedded systems like Raspberry Pi and Orange Pi. When SSH connectivity fails or
+        network issues arise in your homelab infrastructure, this ESP32-based solution bridges serial
+        console access over WiFi and MQTT, offering a reliable fallback for console access and basic
+        administration. It's perfect for managing headless embedded systems without physical access,
+        integrating seamlessly into homelab deployments for out-of-band management.
+    </p>
+</div>
+<div style="background:#F5F5F5;padding:20px;border-radius:4px;margin-bottom:20px;border:2px solid #666;">
+    <h4 style="margin-top:0;color:#333;">Key Features</h4>
+    <ul style="line-height:1.8;color:#333;">
+        <li><strong>Serial Bridge:</strong> Connect ARM devices via UART serial port</li>
+        <li><strong>USB Debug Port:</strong> Built-in USB serial for debugging</li>
+        <li><strong>MQTT Integration:</strong> Send/receive serial data over MQTT topics</li>
+        <li><strong>Web Interface:</strong> Configuration and real-time monitoring</li>
+        <li><strong>AP Mode:</strong> Automatic access point for initial setup</li>
+        <li><strong>OTA Updates:</strong> Over-the-air firmware updates</li>
+        <li><strong>Serial Logging:</strong> Circular buffer for serial data</li>
+    </ul>
+</div>
+<div style="background:#E3F2FD;padding:20px;border-radius:4px;margin-bottom:20px;border:2px solid #2196F3;">
+    <h4 style="margin-top:0;color:#333;">Technical Details</h4>
+    <p style="margin:5px 0;"><strong>Hardware:</strong> ESP32-C3 SuperMini / DevKitM-1</p>
+    <p style="margin:5px 0;"><strong>Platform:</strong> ESP32-C3 RISC-V @ 160MHz</p>
+    <p style="margin:5px 0;"><strong>Memory:</strong> 320KB RAM, 4MB Flash</p>
+    <p style="margin:5px 0;"><strong>Framework:</strong> Arduino on PlatformIO</p>
+    <p style="margin:5px 0;"><strong>Connectivity:</strong> WiFi 2.4GHz, MQTT, HTTP</p>
+    <p style="margin:5px 0;"><strong>Serial Ports:</strong> USB (ttyS0) + UART GPIO 0/1 (ttyS1)</p>
+</div>
+<div style="background:#FFF3E0;padding:20px;border-radius:4px;margin-bottom:20px;border:2px solid #FF9800;">
+    <h4 style="margin-top:0;color:#333;">Device Information</h4>
+    <p style="margin:5px 0;"><strong>Device Name:</strong> %DEVICE_NAME%</p>
+    <p style="margin:5px 0;"><strong>IP Address:</strong> %IP_ADDRESS%</p>
+    <p style="margin:5px 0;"><strong>Hostname:</strong> %DEVICE_NAME%.local</p>
+    <p style="margin:5px 0;"><strong>MQTT Broker:</strong> %MQTT_BROKER%:%MQTT_PORT%</p>
+</div>
+<div style="background:#FFF9C4;padding:20px;border-radius:4px;border:2px solid #FFC107;text-align:center;">
+    <h4 style="margin-top:0;color:#333;">Developed By</h4>
+    <p style="font-size:18px;margin:10px 0;"><strong>Josneli Hurt</strong></p>
+    <p style="margin:10px 0;">
+        <a href="http://www.josnelihurt.me" target="_blank" style="color:#2196F3;font-weight:bold;text-decoration:none;font-size:16px;">
+            🌐 www.josnelihurt.me
+        </a>
+    </p>
+    <p style="font-size:12px;color:#666;margin-top:15px;">
+        This is a fun homelab project - use it, modify it, break it, fix it - just enjoy tinkering! 🚀
+    </p>
+</div>
