@@ -1,9 +1,8 @@
 #pragma once
 
-#include "interfaces/itask.h"
-#include "domain/network/mqtt_client.h"
-#include "domain/config/preferences_storage.h"
-#include "dependency_container.h"
+#include "../../interfaces/itask.h"
+#include "../../domain/network/mqtt_client.h"
+#include "../../domain/config/preferences_storage.h"
 #include <WiFiClient.h>
 #include <functional>
 
@@ -18,14 +17,14 @@ void tty1Wrapper(const char* data, unsigned int length);
 
 class MqttHandlerCreateTask final : public ITask {
 private:
-    DependencyContainer& container;
+    MqttClient& mqttClient;
     WiFiClient& wifiClient;
     PreferencesStorage& preferencesStorage;
     std::function<void(const char*, unsigned int)> onTty0;
     std::function<void(const char*, unsigned int)> onTty1;
 
 public:
-    MqttHandlerCreateTask(DependencyContainer& cont, WiFiClient& wifi, 
+    MqttHandlerCreateTask(MqttClient& mqtt, WiFiClient& wifi,
                              PreferencesStorage& storage,
                              std::function<void(const char*, unsigned int)> tty0,
                              std::function<void(const char*, unsigned int)> tty1);

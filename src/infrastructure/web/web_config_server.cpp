@@ -300,6 +300,7 @@ String WebConfigServer::getConfigHTML() {
         <table class="button-table">
             <tr>
                 <td><button class="special-btn" onclick="sendSpecial(0, 'ESC')">ESC \e</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+BACKTICK')">Ctrl+` `</button></td>
                 <td><button class="special-btn" onclick="sendSpecial(0, 'TAB')">TAB \t</button></td>
                 <td><button class="special-btn" onclick="sendSpecial(0, 'ENTER')">ENTER \r\n</button></td>
                 <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+C')">Ctrl+C ^C</button></td>
@@ -322,6 +323,7 @@ String WebConfigServer::getConfigHTML() {
         <table class="button-table">
             <tr>
                 <td><button class="special-btn" onclick="sendSpecial(1, 'ESC')">ESC \e</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+BACKTICK')">Ctrl+` `</button></td>
                 <td><button class="special-btn" onclick="sendSpecial(1, 'TAB')">TAB \t</button></td>
                 <td><button class="special-btn" onclick="sendSpecial(1, 'ENTER')">ENTER \r\n</button></td>
                 <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+C')">Ctrl+C ^C</button></td>
@@ -360,10 +362,11 @@ String WebConfigServer::getConfigHTML() {
          function clearOutput(port){
              document.getElementById('output'+port).textContent='';}
          function sendSpecial(port, type){
-             let data='';
-             switch(type){
-                 case 'ESC': data='\x1b'; break;
-                 case 'TAB': data='\t'; break;
+              let data='';
+              switch(type){
+                  case 'ESC': data='\x1b'; break;
+                  case 'CTRL+BACKTICK': data='\x60'; break;
+                  case 'TAB': data='\t'; break;
                  case 'ENTER': data='\r\n'; break;
                  case 'CTRL+C': data='\x03'; break;
                  case 'CTRL+Z': data='\x1a'; break;

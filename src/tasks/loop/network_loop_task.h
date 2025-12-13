@@ -1,9 +1,8 @@
 #pragma once
 
-#include "interfaces/itask.h"
-#include "domain/network/wifi_manager.h"
-#include "interfaces/imqtt_client.h"
-#include "dependency_container.h"
+#include "../../interfaces/itask.h"
+#include "../../domain/network/wifi_manager.h"
+#include "../../interfaces/imqtt_client.h"
 #include <ArduinoOTA.h>
 
 namespace jrb::wifi_serial {
@@ -11,15 +10,15 @@ namespace jrb::wifi_serial {
 class NetworkLoopTask final : public ITask {
 private:
     WiFiManager& wifiManager;
-    DependencyContainer& container;
+    IMqttClient& mqttClient;
 
 public:
-    NetworkLoopTask(WiFiManager& wifi, DependencyContainer& cont)
-        : wifiManager(wifi), container(cont) {}
-    
+    NetworkLoopTask(WiFiManager& wifi, IMqttClient& mqtt)
+        : wifiManager(wifi), mqttClient(mqtt) {}
+
     void loop() override {
         wifiManager.loop();
-        container.getMqttClient().loop();
+        mqttClient.loop();
         ArduinoOTA.handle();
     }
 };

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "config.h"
-#include "interfaces/ibutton_handler.h"
 #include <Arduino.h>
 #include <functional>
 
@@ -13,7 +12,7 @@ namespace jrb::wifi_serial {
  * This class provides functionality to monitor button presses and detect when a triple press occurs,
  * which can be used to trigger specific actions in the firmware.
  */
-class ButtonHandler final : public IButtonHandler {
+class ButtonHandler final {
 private:
     /**
      * @brief Timestamp of the last button check.
@@ -58,7 +57,7 @@ public:
      *
      * @return True if a triple press is detected, false otherwise.
      */
-    bool checkTriplePress() override;
+    bool checkTriplePress();
 };
 
 }  // namespace jrb::wifi_serial

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "config.h"
-#include "interfaces/iserial_bridge.h"
 #include <Arduino.h>
 #include <HardwareSerial.h>
 
@@ -13,10 +12,10 @@ class IMqttClient;
 /**
  * @brief Manages bidirectional communication between serial ports, logs, and MQTT.
  *
- * This class handles data transfer between two serial interfaces (e.g., UART0/UART1), 
+ * This class handles data transfer between two serial interfaces (e.g., UART0/UART1),
  * logs data to a `SerialLog` object, and communicates with an MQTT client for remote monitoring.
  */
-class SerialBridge final : public ISerialBridge {
+class SerialBridge final {
 public:
     SerialBridge();
     ~SerialBridge() = default;

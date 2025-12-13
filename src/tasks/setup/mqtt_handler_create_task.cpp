@@ -19,26 +19,26 @@ void tty1Wrapper(const char* data, unsigned int length) {
     }
 }
 
-MqttHandlerCreateTask::MqttHandlerCreateTask(DependencyContainer& cont, WiFiClient& wifi, 
+MqttHandlerCreateTask::MqttHandlerCreateTask(MqttClient& mqtt, WiFiClient& wifi,
                                              PreferencesStorage& storage,
                                              std::function<void(const char*, unsigned int)> tty0,
                                              std::function<void(const char*, unsigned int)> tty1)
-    : container(cont), wifiClient(wifi), preferencesStorage(storage),
+    : mqttClient(mqtt), wifiClient(wifi), preferencesStorage(storage),
       onTty0(tty0), onTty1(tty1) {
     g_taskInstance = this;
 }
 
 void MqttHandlerCreateTask::setup() {
-    container.getMqttClient().setDeviceName(preferencesStorage.deviceName);
-    container.getMqttClient().setTopics(preferencesStorage.topicTty0Rx, preferencesStorage.topicTty0Tx,
+    mqttClient.setDeviceName(preferencesStorage.deviceName);
+    mqttClient.setTopics(preferencesStorage.topicTty0Rx, preferencesStorage.topicTty0Tx,
                       preferencesStorage.topicTty1Rx, preferencesStorage.topicTty1Tx);
-    
-    container.getMqttClient().setCallbacks(tty0Wrapper, tty1Wrapper);
-    
+
+    mqttClient.setCallbacks(tty0Wrapper, tty1Wrapper);
+
     if (preferencesStorage.mqttBroker.length() > 0) {
         const char* user = preferencesStorage.mqttUser.length() > 0 ? preferencesStorage.mqttUser.c_str() : nullptr;
         const char* pass = preferencesStorage.mqttPassword.length() > 0 ? preferencesStorage.mqttPassword.c_str() : nullptr;
-        container.getMqttClient().connect(preferencesStorage.mqttBroker.c_str(), preferencesStorage.mqttPort, user, pass);
+        mqttClient.connect(preferencesStorage.mqttBroker.c_str(), preferencesStorage.mqttPort, user, pass);
     }
 }
 

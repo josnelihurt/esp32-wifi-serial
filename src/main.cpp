@@ -1,13 +1,11 @@
 #include <Arduino.h>
 #include <ArduinoLog.h>
-#include "dependency_container.h"
 #include "core/application.h"
 
 static const char* TAG = "wifi_serial";
 namespace jrb::wifi_serial {
 namespace {
 Application* app{nullptr};
-DependencyContainer* container{nullptr};
 }
 Application& application() {
   return *app;
@@ -28,8 +26,7 @@ void setup() {
   setupHardware();
   Log.begin(LOG_LEVEL_INFO, &Serial);
   Log.infoln(__PRETTY_FUNCTION__);
-  jrb::wifi_serial::container = new jrb::wifi_serial::DependencyContainer();
-  jrb::wifi_serial::app = new jrb::wifi_serial::Application(*jrb::wifi_serial::container);
+  jrb::wifi_serial::app = new jrb::wifi_serial::Application();
   Log.infoln(
 R"(
 ================================================

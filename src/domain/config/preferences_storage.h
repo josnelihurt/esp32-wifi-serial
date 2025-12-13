@@ -1,7 +1,6 @@
 #pragma once
 
 #include "config.h"
-#include "interfaces/istorage.h"
 #include <Preferences.h>
 #include <Arduino.h>
 
@@ -11,7 +10,7 @@ namespace jrb::wifi_serial {
  * @class PreferencesStorage
  * @brief A class to manage device configuration preferences using the Arduino Preferences library.
  */
-class PreferencesStorage final : public IStorage {
+class PreferencesStorage final {
 private:
     Preferences preferences;
     /**
@@ -46,17 +45,17 @@ private:
     /**
      * @brief Loads configuration from preferences storage.
      */
-    void load() override;
-    
+    void load();
+
     /**
      * @brief Saves current configuration to preferences storage.
      */
-    void save() override;
-    
+    void save();
+
     /**
      * @brief Clears all configuration in the preferences storage.
      */
-    void clear() override;
+    void clear();
     
 };
 

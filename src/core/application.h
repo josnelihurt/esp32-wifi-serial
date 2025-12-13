@@ -1,7 +1,19 @@
 #pragma once
 
-#include "dependency_container.h"
 #include "task_registry.h"
+#include "domain/network/wifi_manager.h"
+#include "domain/serial/serial_bridge.h"
+#include "domain/serial/serial_log.h"
+#include "domain/config/preferences_storage.h"
+#include "domain/network/mqtt_client.h"
+#include "infrastructure/hardware/serial_command_handler.h"
+#include "infrastructure/hardware/button_handler.h"
+#include "system_info.h"
+#include "ota_manager.h"
+#include "infrastructure/web/web_config_server.h"
+#include <WiFiClient.h>
+#include <Preferences.h>
+#include "config.h"
 #include <Arduino.h>
 #include <functional>
 
@@ -26,8 +38,8 @@ namespace jrb::wifi_serial {
  */
 class Application final {
 public:
-    explicit Application(DependencyContainer& container);
-    ~Application() = default;
+    Application();
+    ~Application();
 
     /**
      * @brief Run one-time setup routines.
@@ -88,9 +100,32 @@ public:
 
 
 private:
-    DependencyContainer& container;
+    // Primitives (initialize first)
+    bool otaEnabled{false};
+    bool debugEnabled{true};
+    unsigned long lastInfoPublish{0};
+    unsigned long lastMqttReconnectAttempt{0};
+    char serialBuffer[2][SERIAL_BUFFER_SIZE];
+
+    // Stack objects (order matters - dependencies flow down)
+    ::Preferences preferences;
+    PreferencesStorage preferencesStorage;
+    WiFiManager wifiManager{preferencesStorage};
+    WiFiClient wifiClient;
+    MqttClient mqttClient{wifiClient};
+    SerialBridge serialBridge;
+    SerialLog serial0Log;
+    SerialLog serial1Log;
+    SystemInfo systemInfo{preferencesStorage, &mqttClient, otaEnabled};
+
+    // Heap objects (lazy init in constructor)
+    SerialCommandHandler* serialCmdHandler{nullptr};
+    ButtonHandler* buttonHandler{nullptr};
+    OTAManager* otaManager{nullptr};
+    WebConfigServer* webServer{nullptr};
+
     TaskRegistry registry;
-    
+
     void registerSetupTasks();
     void registerLoopTasks();
 };

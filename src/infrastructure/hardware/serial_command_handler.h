@@ -1,7 +1,6 @@
 #pragma once
 
 #include "config.h"
-#include "interfaces/iserial_command_handler.h"
 #include "domain/config/preferences_storage.h"
 #include "interfaces/imqtt_client.h"
 #include <Arduino.h>
@@ -9,7 +8,7 @@
 
 namespace jrb::wifi_serial {
 
-class SerialCommandHandler final : public ISerialCommandHandler {
+class SerialCommandHandler final {
 private:
     PreferencesStorage& preferencesStorage;
     IMqttClient* mqttClient;
@@ -18,12 +17,12 @@ private:
     std::function<void()> printWelcomeFunc;
 
 public:
-    SerialCommandHandler(PreferencesStorage& storage, IMqttClient* client, 
+    SerialCommandHandler(PreferencesStorage& storage, IMqttClient* client,
                         bool& debug, std::function<void()> printWelcome)
-        : preferencesStorage(storage), mqttClient(client), debugEnabled(debug), 
+        : preferencesStorage(storage), mqttClient(client), debugEnabled(debug),
           printWelcomeFunc(printWelcome) {}
-    
-    void handle() override;
+
+    void handle();
 };
 
 }  // namespace jrb::wifi_serial

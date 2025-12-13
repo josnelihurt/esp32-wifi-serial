@@ -1,12 +1,11 @@
 #pragma once
 
-#include "interfaces/iota_manager.h"
 #include "domain/config/preferences_storage.h"
 #include <ArduinoOTA.h>
 
 namespace jrb::wifi_serial {
 
-class OTAManager final : public IOTAManager {
+class OTAManager final {
 private:
     PreferencesStorage& preferencesStorage;
     bool& otaEnabled;
@@ -14,8 +13,8 @@ private:
 public:
     OTAManager(PreferencesStorage& storage, bool& ota)
         : preferencesStorage(storage), otaEnabled(ota) {}
-    
-    void setup() override;
+
+    void setup();
 };
 
 }  // namespace jrb::wifi_serial
