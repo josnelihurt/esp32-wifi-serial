@@ -1,6 +1,8 @@
 #include "preferences_storage.h"
 #include "config.h"
+#include <algorithm>
 #include <ArduinoJson.h>
+#include <algorithm>
 namespace jrb::wifi_serial {
 
 PreferencesStorage::PreferencesStorage()
@@ -16,9 +18,9 @@ PreferencesStorage::PreferencesStorage()
 {
 }
 
-String PreferencesStorage::serialize() {
+String PreferencesStorage::serialize(const String& ipAddress, const String& macAddress, const String& ssid) {
     String output;
-    StaticJsonDocument<512> obj;
+    StaticJsonDocument<1024> obj;
     obj["deviceName"] = deviceName;
     obj["mqttBroker"] = mqttBroker;
     obj["mqttPort"] = mqttPort;
@@ -28,7 +30,10 @@ String PreferencesStorage::serialize() {
     obj["topicTty0Tx"] = topicTty0Tx;
     obj["topicTty1Rx"] = topicTty1Rx;
     obj["topicTty1Tx"] = topicTty1Tx;
+    obj["ipAddress"] = ipAddress;
+    obj["macAddress"] = macAddress;
     obj["ssid"] = ssid;
+    obj["mqtt"] = (mqttBroker.length() > 0 ? "connected" : "disconnected");
     obj["password"] = "******";
     serializeJsonPretty(obj, output);
     return output;

@@ -1,6 +1,7 @@
 #include "mqtt_client.h"
 #include "config.h"
 #include <cstring>
+#include <ArduinoLog.h>
 
 namespace jrb::wifi_serial {
 
@@ -38,7 +39,7 @@ void MqttClient::setDeviceName(const String& name) {
     deviceName = name;
 }
 
-void MqttClient::setTopics(const String& tty0Rx, const String& tty0Tx, 
+void MqttClient::setTopics(const String& tty0Rx, const String& tty0Tx,
                            const String& tty1Rx, const String& tty1Tx) {
     topicTty0Rx = tty0Rx;
     topicTty0Tx = tty0Tx;
@@ -51,6 +52,7 @@ void MqttClient::setTopics(const String& tty0Rx, const String& tty0Tx,
         int lastSlash = topicInfo.lastIndexOf('/');
         topicInfo = topicInfo.substring(0, lastSlash) + "/info";
     }
+    Log.infoln("MQTT info topic set to: %s", topicInfo.c_str());
 }
 
 void MqttClient::setCallbacks(void (*tty0)(const char*, unsigned int),
@@ -59,20 +61,14 @@ void MqttClient::setCallbacks(void (*tty0)(const char*, unsigned int),
     onTty1Callback = tty1;
 }
 
-bool MqttClient::connect(const char* broker, int port, const char* user, 
+bool MqttClient::connect(const char* broker, int port, const char* user,
                          const char* password) {
     mqttClient->setServer(broker, port);
-    
+
     String clientId = "ESP32-C3-" + deviceName + "-" + String(random(0xffff), HEX);
-    
-    Serial.print("[MQTT] Connecting to broker: ");
-    Serial.print(broker);
-    Serial.print(":");
-    Serial.print(port);
-    Serial.print(" (ClientID: ");
-    Serial.print(clientId);
-    Serial.println(")");
-    
+
+    Log.infoln("MQTT connecting to %s:%d (ClientID: %s)", broker, port, clientId.c_str());
+
     bool result = false;
     if (user && password) {
         result = mqttClient->connect(clientId.c_str(), user, password);
@@ -82,12 +78,11 @@ bool MqttClient::connect(const char* broker, int port, const char* user,
 
     connected = result;
     if (!result) {
-        Serial.print("[MQTT] Connection failed! State: ");
-        Serial.println(mqttClient->state());
+        Log.errorln("MQTT connection failed! State: %d", mqttClient->state());
         return false;
     }
-    
-    Serial.println("[MQTT] Connected successfully!");
+
+    Log.infoln("MQTT connected successfully!");
     
     if (topicTty0Tx.length() > 0) {
         mqttClient->subscribe(topicTty0Tx.c_str(), 1);
@@ -119,11 +114,11 @@ void MqttClient::disconnect() {
         connected = false;
         return;
     }
-    
-    Serial.println("[MQTT] Disconnecting...");
+
+    Log.infoln("MQTT disconnecting...");
     mqttClient->disconnect();
     connected = false;
-    Serial.println("[MQTT] Disconnected");
+    Log.infoln("MQTT disconnected");
 }
 
 bool MqttClient::reconnect() {
@@ -143,14 +138,14 @@ void MqttClient::loop() {
     mqttClient->loop();
     
     connected = mqttClient->connected();
-    
+
     if (wasConnected && !connected) {
-        Serial.println("[MQTT] Connection lost!");
+        Log.warningln("MQTT connection lost!");
         connected = false;
     }
-    
+
     if (!wasConnected && connected) {
-        Serial.println("[MQTT] Reconnected successfully!");
+        Log.infoln("MQTT reconnected successfully!");
         if (topicTty0Tx.length() > 0) {
             mqttClient->subscribe(topicTty0Tx.c_str(), 1);
             mqttClient->loop();
@@ -179,8 +174,7 @@ bool MqttClient::publish(int portIndex, const char* data, unsigned int length) {
     if (!result) {
         connected = mqttClient->connected();
         if (!connected) {
-            Serial.print("[MQTT] Publish failed, connection lost. State: ");
-            Serial.println(mqttClient->state());
+            Log.errorln("MQTT publish failed, connection lost. State: %d", mqttClient->state());
         }
     }
     return result;
@@ -203,14 +197,30 @@ bool MqttClient::publishTty1(const String& data) {
 }
 
 bool MqttClient::publishInfo(const String& data) {
-    if (!mqttClient || topicInfo.length() == 0) return false;
-    
+    if (!mqttClient) {
+        Log.errorln("MQTT publishInfo failed: mqttClient is null");
+        return false;
+    }
+
+    if (topicInfo.length() == 0) {
+        Log.errorln("MQTT publishInfo failed: topicInfo is empty");
+        return false;
+    }
+
     connected = mqttClient->connected();
-    if (!connected) return false;
-    
+    if (!connected) {
+        Log.warningln("MQTT publishInfo failed: not connected");
+        return false;
+    }
+
+    Log.traceln("MQTT publishing info to %s (%d bytes)", topicInfo.c_str(), data.length());
+
     bool result = mqttClient->publish(topicInfo.c_str(), (uint8_t*)data.c_str(), data.length(), false);
     if (!result) {
+        Log.errorln("MQTT publishInfo failed! State: %d", mqttClient->state());
         connected = mqttClient->connected();
+    } else {
+        Log.traceln("MQTT info published successfully");
     }
     return result;
 }

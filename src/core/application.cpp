@@ -165,14 +165,7 @@ void Application::loop() {
             String macAddress = WiFi.macAddress();
             String ipAddress = WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : "Not connected";
             String ssid = WiFi.status() == WL_CONNECTED ? WiFi.SSID() : "Not configured";
-
-            String infoJson = "{\"device\":\"" + preferencesStorage.deviceName +
-                            "\",\"ip\":\"" + ipAddress +
-                            "\",\"mac\":\"" + macAddress +
-                            "\",\"ssid\":\"" + ssid +
-                            "\",\"mqtt\":\"" + (preferencesStorage.mqttBroker.length() > 0 ? "connected" : "disconnected") + "\"}";
-
-            mqttClient.publishInfo(infoJson);
+            mqttClient.publishInfo(preferencesStorage.serialize(ipAddress, macAddress, ssid));
             lastInfoPublish = millis();
         }
     }

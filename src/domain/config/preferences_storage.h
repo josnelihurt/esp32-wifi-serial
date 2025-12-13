@@ -41,7 +41,7 @@ private:
      * @brief Serializes the configuration to a JSON string.
      * @return The configuration as a JSON string.
      */
-    String serialize();
+    String serialize(const String& ipAddress, const String& macAddress, const String& ssid);
     /**
      * @brief Loads configuration from preferences storage.
      */
