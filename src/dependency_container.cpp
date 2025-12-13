@@ -24,7 +24,7 @@ void DependencyContainer::createHandlers(std::function<void(int, const String&)>
     Log.traceln(__PRETTY_FUNCTION__);
     preferencesStorage.load();
     systemInfo.logSystemInformation();
-    serialBridge.begin(preferencesStorage.baudRateTty1);
+    serialBridge.setup(preferencesStorage.baudRateTty1);
     serialBridge.setLogs(serial0Log, serial1Log);
     serialCmdHandler = new SerialCommandHandler(
         preferencesStorage, &mqttClient, debugEnabled,

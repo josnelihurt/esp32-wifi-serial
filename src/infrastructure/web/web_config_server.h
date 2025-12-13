@@ -17,7 +17,7 @@ public:
                     SerialSendCallback sendCallback);
     ~WebConfigServer();
     
-    void begin() override;
+    void setup() override;
     void loop() override;
     
     void setWiFiConfig(const String& ssid, const String& password, const String& deviceName,

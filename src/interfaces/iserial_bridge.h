@@ -21,7 +21,7 @@ public:
      * @brief Initialize serial ports with custom baud rates
      * @param ttyS1BaudRate Baud rate for serial port 1 (0 to disable)
      */
-    virtual void begin(int ttyS1BaudRate) = 0;
+    virtual void setup(int ttyS1BaudRate) = 0;
     
     /**
      * @brief Set log handlers for both serial ports

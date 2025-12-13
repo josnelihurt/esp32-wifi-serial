@@ -26,7 +26,7 @@ public:
      *
      * @param ttyS1BaudRate Baud rate for the second serial interface.
      */
-    void begin(int ttyS1BaudRate) override;
+    void setup(int ttyS1BaudRate) override;
     
     /**
      * @brief Assigns log buffers for data from each serial port.

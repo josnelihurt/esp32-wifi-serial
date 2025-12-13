@@ -29,7 +29,7 @@ public:
         if (wifiManager.isAPMode()) {
             webServer.setAPIP(wifiManager.getAPIP());
         }
-        webServer.begin();
+        webServer.setup();
     }
     void loop() override {}
 };

@@ -26,7 +26,7 @@ public:
     /**
      * @brief Start the web configuration server
      */
-    virtual void begin() = 0;
+    virtual void setup() = 0;
     
     /**
      * @brief Process HTTP requests and maintain server

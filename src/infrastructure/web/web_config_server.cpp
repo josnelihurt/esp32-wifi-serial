@@ -44,7 +44,7 @@ void WebConfigServer::setAPIP(const IPAddress &ip) {
   this->apIP = ip;
 }
 
-void WebConfigServer::begin() {
+void WebConfigServer::setup() {
   if (server) {
     server->stop();
     delete server;

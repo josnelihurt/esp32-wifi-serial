@@ -9,7 +9,7 @@ SerialBridge::SerialBridge() : serial1{}, buffer0Index{0}, buffer1Index{0} {
   Log.traceln(__PRETTY_FUNCTION__);
 }
 
-void SerialBridge::begin(int ttyS1BaudRate) {
+void SerialBridge::setup(int ttyS1BaudRate) {
   if (ttyS1BaudRate <= 1) {
     Log.errorln("%s: ttyS1BaudRate is %d (<= 1), NOT initializing serial1!",
                __PRETTY_FUNCTION__, ttyS1BaudRate);
