@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <ArduinoLog.h>
 #include <Preferences.h>
+#include <WiFi.h>
 namespace jrb::wifi_serial {
 
 WebConfigServer::WebConfigServer(PreferencesStorage &storage,
@@ -230,6 +231,7 @@ String WebConfigServer::getConfigHTML() {
         <div class="tab active" onclick="switchTab(0)">Configuration</div>
         <div class="tab" onclick="switchTab(1)">ttyS0 (USB)</div>
         <div class="tab" onclick="switchTab(2)">ttyS1 (UART)</div>
+        <div class="tab" onclick="switchTab(3)">OTA Update</div>
     </div>
     <div id="tab-config" class="tab-content active">
         <h3>Configuration</h3>
@@ -338,6 +340,53 @@ String WebConfigServer::getConfigHTML() {
         <div class="input-group">
             <input type="text" id="input1" class="serial-input" placeholder="Enter command..." onkeypress="if(event.key==='Enter')sendCommand(1)">
             <button class="send-btn" onclick="sendCommand(1)">Send</button>
+        </div>
+    </div>
+    <div id="tab-ota" class="tab-content">
+        <h3>OTA (Over-The-Air) Update</h3>
+        <div style="background:#FFF9C4;padding:15px;border-radius:4px;margin-bottom:20px;border:2px solid #FFC107;">
+            <h4 style="margin-top:0;color:#333;">Network Information</h4>
+            <p style="margin:5px 0;"><strong>Device Name:</strong> )HTML") +
+         escapeHTML(preferencesStorage.deviceName) + String(R"HTML(</p>
+            <p style="margin:5px 0;"><strong>IP Address:</strong> )HTML") +
+         (apMode ? apIP.toString() : WiFi.localIP().toString()) + String(R"HTML(</p>
+            <p style="margin:5px 0;"><strong>Hostname:</strong> )HTML") +
+         escapeHTML(preferencesStorage.deviceName) + String(R"HTML(.local</p>
+            <p style="margin:5px 0;"><strong>OTA Port:</strong> 3232</p>
+            <p style="margin:5px 0;"><strong>OTA Password:</strong> )HTML") +
+         (preferencesStorage.mqttPassword.length() > 0 ? String("Configured (uses MQTT password)") : String("Not configured - OTA is unprotected!")) +
+         String(R"HTML(</p>
+        </div>
+        <div style="background:#E3F2FD;padding:15px;border-radius:4px;margin-bottom:20px;border:2px solid #2196F3;">
+            <h4 style="margin-top:0;color:#333;">PlatformIO Upload Command</h4>
+            <p style="margin:5px 0;">Use this command from your project directory to upload via OTA:</p>
+            <div style="background:#263238;color:#00E676;padding:12px;border-radius:4px;font-family:monospace;margin:10px 0;overflow-x:auto;">
+                pio run -t upload --upload-port )HTML") +
+         (apMode ? apIP.toString() : WiFi.localIP().toString()) + String(R"HTML(
+            </div>
+            <p style="margin:5px 0;font-size:12px;color:#666;">Note: Make sure your computer is on the same network as the ESP32.</p>
+        </div>
+        <div style="background:#FFEBEE;padding:15px;border-radius:4px;margin-bottom:20px;border:2px solid #f44336;">
+            <h4 style="margin-top:0;color:#333;">Important Notes</h4>
+            <ul style="margin:5px 0;padding-left:20px;">
+                <li>OTA updates only work when connected to WiFi (Station mode)</li>
+                <li>Ensure your firewall allows port 3232</li>
+                <li>The device will restart after a successful update</li>
+                <li>If OTA fails, you can still update via USB cable</li>
+            </ul>
+        </div>
+        <div style="background:#F5F5F5;padding:15px;border-radius:4px;border:2px solid #666;">
+            <h4 style="margin-top:0;color:#333;">Alternative Upload Methods</h4>
+            <p style="margin:5px 0;"><strong>Via Hostname (requires mDNS):</strong></p>
+            <div style="background:#263238;color:#00E676;padding:12px;border-radius:4px;font-family:monospace;margin:10px 0;overflow-x:auto;">
+                pio run -t upload --upload-port )HTML") +
+         escapeHTML(preferencesStorage.deviceName) + String(R"HTML(.local
+            </div>
+            <p style="margin:5px 0;"><strong>Via espota.py (manual):</strong></p>
+            <div style="background:#263238;color:#00E676;padding:12px;border-radius:4px;font-family:monospace;margin:10px 0;overflow-x:auto;">
+                python espota.py -i )HTML") +
+         (apMode ? apIP.toString() : WiFi.localIP().toString()) + String(R"HTML( -p 3232 -f firmware.bin
+            </div>
         </div>
     </div>
     <script>
