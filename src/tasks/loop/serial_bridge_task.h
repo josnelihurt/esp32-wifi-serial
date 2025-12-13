@@ -6,6 +6,7 @@
 #include "domain/serial/serial_log.h"
 #include "interfaces/imqtt_client.h"
 #include <Arduino.h>
+#include <ArduinoLog.h>
 
 namespace jrb::wifi_serial {
 
@@ -53,9 +54,7 @@ public:
         if (len <= 0) return;
         
         if (debugEnabled) {
-            Serial.print(getDebugPrefix());
-            Serial.write((uint8_t*)serialBuffer, len);
-            Serial.println();
+            Log.traceln("%s%.*s", getDebugPrefix(), len, serialBuffer);
         }
         
         // Check for command sequences (only on ttyS0)
@@ -69,14 +68,11 @@ public:
                     cmdPrefixReceived = false;
                     
                     // Debug: print what character we got after Ctrl+Y
-                    Serial.print("DEBUG: After Ctrl+Y, got char: 0x");
-                    Serial.print((int)c, HEX);
                     if (c >= 32 && c <= 126) {
-                        Serial.print(" ('");
-                        Serial.print(c);
-                        Serial.print("')");
+                        Log.traceln("DEBUG: After Ctrl+Y, got char: 0x%X ('%c')", (int)c, c);
+                    } else {
+                        Log.traceln("DEBUG: After Ctrl+Y, got char: 0x%X", (int)c);
                     }
-                    Serial.println();
                     
                     if (c == CMD_INFO || c == 'I') {
                         systemInfo.logSystemInformation();
@@ -88,10 +84,9 @@ public:
                         i--; // Adjust index since we removed a character
                         continue;
                     } else if (c == CMD_DEBUG || c == 'D') {
-                        Serial.println("Command detected: Ctrl+Y + d (Toggle Debug)");
+                        Log.infoln("Command detected: Ctrl+Y + d (Toggle Debug)");
                         debugEnabled = !debugEnabled;
-                        Serial.print("Debug ");
-                        Serial.println(debugEnabled ? "enabled" : "disabled");
+                        Log.infoln("Debug %s", debugEnabled ? "enabled" : "disabled");
                         // Remove this command character from buffer
                         for (int j = i; j < len - 1; j++) {
                             serialBuffer[j] = serialBuffer[j + 1];
@@ -109,7 +104,7 @@ public:
                 
                 // Check for new command prefix
                 if (c == CMD_PREFIX) {
-                    Serial.println("DEBUG: Ctrl/Y (command prefix) detected");
+                    Log.traceln("DEBUG: Ctrl/Y (command prefix) detected");
                     cmdPrefixReceived = true;
                     // Remove Ctrl+Y from buffer since we're handling it as a command
                     for (int j = i; j < len - 1; j++) {

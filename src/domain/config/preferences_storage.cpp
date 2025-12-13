@@ -2,6 +2,7 @@
 #include "config.h"
 #include <algorithm>
 #include <ArduinoJson.h>
+#include <ArduinoLog.h>
 #include <algorithm>
 namespace jrb::wifi_serial {
 
@@ -39,7 +40,7 @@ String PreferencesStorage::serialize(const String& ipAddress, const String& macA
     return output;
 }
 void PreferencesStorage::generateDefaultTopics() {
-    Serial.println("Generating default topics with device name: " + deviceName);
+    Log.infoln("Generating default topics with device name: %s", deviceName.c_str());
     char baseTopic0[64], baseTopic1[64];
     snprintf(baseTopic0, sizeof(baseTopic0), DEFAULT_TOPIC_TTY0, deviceName.c_str());
     snprintf(baseTopic1, sizeof(baseTopic1), DEFAULT_TOPIC_TTY1, deviceName.c_str());
@@ -80,7 +81,7 @@ void PreferencesStorage::generateDefaultTopics() {
 }
 
 void PreferencesStorage::load() {
-    Serial.println("Loading preferences");
+    Log.infoln("Loading preferences");
     preferences.begin("esp32bridge", true);
     
     deviceName = preferences.getString("deviceName", DEFAULT_DEVICE_NAME);

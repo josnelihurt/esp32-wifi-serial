@@ -29,27 +29,27 @@ void WiFiManager::loop() {
 bool WiFiManager::connect() {
     Log.traceln(__PRETTY_FUNCTION__);
     if (preferencesStorage.ssid.length() == 0) return false;
-    
+
     WiFi.mode(WIFI_STA);
     WiFi.begin(preferencesStorage.ssid.c_str(), preferencesStorage.password.c_str());
-    
+
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 20) {
         delay(500);
-        Serial.print(".");
+        Log.traceln("WiFi connecting...");
         attempts++;
     }
-    
+
     if (WiFi.status() != WL_CONNECTED) {
         apMode = true;
         return false;
     }
-    
+
     apMode = false;
-    Log.infoln("%s: %s", __PRETTY_FUNCTION__, 
+    Log.infoln("%s: %s", __PRETTY_FUNCTION__,
 R"(WiFi connected!
 IP address: %s)", WiFi.localIP().toString().c_str());
-    
+
     return true;
 }
 

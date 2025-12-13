@@ -27,8 +27,7 @@ void SerialCommandHandler::handle() {
     
     if (c == CMD_DEBUG || c == 'D') {
         debugEnabled = !debugEnabled;
-        Serial.print("Debug ");
-        Serial.println(debugEnabled ? "enabled" : "disabled");
+        Log.infoln("Debug %s", debugEnabled ? "enabled" : "disabled");
     }
 }
 
