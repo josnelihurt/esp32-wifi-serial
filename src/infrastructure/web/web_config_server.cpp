@@ -3,10 +3,10 @@
 #include "domain/serial/serial_log.h"
 #include <Arduino.h>
 #include <ArduinoLog.h>
+#include <ESPAsyncWebServer.h>
+#include <LittleFS.h>
 #include <Preferences.h>
 #include <WiFi.h>
-#include <LittleFS.h>
-#include <ESPAsyncWebServer.h>
 namespace jrb::wifi_serial {
 
 WebConfigServer::WebConfigServer(PreferencesStorage &storage,
@@ -63,9 +63,13 @@ void WebConfigServer::setup() {
 
   // Serve index.html with template processor
   server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                               preferencesStorage.webPassword.c_str())) {
+      return request->requestAuthentication();
+    }
     Log.traceln("%s: Handling / request", __PRETTY_FUNCTION__);
     request->send(LittleFS, "/index.html", "text/html", false,
-                  [this](const String& var) { return this->processor(var); });
+                  [this](const String &var) { return this->processor(var); });
   });
 
   // Serve static CSS file (no template processing)
@@ -82,27 +86,40 @@ void WebConfigServer::setup() {
 
   // Serve OTA HTML with template processor
   server->on("/ota.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                               preferencesStorage.webPassword.c_str())) {
+      return request->requestAuthentication();
+    }
     Log.traceln("%s: Handling /ota.html request", __PRETTY_FUNCTION__);
     request->send(LittleFS, "/ota.html", "text/html", false,
-                  [this](const String& var) { return this->processor(var); });
+                  [this](const String &var) { return this->processor(var); });
   });
 
   // Serve About HTML with template processor
   server->on("/about.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                               preferencesStorage.webPassword.c_str())) {
+      return request->requestAuthentication();
+    }
     Log.traceln("%s: Handling /about.html request", __PRETTY_FUNCTION__);
     request->send(LittleFS, "/about.html", "text/html", false,
-                  [this](const String& var) { return this->processor(var); });
+                  [this](const String &var) { return this->processor(var); });
   });
 
   // Handle configuration save
   server->on("/save", HTTP_POST, [this](AsyncWebServerRequest *request) {
+    if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                               preferencesStorage.webPassword.c_str())) {
+      return request->requestAuthentication();
+    }
     Log.traceln("%s: Handling /save request", __PRETTY_FUNCTION__);
 
     // Process baud rate
     if (request->hasParam("speed0", true)) {
       int baudRate = request->getParam("speed0", true)->value().toInt();
       if (baudRate <= 1) {
-        Log.errorln("Invalid baud rate %d (must be > 1), using default 115200", baudRate);
+        Log.errorln("Invalid baud rate %d (must be > 1), using default 115200",
+                    baudRate);
         preferencesStorage.baudRateTty1 = 115200;
       } else {
         preferencesStorage.baudRateTty1 = baudRate;
@@ -122,19 +139,26 @@ void WebConfigServer::setup() {
 
     // Process device name and MQTT topics
     if (request->hasParam("device", true)) {
-      preferencesStorage.deviceName = request->getParam("device", true)->value();
-      preferencesStorage.topicTty0Rx = "wifi_serial/" + preferencesStorage.deviceName + "/ttyS0/rx";
-      preferencesStorage.topicTty0Tx = "wifi_serial/" + preferencesStorage.deviceName + "/ttyS0/tx";
-      preferencesStorage.topicTty1Rx = "wifi_serial/" + preferencesStorage.deviceName + "/ttyS1/rx";
-      preferencesStorage.topicTty1Tx = "wifi_serial/" + preferencesStorage.deviceName + "/ttyS1/tx";
+      preferencesStorage.deviceName =
+          request->getParam("device", true)->value();
+      preferencesStorage.topicTty0Rx =
+          "wifi_serial/" + preferencesStorage.deviceName + "/ttyS0/rx";
+      preferencesStorage.topicTty0Tx =
+          "wifi_serial/" + preferencesStorage.deviceName + "/ttyS0/tx";
+      preferencesStorage.topicTty1Rx =
+          "wifi_serial/" + preferencesStorage.deviceName + "/ttyS1/rx";
+      preferencesStorage.topicTty1Tx =
+          "wifi_serial/" + preferencesStorage.deviceName + "/ttyS1/tx";
     }
 
     // Process MQTT settings
     if (request->hasParam("broker", true)) {
-      preferencesStorage.mqttBroker = request->getParam("broker", true)->value();
+      preferencesStorage.mqttBroker =
+          request->getParam("broker", true)->value();
     }
     if (request->hasParam("port", true)) {
-      preferencesStorage.mqttPort = request->getParam("port", true)->value().toInt();
+      preferencesStorage.mqttPort =
+          request->getParam("port", true)->value().toInt();
     }
     if (request->hasParam("user", true)) {
       preferencesStorage.mqttUser = request->getParam("user", true)->value();
@@ -146,6 +170,17 @@ void WebConfigServer::setup() {
       }
     }
 
+    // Process Web User settings
+    if (request->hasParam("web_user", true)) {
+      preferencesStorage.webUser = request->getParam("web_user", true)->value();
+    }
+    if (request->hasParam("web_password", true)) {
+      String newWebPassword = request->getParam("web_password", true)->value();
+      if (newWebPassword.length() > 0 && newWebPassword != "********") {
+        preferencesStorage.webPassword = newWebPassword;
+      }
+    }
+
     preferencesStorage.save();
     request->send(200, "text/plain", "Configuration saved! Restarting...");
     delay(1000);
@@ -154,6 +189,10 @@ void WebConfigServer::setup() {
 
   // Handle device reset
   server->on("/reset", HTTP_POST, [this](AsyncWebServerRequest *request) {
+    if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                               preferencesStorage.webPassword.c_str())) {
+      return request->requestAuthentication();
+    }
     Log.traceln("%s: Handling /reset request", __PRETTY_FUNCTION__);
     request->send(200, "text/plain", "Device resetting...");
     delay(500);
@@ -162,6 +201,10 @@ void WebConfigServer::setup() {
 
   // Serial0 polling - simplified for async
   server->on("/serial0/poll", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                               preferencesStorage.webPassword.c_str())) {
+      return request->requestAuthentication();
+    }
     Log.traceln("%s: Handling /serial0/poll request", __PRETTY_FUNCTION__);
     static int lastPos0 = 0;
     String newData = serial0Log.getNewData(lastPos0);
@@ -170,6 +213,10 @@ void WebConfigServer::setup() {
 
   // Serial1 polling - simplified for async
   server->on("/serial1/poll", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                               preferencesStorage.webPassword.c_str())) {
+      return request->requestAuthentication();
+    }
     Log.traceln("%s: Handling /serial1/poll request", __PRETTY_FUNCTION__);
     static int lastPos1 = 0;
     String newData = serial1Log.getNewData(lastPos1);
@@ -177,38 +224,48 @@ void WebConfigServer::setup() {
   });
 
   // Serial0 send
-  server->on("/serial0/send", HTTP_POST, [this](AsyncWebServerRequest *request) {
-    Log.traceln("%s: Handling /serial0/send request", __PRETTY_FUNCTION__);
-    if (!request->hasParam("data", true)) {
-      request->send(400, "text/plain", "Missing data");
-      return;
-    }
-    String data = request->getParam("data", true)->value();
-    if (sendCallback) {
-      sendCallback(0, data);
-    }
-    request->send(200, "text/plain", "OK");
-  });
+  server->on(
+      "/serial0/send", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                                   preferencesStorage.webPassword.c_str())) {
+          return request->requestAuthentication();
+        }
+        Log.traceln("%s: Handling /serial0/send request", __PRETTY_FUNCTION__);
+        if (!request->hasParam("data", true)) {
+          request->send(400, "text/plain", "Missing data");
+          return;
+        }
+        String data = request->getParam("data", true)->value();
+        if (sendCallback) {
+          sendCallback(0, data);
+        }
+        request->send(200, "text/plain", "OK");
+      });
 
   // Serial1 send
-  server->on("/serial1/send", HTTP_POST, [this](AsyncWebServerRequest *request) {
-    Log.traceln("%s: Handling /serial1/send request", __PRETTY_FUNCTION__);
-    if (!request->hasParam("data", true)) {
-      request->send(400, "text/plain", "Missing data");
-      return;
-    }
-    String data = request->getParam("data", true)->value();
-    if (sendCallback) {
-      sendCallback(1, data);
-    }
-    request->send(200, "text/plain", "OK");
-  });
+  server->on(
+      "/serial1/send", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                                   preferencesStorage.webPassword.c_str())) {
+          return request->requestAuthentication();
+        }
+        Log.traceln("%s: Handling /serial1/send request", __PRETTY_FUNCTION__);
+        if (!request->hasParam("data", true)) {
+          request->send(400, "text/plain", "Missing data");
+          return;
+        }
+        String data = request->getParam("data", true)->value();
+        if (sendCallback) {
+          sendCallback(1, data);
+        }
+        request->send(200, "text/plain", "OK");
+      });
 
   server->begin();
   Log.infoln("Async web server started");
 }
 
-String WebConfigServer::processor(const String& var) {
+String WebConfigServer::processor(const String &var) {
   // This function is called for each %VARIABLE% in the HTML template
 
   if (var == "SSID") {
@@ -222,13 +279,15 @@ String WebConfigServer::processor(const String& var) {
   }
   if (var == "DEVICE_NAME") {
     return escapeHTML(preferencesStorage.deviceName.length() > 0
-                      ? preferencesStorage.deviceName : "esp32c3");
+                          ? preferencesStorage.deviceName
+                          : "esp32c3");
   }
   if (var == "MQTT_BROKER") {
     return escapeHTML(preferencesStorage.mqttBroker);
   }
   if (var == "MQTT_PORT") {
-    return String(preferencesStorage.mqttPort > 0 ? preferencesStorage.mqttPort : 1883);
+    return String(preferencesStorage.mqttPort > 0 ? preferencesStorage.mqttPort
+                                                  : 1883);
   }
   if (var == "MQTT_USER") {
     return escapeHTML(preferencesStorage.mqttUser);
@@ -258,9 +317,19 @@ String WebConfigServer::processor(const String& var) {
     return (apMode ? apIP.toString() : WiFi.localIP().toString());
   }
   if (var == "OTA_PASSWORD_STATUS") {
-    return preferencesStorage.mqttPassword.length() > 0
-           ? "Configured (uses MQTT password)"
-           : "Not configured - OTA is unprotected!";
+    return preferencesStorage.webPassword.length() > 0
+               ? "Configured (uses Web Password)"
+               : "Not configured - OTA is unprotected!";
+  }
+
+  if (var == "WEB_USER") {
+    return escapeHTML(preferencesStorage.webUser);
+  }
+  if (var == "WEB_PASSWORD_DISPLAY") {
+    return preferencesStorage.webPassword.length() > 0 ? "********" : "";
+  }
+  if (var == "WEB_PASSWORD_HAS_VALUE") {
+    return preferencesStorage.webPassword.length() > 0 ? "1" : "0";
   }
 
   return String(); // Return empty string for unknown variables

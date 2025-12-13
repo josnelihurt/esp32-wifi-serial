@@ -23,6 +23,18 @@
             <label>WiFi Password:</label>
             <input type="password" name="password" id="wifi_password" value="%PASSWORD_DISPLAY%" placeholder="Leave empty to keep current">
             <input type="hidden" id="wifi_password_has_value" value="%PASSWORD_HAS_VALUE%">
+            
+            <hr style="margin:20px 0;border:0;border-top:1px solid #ccc;">
+            <h4>Web Interface Settings</h4>
+            
+            <label>Web User (default: admin):</label>
+            <input type="text" name="web_user" value="%WEB_USER%">
+            
+            <label>Web Password:</label>
+            <input type="password" name="web_password" id="web_password" value="%WEB_PASSWORD_DISPLAY%" placeholder="Leave empty to keep current">
+            <input type="hidden" id="web_password_has_value" value="%WEB_PASSWORD_HAS_VALUE%">
+            <div style="font-size:12px;color:#666666;margin-top:5px;">This password is also used for OTA updates.</div>
+            <hr style="margin:20px 0;border:0;border-top:1px solid #ccc;">
 
             <label>TTYS1 (UART) Speed (baud):</label>
             <input type="number" name="speed0" min="2" value="%BAUD_RATE_TTY1%">
