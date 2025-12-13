@@ -58,11 +58,17 @@ void WebConfigServer::setup() {
     server->send(200, "text/html", this->getConfigHTML());
   });
 
-  server->on("/save", HTTP_POST, [this]() {
-    Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling /save request");
-    if (server->hasArg("speed0")) {
-      preferencesStorage.baudRateTty1 = server->arg("speed0").toInt();
-    }
+   server->on("/save", HTTP_POST, [this]() {
+     Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling /save request");
+     if (server->hasArg("speed0")) {
+       int baudRate = server->arg("speed0").toInt();
+       if (baudRate <= 1) {
+         Log.errorln("Invalid baud rate %d (must be > 1), using default 115200", baudRate);
+         preferencesStorage.baudRateTty1 = DEFAULT_BAUD_RATE_TTY1;
+       } else {
+         preferencesStorage.baudRateTty1 = baudRate;
+       }
+     }
     if (server->hasArg("ssid")) {
       preferencesStorage.ssid = server->arg("ssid");
     }
@@ -240,9 +246,10 @@ String WebConfigServer::getConfigHTML() {
          (preferencesStorage.password.length() > 0 ? String("1")
                                                    : String("0")) +
          String(R"HTML(">
-            <label>TTYS1 (UART) Speed (baud):</label>
-            <input type="number" name="speed0" value=")HTML") +
-         String(preferencesStorage.baudRateTty1) + String(R"HTML(">
+             <label>TTYS1 (UART) Speed (baud):</label>
+              <input type="number" name="speed0" min="2" value=")HTML") +
+           String(preferencesStorage.baudRateTty1) + String(R"HTML(">
+              <div style="font-size:12px;color:#666666;margin-top:5px;">Must be > 1 (e.g., 9600, 115200)</div>
             <label>Device Name:</label>
             <input type="text" name="device" value=")HTML") +
          escapeHTML(preferencesStorage.deviceName.length() > 0

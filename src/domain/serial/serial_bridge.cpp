@@ -11,10 +11,9 @@ SerialBridge::SerialBridge() : serial1{}, buffer0Index{0}, buffer1Index{0} {
 
 void SerialBridge::setup(int ttyS1BaudRate) {
   if (ttyS1BaudRate <= 1) {
-    Log.errorln("%s: ttyS1BaudRate is %d (<= 1), NOT initializing serial1!",
+    Log.errorln("%s: ttyS1BaudRate is %d (<= 1), using default 115200",
                __PRETTY_FUNCTION__, ttyS1BaudRate);
-    Log.errorln("Web messages to ttyS1 will not work!");
-    return;
+    ttyS1BaudRate = DEFAULT_BAUD_RATE_TTY1;
   }
   Log.infoln("%s: Initializing serial1 with baud rate: %d", __PRETTY_FUNCTION__,
              ttyS1BaudRate);
@@ -72,16 +71,6 @@ void SerialBridge::writeSerial1(const char *data, int length) {
   serial1->write((uint8_t *)data, length);
 }
 
-void SerialBridge::writeSerial0(const String &data) {
-  Log.traceln(__PRETTY_FUNCTION__);
-  writeSerial0(data.c_str(), data.length());
-}
-
-void SerialBridge::writeSerial1(const String &data) {
-  Log.traceln(__PRETTY_FUNCTION__);
-  writeSerial1(data.c_str(), data.length());
-}
-
 bool SerialBridge::available0() const { return Serial.available() > 0; }
 
 bool SerialBridge::available1() const {
@@ -103,12 +92,13 @@ void SerialBridge::writeToSerialAndLog(int portIndex, const String &serialData,
                                        const String &logData) {
   Log.traceln(__PRETTY_FUNCTION__);
   if (portIndex == 0) {
-    writeSerial0(serialData);
+    writeSerial0(serialData.c_str(), serialData.length());
     if (serial0Log) {
       serial0Log->append(logData);
     }
   } else {
-    writeSerial1(serialData);
+    Log.infoln("$ttyS1(w)$ '%s'", serialData.c_str());
+    writeSerial1(serialData.c_str(), serialData.length());
     if (serial1Log) {
       serial1Log->append(logData);
     }
