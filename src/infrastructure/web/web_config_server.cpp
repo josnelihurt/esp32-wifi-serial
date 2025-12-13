@@ -83,6 +83,10 @@ void WebConfigServer::setup() {
     Log.traceln("%s: Handling /script.js request", __PRETTY_FUNCTION__);
     request->send(LittleFS, "/script.js", "application/javascript");
   });
+  server->on("/favicon.svg", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    Log.traceln("%s: Handling /favicon.svg request", __PRETTY_FUNCTION__);
+    request->send(LittleFS, "/favicon.svg", "image/svg+xml");
+  });
 
   // Serve OTA HTML with template processor
   server->on("/ota.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
