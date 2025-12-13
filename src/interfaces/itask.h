@@ -17,7 +17,7 @@ public:
      * 
      * Called once during system initialization. Default implementation does nothing.
      */
-    virtual void setup() {}
+    virtual void setup() = 0;
     
     /**
      * @brief Execute task during loop phase

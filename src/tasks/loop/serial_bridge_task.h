@@ -47,6 +47,8 @@ public:
         : serialBridge(bridge), serialLog(log), serialBuffer(buffer), 
           mqttClient(client), debugEnabled(debug), systemInfo(info) {}
     
+    void setup() override {}
+    
     void loop() override {
         if (!available()) return;
 

@@ -16,6 +16,7 @@ public:
     NetworkLoopTask(WiFiManager& wifi, IMqttClient& mqtt)
         : wifiManager(wifi), mqttClient(mqtt) {}
 
+    void setup() override {}
     void loop() override {
         wifiManager.loop();
         mqttClient.loop();
