@@ -1,6 +1,5 @@
 #pragma once
 
-#include "task_registry.h"
 #include "domain/network/wifi_manager.h"
 #include "domain/serial/serial_bridge.h"
 #include "domain/serial/serial_log.h"
@@ -124,10 +123,17 @@ private:
     OTAManager* otaManager{nullptr};
     WebConfigServer* webServer{nullptr};
 
-    TaskRegistry registry;
+    // Helper methods for loop processing
+    void handleSerialPort0();
+    void handleSerialPort1();
+    void reconnectMqttIfNeeded();
+    void publishInfoIfNeeded();
+    void setupMqttCallbacks();
 
-    void registerSetupTasks();
-    void registerLoopTasks();
+    // MQTT callback wrappers (need to be static for C-style function pointers)
+    static void mqttTty0Wrapper(const char* data, unsigned int length);
+    static void mqttTty1Wrapper(const char* data, unsigned int length);
+    static Application* s_instance;
 };
 
 }  // namespace jrb::wifi_serial
