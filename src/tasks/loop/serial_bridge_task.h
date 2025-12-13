@@ -13,10 +13,12 @@ template<int PortIndex>
 class SerialBridgeTask final : public ITask {
 private:
     SerialBridge& serialBridge;
+    SystemInfo& systemInfo;
     SerialLog& serialLog;
     char* serialBuffer;
-    IMqttClient* mqttClient;
+    IMqttClient& mqttClient;
     bool& debugEnabled;
+    bool cmdPrefixReceived{false};  // State for command detection
 
     bool available() const {
         if (PortIndex == 0) {
@@ -40,13 +42,13 @@ public:
     }
     
     SerialBridgeTask(SerialBridge& bridge, SerialLog& log, char* buffer, 
-                       IMqttClient* client, bool& debug)
+                       IMqttClient& client, bool& debug, SystemInfo& info)
         : serialBridge(bridge), serialLog(log), serialBuffer(buffer), 
-          mqttClient(client), debugEnabled(debug) {}
+          mqttClient(client), debugEnabled(debug), systemInfo(info) {}
     
     void loop() override {
         if (!available()) return;
-        
+
         int len = readSerial(serialBuffer, SERIAL_BUFFER_SIZE);
         if (len <= 0) return;
         
@@ -56,7 +58,73 @@ public:
             Serial.println();
         }
         
-        serialBridge.handleSerialToMqttAndWeb(PortIndex, serialBuffer, len);
+        // Check for command sequences (only on ttyS0)
+        if (PortIndex == 0) {
+            // Process each character in the buffer
+            for (int i = 0; i < len; i++) {
+                char c = serialBuffer[i];
+                
+                if (cmdPrefixReceived) {
+                    // We received Ctrl+Y previously, now check the command
+                    cmdPrefixReceived = false;
+                    
+                    // Debug: print what character we got after Ctrl+Y
+                    Serial.print("DEBUG: After Ctrl+Y, got char: 0x");
+                    Serial.print((int)c, HEX);
+                    if (c >= 32 && c <= 126) {
+                        Serial.print(" ('");
+                        Serial.print(c);
+                        Serial.print("')");
+                    }
+                    Serial.println();
+                    
+                    if (c == CMD_INFO || c == 'I') {
+                        systemInfo.logSystemInformation();
+                        // Remove this command character from buffer
+                        for (int j = i; j < len - 1; j++) {
+                            serialBuffer[j] = serialBuffer[j + 1];
+                        }
+                        len -= 1;
+                        i--; // Adjust index since we removed a character
+                        continue;
+                    } else if (c == CMD_DEBUG || c == 'D') {
+                        Serial.println("Command detected: Ctrl+Y + d (Toggle Debug)");
+                        debugEnabled = !debugEnabled;
+                        Serial.print("Debug ");
+                        Serial.println(debugEnabled ? "enabled" : "disabled");
+                        // Remove this command character from buffer
+                        for (int j = i; j < len - 1; j++) {
+                            serialBuffer[j] = serialBuffer[j + 1];
+                        }
+                        len -= 1;
+                        i--; // Adjust index since we removed a character
+                        continue;
+                    } else {
+                        // Not a valid command after Ctrl+Y, keep the Ctrl+Y in buffer
+                        // We need to insert Ctrl+Y back at position i-1
+                        // But we already passed it, so we need special handling
+                        // For now, just let it through
+                    }
+                }
+                
+                // Check for new command prefix
+                if (c == CMD_PREFIX) {
+                    Serial.println("DEBUG: Ctrl/Y (command prefix) detected");
+                    cmdPrefixReceived = true;
+                    // Remove Ctrl+Y from buffer since we're handling it as a command
+                    for (int j = i; j < len - 1; j++) {
+                        serialBuffer[j] = serialBuffer[j + 1];
+                    }
+                    len -= 1;
+                    i--; // Adjust index since we removed a character
+                    continue;
+                }
+            }
+        }
+        
+        if (len > 0) {
+            serialBridge.handleSerialToMqttAndWeb(PortIndex, serialBuffer, len);
+        }
     }
 };
 

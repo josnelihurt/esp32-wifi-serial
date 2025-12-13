@@ -1,200 +1,185 @@
 #include "web_config_server.h"
 #include "domain/config/preferences_storage.h"
 #include "domain/serial/serial_log.h"
-#include <Preferences.h>
 #include <Arduino.h>
-
+#include <ArduinoLog.h>
+#include <Preferences.h>
 namespace jrb::wifi_serial {
 
-WebConfigServer::WebConfigServer(PreferencesStorage& storage, SerialLog& serial0Log, 
-                                  SerialLog& serial1Log, SerialSendCallback sendCallback)
-    : preferencesStorage(storage)
-    , serial0Log(serial0Log)
-    , serial1Log(serial1Log)
-    , sendCallback(sendCallback)
-    , server(nullptr)
-    , dnsServer(nullptr)
-    , apMode(false)
-    , mqttPort(1883)
-{
+WebConfigServer::WebConfigServer(PreferencesStorage &storage,
+                                 SerialLog &serial0Log, SerialLog &serial1Log,
+                                 SerialSendCallback sendCallback)
+    : preferencesStorage(storage), serial0Log(serial0Log),
+      serial1Log(serial1Log), sendCallback(sendCallback), server(nullptr),
+      apMode(false) {
+  Log.traceln(__PRETTY_FUNCTION__);
 }
 
 WebConfigServer::~WebConfigServer() {
-    if (server) {
-        server->stop();
-        delete server;
-    }
-    if (dnsServer) {
-        delete dnsServer;
-    }
-}
-
-void WebConfigServer::begin() {
-    setupWebServer();
-    if (apMode && dnsServer) {
-        dnsServer->start(53, "*", apIP);
-    }
+  if (server) {
+    server->stop();
+    delete server;
+  }
 }
 
 void WebConfigServer::loop() {
-    if (dnsServer) {
-        dnsServer->processNextRequest();
-    }
-    if (server) {
-        server->handleClient();
-    }
+  if (server) {
+    server->handleClient();
+  }
 }
 
-void WebConfigServer::setWiFiConfig(const String& ssid, const String& password, 
-                                    const String& deviceName, const String& mqttBroker,
-                                    int mqttPort, const String& mqttUser,
-                                    const String& mqttPassword) {
-    this->ssid = ssid;
-    this->password = password;
-    this->deviceName = deviceName;
-    this->mqttBroker = mqttBroker;
-    this->mqttPort = mqttPort;
-    this->mqttUser = mqttUser;
-    this->mqttPassword = mqttPassword;
-}
+void WebConfigServer::setWiFiConfig(const String &ssid, const String &password,
+                                    const String &deviceName,
+                                    const String &mqttBroker, int mqttPort,
+                                    const String &mqttUser,
+                                    const String &mqttPassword) {}
 
 void WebConfigServer::setAPMode(bool apMode) {
-    this->apMode = apMode;
+  Log.infoln(__PRETTY_FUNCTION__, "apMode: %s", apMode ? "true" : "false");
+  this->apMode = apMode;
 }
 
-void WebConfigServer::setAPIP(const IPAddress& ip) {
-    this->apIP = ip;
+void WebConfigServer::setAPIP(const IPAddress &ip) {
+  Log.infoln(__PRETTY_FUNCTION__, "ip: %s", ip.toString().c_str());
+  this->apIP = ip;
 }
 
-void WebConfigServer::setupWebServer() {
-    if (server) {
-        server->stop();
-        delete server;
-        server = nullptr;
+void WebConfigServer::begin() {
+  if (server) {
+    server->stop();
+    delete server;
+    server = nullptr;
+  }
+  Log.infoln(__PRETTY_FUNCTION__, "Creating web server");
+  server = new WebServer(80);
+
+  server->on("/", HTTP_GET, [this]() {
+    Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling / request");
+    server->send(200, "text/html", this->getConfigHTML());
+  });
+
+  server->on("/save", HTTP_POST, [this]() {
+    Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling /save request");
+    if (server->hasArg("speed0")) {
+      preferencesStorage.baudRateTty1 = server->arg("speed0").toInt();
     }
-    
-    server = new WebServer(80);
-    
-    server->on("/", HTTP_GET, [this](){
-        server->send(200, "text/html", getConfigHTML());
-    });
-    
-    server->on("/save", HTTP_POST, [this](){
-        if (server->hasArg("ssid")) {
-            ssid = server->arg("ssid");
-        }
-        if (server->hasArg("password")) {
-            String newPassword = server->arg("password");
-            if (newPassword.length() > 0 && newPassword != "********") {
-                password = newPassword;
-            }
-        }
-        if (server->hasArg("device")) {
-            deviceName = server->arg("device");
-        }
-        if (server->hasArg("broker")) {
-            mqttBroker = server->arg("broker");
-        }
-        if (server->hasArg("port")) {
-            mqttPort = server->arg("port").toInt();
-        }
-        if (server->hasArg("user")) {
-            mqttUser = server->arg("user");
-        }
-        if (server->hasArg("mqttpass")) {
-            String newMqttPassword = server->arg("mqttpass");
-            if (newMqttPassword.length() > 0 && newMqttPassword != "********") {
-                mqttPassword = newMqttPassword;
-            }
-        }
-        
-        Preferences preferences;
-        preferences.begin("esp32bridge", false);
-        preferences.putString("wifiSSID", ssid);
-        preferences.putString("wifiPassword", password);
-        preferences.putString("deviceName", deviceName);
-        preferences.putString("mqttBroker", mqttBroker);
-        preferences.putInt("mqttPort", mqttPort);
-        preferences.putString("mqttUser", mqttUser);
-        preferences.putString("mqttPassword", mqttPassword);
-        preferences.end();
-        
-        server->send(200, "text/plain", "Configuration saved! Restarting...");
-        delay(1000);
-        ESP.restart();
-    });
-    
-    server->on("/reset", HTTP_POST, [this](){
-        server->send(200, "text/plain", "Device resetting...");
-        delay(500);
-        ESP.restart();
-    });
-    
-    server->on("/serial0/poll", HTTP_GET, [this](){
-        static int lastPos0 = 0;
-        unsigned long startTime = millis();
-        
-        while (millis() - startTime < 3000) {
-            String newData = serial0Log.getNewData(lastPos0);
-            if (newData.length() > 0) {
-                server->send(200, "text/plain", newData);
-                return;
-            }
-            delay(100);
-            server->handleClient();
-        }
-        
-        server->send(200, "text/plain", "");
-    });
-    
-    server->on("/serial1/poll", HTTP_GET, [this](){
-        static int lastPos1 = 0;
-        unsigned long startTime = millis();
-        
-        while (millis() - startTime < 3000) {
-            String newData = serial1Log.getNewData(lastPos1);
-            if (newData.length() > 0) {
-                server->send(200, "text/plain", newData);
-                return;
-            }
-            delay(100);
-            server->handleClient();
-        }
-        
-        server->send(200, "text/plain", "");
-    });
-    
-    server->on("/serial0/send", HTTP_POST, [this](){
-        if (!server->hasArg("data")) {
-            server->send(400, "text/plain", "Missing data");
-            return;
-        }
-        
-        String data = server->arg("data");
-        if (sendCallback) {
-            sendCallback(0, data);
-        }
-        server->send(200, "text/plain", "OK");
-    });
-    
-    server->on("/serial1/send", HTTP_POST, [this](){
-        if (!server->hasArg("data")) {
-            server->send(400, "text/plain", "Missing data");
-            return;
-        }
-        
-        String data = server->arg("data");
-        if (sendCallback) {
-            sendCallback(1, data);
-        }
-        server->send(200, "text/plain", "OK");
-    });
-    
-    server->begin();
+    if (server->hasArg("ssid")) {
+      preferencesStorage.ssid = server->arg("ssid");
+    }
+    if (server->hasArg("password")) {
+      String newPassword = server->arg("password");
+      if (newPassword.length() > 0 && newPassword != "********") {
+        preferencesStorage.password = newPassword;
+      }
+    }
+    if (server->hasArg("device")) {
+      preferencesStorage.deviceName = server->arg("device");
+      preferencesStorage.topicTty0Rx =
+          "wifi_serial/" + preferencesStorage.deviceName + "/ttyS0/rx";
+      preferencesStorage.topicTty0Tx =
+          "wifi_serial/" + preferencesStorage.deviceName + "/ttyS0/tx";
+      preferencesStorage.topicTty1Rx =
+          "wifi_serial/" + preferencesStorage.deviceName + "/ttyS1/rx";
+      preferencesStorage.topicTty1Tx =
+          "wifi_serial/" + preferencesStorage.deviceName + "/ttyS1/tx";
+    }
+    if (server->hasArg("broker")) {
+      preferencesStorage.mqttBroker = server->arg("broker");
+    }
+    if (server->hasArg("port")) {
+      preferencesStorage.mqttPort = server->arg("port").toInt();
+    }
+    if (server->hasArg("user")) {
+      preferencesStorage.mqttUser = server->arg("user");
+    }
+    if (server->hasArg("mqttpass")) {
+      String newMqttPassword = server->arg("mqttpass");
+      if (newMqttPassword.length() > 0 && newMqttPassword != "********") {
+        preferencesStorage.mqttPassword = newMqttPassword;
+      }
+    }
+    preferencesStorage.save();
+    server->send(200, "text/plain", "Configuration saved! Restarting...");
+    delay(1000);
+    ESP.restart();
+  });
+
+  server->on("/reset", HTTP_POST, [this]() {
+    Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling /reset request");
+    server->send(200, "text/plain", "Device resetting...");
+    delay(500);
+    ESP.restart();
+  });
+
+  server->on("/serial0/poll", HTTP_GET, [this]() {
+    Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling /serial0/poll request");
+    static int lastPos0 = 0;
+    unsigned long startTime = millis();
+
+    while (millis() - startTime < 3000) {
+      String newData = serial0Log.getNewData(lastPos0);
+      if (newData.length() > 0) {
+        server->send(200, "text/plain", newData);
+        return;
+      }
+      delay(100);
+      server->handleClient();
+    }
+
+    server->send(200, "text/plain", "");
+  });
+
+  server->on("/serial1/poll", HTTP_GET, [this]() {
+    Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling /serial1/poll request");
+    static int lastPos1 = 0;
+    unsigned long startTime = millis();
+
+    while (millis() - startTime < 3000) {
+      String newData = serial1Log.getNewData(lastPos1);
+      if (newData.length() > 0) {
+        server->send(200, "text/plain", newData);
+        return;
+      }
+      delay(100);
+      server->handleClient();
+    }
+
+    server->send(200, "text/plain", "");
+  });
+
+  server->on("/serial0/send", HTTP_POST, [this]() {
+    Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling /serial0/send request");
+    if (!server->hasArg("data")) {
+      server->send(400, "text/plain", "Missing data");
+      return;
+    }
+
+    String data = server->arg("data");
+    if (sendCallback) {
+      sendCallback(0, data);
+    }
+    server->send(200, "text/plain", "OK");
+  });
+
+  server->on("/serial1/send", HTTP_POST, [this]() {
+    Log.traceln("%s: %s", __PRETTY_FUNCTION__, "Handling /serial1/send request");
+    if (!server->hasArg("data")) {
+      server->send(400, "text/plain", "Missing data");
+      return;
+    }
+
+    String data = server->arg("data");
+    if (sendCallback) {
+      sendCallback(1, data);
+    }
+    server->send(200, "text/plain", "OK");
+  });
+
+  server->begin();
 }
 
 String WebConfigServer::getConfigHTML() {
-    return String(R"HTML(
+  return String(R"HTML(
 <!DOCTYPE html>
 <html>
 <head>
@@ -225,70 +210,79 @@ String WebConfigServer::getConfigHTML() {
         form{margin-bottom:20px;}
         .reset-btn{background:#f44336;color:#FFFFFF;padding:15px;width:100%;border:none;cursor:pointer;border-radius:4px;font-weight:bold;margin-top:10px;}
         .reset-btn:hover{background:#d32f2f;}
+        .clear-btn{background:#2196F3;color:#FFFFFF;padding:8px 12px;border:none;cursor:pointer;border-radius:4px;font-weight:bold;}
+        .clear-btn:hover{background:#1976D2;}
+        .special-btn{background:#4CAF50;color:#FFFFFF;padding:8px 12px;border:none;cursor:pointer;border-radius:4px;font-weight:bold;}
+        .special-btn:hover{background:#388E3C;}
+        .button-table{width:100%;border-collapse:collapse;margin-bottom:10px;}
+        .button-table td{padding:2px;}
     </style>
 </head>
 <body>
     <h2>ESP32-C3 Configuration</h2>
     <div class="tabs">
         <div class="tab active" onclick="switchTab(0)">Configuration</div>
-        <div class="tab" onclick="switchTab(1)">ttyS0</div>
-        <div class="tab" onclick="switchTab(2)">ttyS1</div>
+        <div class="tab" onclick="switchTab(1)">ttyS0 (USB)</div>
+        <div class="tab" onclick="switchTab(2)">ttyS1 (UART)</div>
     </div>
     <div id="tab-config" class="tab-content active">
         <h3>Configuration</h3>
         <form action="/save" method="POST">
             <label>WiFi SSID:</label>
-            <input type="text" name="ssid" value=")HTML") 
-    + escapeHTML(ssid) 
-    + String(R"HTML(" required>
+            <input type="text" name="ssid" value=")HTML") +
+         escapeHTML(preferencesStorage.ssid) + String(R"HTML(" required>
             <label>WiFi Password:</label>
-            <input type="password" name="password" id="wifi_password" value=")HTML")
-    + (password.length() > 0 ? String("********") : String(""))
-    + String(R"HTML(" placeholder="Leave empty to keep current">
-            <input type="hidden" id="wifi_password_has_value" value=")HTML")
-    + (password.length() > 0 ? String("1") : String("0"))
-    + String(R"HTML(">
+            <input type="password" name="password" id="wifi_password" value=")HTML") +
+         (preferencesStorage.password.length() > 0 ? String("********")
+                                                   : String("")) +
+         String(R"HTML(" placeholder="Leave empty to keep current">
+            <input type="hidden" id="wifi_password_has_value" value=")HTML") +
+         (preferencesStorage.password.length() > 0 ? String("1")
+                                                   : String("0")) +
+         String(R"HTML(">
+            <label>TTYS1 (UART) Speed (baud):</label>
+            <input type="number" name="speed0" value=")HTML") +
+         String(preferencesStorage.baudRateTty1) + String(R"HTML(">
             <label>Device Name:</label>
-            <input type="text" name="device" value=")HTML")
-    + escapeHTML(deviceName.length() > 0 ? deviceName : "esp32c3")
-    + String(R"HTML(">
+            <input type="text" name="device" value=")HTML") +
+         escapeHTML(preferencesStorage.deviceName.length() > 0
+                        ? preferencesStorage.deviceName
+                        : "esp32c3") +
+         String(R"HTML(">
             <label>MQTT Broker:</label>
-            <input type="text" name="broker" value=")HTML")
-    + escapeHTML(mqttBroker)
-    + String(R"HTML(">
+            <input type="text" name="broker" value=")HTML") +
+         escapeHTML(preferencesStorage.mqttBroker) + String(R"HTML(">
             <label>MQTT Topics ttyS0:</label>
-            <label style="margin-top:5px;font-size:12px;color:#666666;">RX (ESP32 → MQTT):</label>
-            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML")
-    + escapeHTML(preferencesStorage.topicTty0Rx())
-    + String(R"HTML(</div>
-            <label style="margin-top:5px;font-size:12px;color:#666666;">TX (MQTT → ESP32):</label>
-            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML")
-    + escapeHTML(preferencesStorage.topicTty0Tx())
-    + String(R"HTML(</div>
+            <label style="margin-top:5px;font-size:12px;color:#666666;">RX (ESP32 -> MQTT):</label>
+            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML") +
+         escapeHTML(preferencesStorage.topicTty0Rx) + String(R"HTML(</div>
+            <label style="margin-top:5px;font-size:12px;color:#666666;">TX (MQTT -> ESP32):</label>
+            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML") +
+         escapeHTML(preferencesStorage.topicTty0Tx) + String(R"HTML(</div>
             <label>MQTT Topics ttyS1:</label>
-            <label style="margin-top:5px;font-size:12px;color:#666666;">RX (ESP32 → MQTT):</label>
-            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML")
-    + escapeHTML(preferencesStorage.topicTty1Rx())
-    + String(R"HTML(</div>
-            <label style="margin-top:5px;font-size:12px;color:#666666;">TX (MQTT → ESP32):</label>
-            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML")
-    + escapeHTML(preferencesStorage.topicTty1Tx())
-    + String(R"HTML(</div>
+            <label style="margin-top:5px;font-size:12px;color:#666666;">RX (ESP32 -> MQTT):</label>
+            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML") +
+         escapeHTML(preferencesStorage.topicTty1Rx) + String(R"HTML(</div>
+            <label style="margin-top:5px;font-size:12px;color:#666666;">TX (MQTT -> ESP32):</label>
+            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">)HTML") +
+         escapeHTML(preferencesStorage.topicTty1Tx) + String(R"HTML(</div>
             <label>MQTT Port:</label>
-            <input type="number" name="port" value=")HTML")
-    + String(mqttPort > 0 ? mqttPort : 1883)
-    + String(R"HTML(">
+            <input type="number" name="port" value=")HTML") +
+         String(preferencesStorage.mqttPort > 0 ? preferencesStorage.mqttPort
+                                                : 1883) +
+         String(R"HTML(">
             <label>MQTT User (optional):</label>
-            <input type="text" name="user" value=")HTML")
-    + escapeHTML(mqttUser)
-    + String(R"HTML(">
+            <input type="text" name="user" value=")HTML") +
+         escapeHTML(preferencesStorage.mqttUser) + String(R"HTML(">
             <label>MQTT Password (optional):</label>
-            <input type="password" name="mqttpass" id="mqtt_password" value=")HTML")
-    + (mqttPassword.length() > 0 ? String("********") : String(""))
-    + String(R"HTML(" placeholder="Leave empty to keep current">
-            <input type="hidden" id="mqtt_password_has_value" value=")HTML")
-    + (mqttPassword.length() > 0 ? String("1") : String("0"))
-    + String(R"HTML(">
+            <input type="password" name="mqttpass" id="mqtt_password" value=")HTML") +
+         (preferencesStorage.mqttPassword.length() > 0 ? String("********")
+                                                       : String("")) +
+         String(R"HTML(" placeholder="Leave empty to keep current">
+            <input type="hidden" id="mqtt_password_has_value" value=")HTML") +
+         (preferencesStorage.mqttPassword.length() > 0 ? String("1")
+                                                       : String("0")) +
+         String(R"HTML(">
             <button type="submit">Save Configuration</button>
         </form>
         <button class="reset-btn" onclick="if(confirm('Are you sure you want to reset the device? This will restart the ESP32.')){fetch('/reset',{method:'POST'}).then(()=>{alert('Device resetting...');});}">Reset Device</button>
@@ -296,6 +290,20 @@ String WebConfigServer::getConfigHTML() {
     <div id="tab-serial0" class="tab-content">
         <h3>Serial Port ttyS0 (USB)</h3>
         <div id="output0" class="serial-output"></div>
+        <table class="button-table">
+            <tr>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'ESC')">ESC \e</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'TAB')">TAB \t</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'ENTER')">ENTER \r\n</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+C')">Ctrl+C ^C</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+Z')">Ctrl+Z ^Z</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+D')">Ctrl+D ^D</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+A')">Ctrl+A ^A</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'CTRL+E')">Ctrl+E ^E</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(0, 'BACKSPACE')">Backspace ^H</button></td>
+                <td><button class="clear-btn" onclick="clearOutput(0)">Clear</button></td>
+            </tr>
+        </table>
         <div class="input-group">
             <input type="text" id="input0" class="serial-input" placeholder="Enter command..." onkeypress="if(event.key==='Enter')sendCommand(0)">
             <button class="send-btn" onclick="sendCommand(0)">Send</button>
@@ -304,6 +312,20 @@ String WebConfigServer::getConfigHTML() {
     <div id="tab-serial1" class="tab-content">
         <h3>Serial Port ttyS1 (UART)</h3>
         <div id="output1" class="serial-output"></div>
+        <table class="button-table">
+            <tr>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'ESC')">ESC \e</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'TAB')">TAB \t</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'ENTER')">ENTER \r\n</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+C')">Ctrl+C ^C</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+Z')">Ctrl+Z ^Z</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+D')">Ctrl+D ^D</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+A')">Ctrl+A ^A</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'CTRL+E')">Ctrl+E ^E</button></td>
+                <td><button class="special-btn" onclick="sendSpecial(1, 'BACKSPACE')">Backspace ^H</button></td>
+                <td><button class="clear-btn" onclick="clearOutput(1)">Clear</button></td>
+            </tr>
+        </table>
         <div class="input-group">
             <input type="text" id="input1" class="serial-input" placeholder="Enter command..." onkeypress="if(event.key==='Enter')sendCommand(1)">
             <button class="send-btn" onclick="sendCommand(1)">Send</button>
@@ -324,10 +346,28 @@ String WebConfigServer::getConfigHTML() {
             fetch('/serial'+port+'/poll').then(r=>r.text()).then(d=>{
                 if(d.length>0){const o=document.getElementById('output'+port);o.textContent+=d;o.scrollTop=o.scrollHeight;}
                 setTimeout(()=>pollSerial(port),100);}).catch(e=>setTimeout(()=>pollSerial(port),1000));}
-        function sendCommand(port){
-            const i=document.getElementById('input'+port);const c=i.value;if(!c)return;
-            fetch('/serial'+port+'/send',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(c)})
-            .then(r=>r.text()).then(d=>{i.value='';}).catch(e=>console.error('Error:',e));}
+         function sendCommand(port){
+             const i=document.getElementById('input'+port);const c=i.value;if(!c)return;
+             fetch('/serial'+port+'/send',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(c)})
+             .then(r=>r.text()).then(d=>{i.value='';}).catch(e=>console.error('Error:',e));}
+         function clearOutput(port){
+             document.getElementById('output'+port).textContent='';}
+         function sendSpecial(port, type){
+             let data='';
+             switch(type){
+                 case 'ESC': data='\x1b'; break;
+                 case 'TAB': data='\t'; break;
+                 case 'ENTER': data='\r\n'; break;
+                 case 'CTRL+C': data='\x03'; break;
+                 case 'CTRL+Z': data='\x1a'; break;
+                 case 'CTRL+D': data='\x04'; break;
+                 case 'CTRL+A': data='\x01'; break;
+                 case 'CTRL+E': data='\x05'; break;
+                 case 'BACKSPACE': data='\x08'; break;
+                 default: return;
+             }
+             fetch('/serial'+port+'/send',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(data)})
+             .then(r=>r.text()).then(d=>{}).catch(e=>console.error('Error:',e));}
         document.querySelector('form').addEventListener('submit',function(e){
             const wifiPwd=document.getElementById('wifi_password');
             const wifiPwdHasValue=document.getElementById('wifi_password_has_value').value==='1';
@@ -352,15 +392,14 @@ String WebConfigServer::getConfigHTML() {
 )HTML");
 }
 
-String WebConfigServer::escapeHTML(const String& str) {
-    String escaped = str;
-    escaped.replace("&", "&amp;");
-    escaped.replace("<", "&lt;");
-    escaped.replace(">", "&gt;");
-    escaped.replace("\"", "&quot;");
-    escaped.replace("'", "&#39;");
-    return escaped;
+String WebConfigServer::escapeHTML(const String &str) {
+  String escaped = str;
+  escaped.replace("&", "&amp;");
+  escaped.replace("<", "&lt;");
+  escaped.replace(">", "&gt;");
+  escaped.replace("\"", "&quot;");
+  escaped.replace("'", "&#39;");
+  return escaped;
 }
 
-}  // namespace jrb::wifi_serial
-
+} // namespace jrb::wifi_serial

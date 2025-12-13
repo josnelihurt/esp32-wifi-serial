@@ -29,19 +29,16 @@ MqttHandlerCreateTask::MqttHandlerCreateTask(DependencyContainer& cont, WiFiClie
 }
 
 void MqttHandlerCreateTask::setup() {
-    MqttClient* client = new MqttClient(wifiClient);
-    container.setMqttClient(static_cast<IMqttClient*>(client));
+    container.getMqttClient().setDeviceName(preferencesStorage.deviceName);
+    container.getMqttClient().setTopics(preferencesStorage.topicTty0Rx, preferencesStorage.topicTty0Tx,
+                      preferencesStorage.topicTty1Rx, preferencesStorage.topicTty1Tx);
     
-    client->setDeviceName(preferencesStorage.deviceName());
-    client->setTopics(preferencesStorage.topicTty0Rx(), preferencesStorage.topicTty0Tx(),
-                      preferencesStorage.topicTty1Rx(), preferencesStorage.topicTty1Tx());
+    container.getMqttClient().setCallbacks(tty0Wrapper, tty1Wrapper);
     
-    client->setCallbacks(tty0Wrapper, tty1Wrapper);
-    
-    if (preferencesStorage.mqttBroker().length() > 0) {
-        const char* user = preferencesStorage.mqttUser().length() > 0 ? preferencesStorage.mqttUser().c_str() : nullptr;
-        const char* pass = preferencesStorage.mqttPassword().length() > 0 ? preferencesStorage.mqttPassword().c_str() : nullptr;
-        client->connect(preferencesStorage.mqttBroker().c_str(), preferencesStorage.mqttPort(), user, pass);
+    if (preferencesStorage.mqttBroker.length() > 0) {
+        const char* user = preferencesStorage.mqttUser.length() > 0 ? preferencesStorage.mqttUser.c_str() : nullptr;
+        const char* pass = preferencesStorage.mqttPassword.length() > 0 ? preferencesStorage.mqttPassword.c_str() : nullptr;
+        container.getMqttClient().connect(preferencesStorage.mqttBroker.c_str(), preferencesStorage.mqttPort, user, pass);
     }
 }
 

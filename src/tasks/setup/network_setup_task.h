@@ -20,9 +20,9 @@ public:
         : wifiManager(wifi), preferences(prefs), otaManager(ota), systemInfo(info) {}
     
     void setup() override {
-        wifiManager.begin(&preferences);
+        wifiManager.setup();
         otaManager.setup();
-        systemInfo.printWelcomeMessage();
+        systemInfo.logSystemInformation();
     }
     
     void loop() override {}

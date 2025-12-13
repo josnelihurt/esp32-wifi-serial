@@ -4,7 +4,6 @@
 #include "domain/config/preferences_storage.h"
 #include "domain/serial/serial_log.h"
 #include <WebServer.h>
-#include <DNSServer.h>
 #include <Arduino.h>
 #include <functional>
 
@@ -35,19 +34,10 @@ private:
     SerialSendCallback sendCallback;
     
     WebServer* server;
-    DNSServer* dnsServer;
     bool apMode;
     IPAddress apIP;
     
-    String ssid;
-    String password;
-    String deviceName;
-    String mqttBroker;
-    int mqttPort;
-    String mqttUser;
-    String mqttPassword;
     
-    void setupWebServer();
     String getConfigHTML();
     String escapeHTML(const String& str);
 };

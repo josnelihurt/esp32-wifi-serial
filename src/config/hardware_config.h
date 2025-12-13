@@ -6,7 +6,6 @@ namespace jrb::wifi_serial {
 #define BOOT_BUTTON_PIN 9
 
 #define SERIAL0_BAUD 115200
-#define SERIAL1_BAUD 115200
 
 #define SERIAL1_RX_PIN 0
 #define SERIAL1_TX_PIN 1

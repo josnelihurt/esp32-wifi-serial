@@ -19,16 +19,7 @@ public:
     
     void loop() override {
         wifiManager.loop();
-        
-        // IMPORTANT: Get MqttClient from container each loop() call, not stored as pointer.
-        // This is critical because MqttClient is created AFTER this task is registered
-        // (in MqttHandlerCreateTask::setup()). If we stored MqttClient* in constructor,
-        // it would be nullptr and never updated, causing MQTT messages to never be processed.
-        IMqttClient* mqttClient = container.getMqttClient();
-        if (mqttClient) {
-            mqttClient->loop();
-        }
-        
+        container.getMqttClient().loop();
         ArduinoOTA.handle();
     }
 };

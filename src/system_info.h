@@ -17,7 +17,7 @@ public:
     SystemInfo(PreferencesStorage& storage, IMqttClient* client, bool& ota)
         : preferencesStorage(storage), mqttClient(client), otaEnabled(ota) {}
     
-    void printWelcomeMessage();
+    void logSystemInformation() const;
 };
 
 }  // namespace jrb::wifi_serial

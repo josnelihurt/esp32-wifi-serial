@@ -5,15 +5,16 @@
 #include "domain/config/preferences_storage.h"
 
 namespace jrb::wifi_serial {
-
+class IWiFiManager;
 class MqttReconnectTask final : public ITask {
 private:
-    IMqttClient* mqttClient;
+    IMqttClient& mqttClient;
+    IWiFiManager& wifiManager;
     PreferencesStorage& preferencesStorage;
 
-public:
-    MqttReconnectTask(IMqttClient* client, PreferencesStorage& storage)
-        : mqttClient(client), preferencesStorage(storage) {}
+public: 
+    MqttReconnectTask(IMqttClient& client, IWiFiManager& wifi, PreferencesStorage& storage);
+    ~MqttReconnectTask() = default;
     
     void loop() override;
 };

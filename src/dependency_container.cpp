@@ -5,15 +5,15 @@
 #include "ota_manager.h"
 #include "infrastructure/web/web_config_server.h"
 #include <Arduino.h>
+#include <ArduinoLog.h>
 
 namespace jrb::wifi_serial {
 
 DependencyContainer::DependencyContainer() {
-    serialBridge.setLogs(serial0Log, serial1Log);
+    Log.traceln(__PRETTY_FUNCTION__);
 }
 
 DependencyContainer::~DependencyContainer() {
-    delete systemInfo;
     delete serialCmdHandler;
     delete buttonHandler;
     delete otaManager;
@@ -21,13 +21,17 @@ DependencyContainer::~DependencyContainer() {
 }
 
 void DependencyContainer::createHandlers(std::function<void(int, const String&)> webToSerialCallback) {
-    systemInfo = new SystemInfo(preferencesStorage, mqttClient, otaEnabled);
+    Log.traceln(__PRETTY_FUNCTION__);
+    preferencesStorage.load();
+    systemInfo.logSystemInformation();
+    serialBridge.begin(preferencesStorage.baudRateTty1);
+    serialBridge.setLogs(serial0Log, serial1Log);
     serialCmdHandler = new SerialCommandHandler(
-        preferencesStorage, mqttClient, debugEnabled,
-        [this]() { systemInfo->printWelcomeMessage(); }
+        preferencesStorage, &mqttClient, debugEnabled,
+        [this]() { systemInfo.logSystemInformation(); }
     );
     buttonHandler = new ButtonHandler(
-        [this]() { systemInfo->printWelcomeMessage(); }
+        [this]() { systemInfo.logSystemInformation(); }
     );
     otaManager = new OTAManager(preferencesStorage, otaEnabled);
     webServer = new WebConfigServer(

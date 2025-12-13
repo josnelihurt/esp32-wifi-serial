@@ -28,15 +28,6 @@ class Application final {
 public:
     explicit Application(DependencyContainer& container);
     ~Application() = default;
-    
-    /**
-     * @brief Perform early initialization.
-     *
-     * Called once at program start to initialize internal services and
-     * prepare the application for setup. This does not start tasks that
-     * require the system to be fully configured.
-     */
-    void initialize();
 
     /**
      * @brief Run one-time setup routines.
@@ -71,13 +62,6 @@ public:
      */
     void onMqttTty1(const char* data, unsigned int length);
 
-    /**
-     * @brief Callback invoked to reset the stored configuration to defaults.
-     *
-     * Typically triggered by a web UI or physical action; this method
-     * coordinates clearing configuration and restarting setup as needed.
-     */
-    void onResetConfig();
 
     /**
      * @brief Forward data received from the web UI to serial and MQTT.
@@ -102,11 +86,6 @@ public:
      */
     std::function<void(const char*, unsigned int)> getMqttTty1Callback();
 
-    /**
-     * @brief Return a callable that triggers a configuration reset when
-     *        invoked.
-     */
-    std::function<void()> getResetConfigCallback();
 
 private:
     DependencyContainer& container;

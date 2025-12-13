@@ -7,49 +7,57 @@
 
 namespace jrb::wifi_serial {
 
+/**
+ * @class PreferencesStorage
+ * @brief A class to manage device configuration preferences using the Arduino Preferences library.
+ */
 class PreferencesStorage final : public IStorage {
 private:
     Preferences preferences;
-    String m_deviceName;
-    String m_mqttBroker;
-    int m_mqttPort;
-    String m_mqttUser;
-    String m_mqttPassword;
-    String m_topicTty0Rx;
-    String m_topicTty0Tx;
-    String m_topicTty1Rx;
-    String m_topicTty1Tx;
-    
+    /**
+    * @brief Generates default MQTT topics.
+    */
     void generateDefaultTopics();
-    void migrateOldTopics();
-
-public:
+    
+    public:
+    /**
+    * @brief Constructor for PreferencesStorage.
+    */
     PreferencesStorage();
     ~PreferencesStorage() = default;
+    String deviceName;
+    int baudRateTty1;
+    String mqttBroker;
+    int mqttPort;
+    String mqttUser;
+    String mqttPassword;
+    String topicTty0Rx;
+    String topicTty0Tx;
+    String topicTty1Rx;
+    String topicTty1Tx;
+    String ssid;
+    String password;
     
+    /**
+     * @brief Serializes the configuration to a JSON string.
+     * @return The configuration as a JSON string.
+     */
+    String serialize();
+    /**
+     * @brief Loads configuration from preferences storage.
+     */
     void load() override;
+    
+    /**
+     * @brief Saves current configuration to preferences storage.
+     */
     void save() override;
+    
+    /**
+     * @brief Clears all configuration in the preferences storage.
+     */
     void clear() override;
     
-    const String& deviceName() const override { return m_deviceName; }
-    const String& mqttBroker() const override { return m_mqttBroker; }
-    int mqttPort() const override { return m_mqttPort; }
-    const String& mqttUser() const override { return m_mqttUser; }
-    const String& mqttPassword() const override { return m_mqttPassword; }
-    const String& topicTty0Rx() const override { return m_topicTty0Rx; }
-    const String& topicTty0Tx() const override { return m_topicTty0Tx; }
-    const String& topicTty1Rx() const override { return m_topicTty1Rx; }
-    const String& topicTty1Tx() const override { return m_topicTty1Tx; }
-    
-    void deviceName(const String& v) override { m_deviceName = v; }
-    void mqttBroker(const String& v) override { m_mqttBroker = v; }
-    void mqttPort(int v) override { m_mqttPort = v; }
-    void mqttUser(const String& v) override { m_mqttUser = v; }
-    void mqttPassword(const String& v) override { m_mqttPassword = v; }
-    void topicTty0Rx(const String& v) override { m_topicTty0Rx = v; }
-    void topicTty0Tx(const String& v) override { m_topicTty0Tx = v; }
-    void topicTty1Rx(const String& v) override { m_topicTty1Rx = v; }
-    void topicTty1Tx(const String& v) override { m_topicTty1Tx = v; }
 };
 
 }  // namespace jrb::wifi_serial

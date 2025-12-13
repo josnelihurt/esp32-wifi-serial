@@ -27,8 +27,7 @@ public:
     
     TaskRegistry& getRegistry() { return registry; }
     WiFiManager& getWiFiManager() { return wifiManager; }
-    IMqttClient* getMqttClient() { return mqttClient; }
-    void setMqttClient(IMqttClient* client) { mqttClient = client; }
+    IMqttClient& getMqttClient() { return mqttClient; }
     PreferencesStorage& getPreferencesStorage() { return preferencesStorage; }
     SerialBridge& getSerialBridge() { return serialBridge; }
     SerialLog& getSerial0Log() { return serial0Log; }
@@ -40,7 +39,7 @@ public:
     }
     ::Preferences& getPreferences() { return preferences; }
     WiFiClient& getWiFiClient() { return wifiClient; }
-    SystemInfo* getSystemInfo() { return systemInfo; }
+    SystemInfo& getSystemInfo() { return systemInfo; }
     ButtonHandler* getButtonHandler() { return buttonHandler; }
     OTAManager* getOTAManager() { return otaManager; }
     WebConfigServer* getWebConfigServer() { return webServer; }
@@ -49,19 +48,19 @@ public:
 private:
     ::Preferences preferences;
     PreferencesStorage preferencesStorage;
-    WiFiManager wifiManager;
+    WiFiManager wifiManager{preferencesStorage};
     WiFiClient wifiClient;
-    IMqttClient* mqttClient{};
+    MqttClient mqttClient{wifiClient};
     SerialBridge serialBridge;
     SerialLog serial0Log;
     SerialLog serial1Log;
     
     bool otaEnabled{false};
     unsigned long lastInfoPublish{0};
-    bool debugEnabled{false};
+    bool debugEnabled{true};
     char serialBuffer[2][SERIAL_BUFFER_SIZE];
     
-    SystemInfo* systemInfo{};
+    SystemInfo systemInfo{preferencesStorage, &mqttClient, otaEnabled};
     SerialCommandHandler* serialCmdHandler{};
     ButtonHandler* buttonHandler{};
     OTAManager* otaManager{};

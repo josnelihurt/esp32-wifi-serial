@@ -1,5 +1,6 @@
 #include "serial_command_handler.h"
 #include "config.h"
+#include <ArduinoLog.h>
 
 namespace jrb::wifi_serial {
 

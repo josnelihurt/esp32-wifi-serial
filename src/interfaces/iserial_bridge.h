@@ -18,16 +18,10 @@ public:
     virtual ~ISerialBridge() = default;
     
     /**
-     * @brief Initialize serial ports with default baud rates
-     */
-    virtual void begin() = 0;
-    
-    /**
      * @brief Initialize serial ports with custom baud rates
-     * @param baud0 Baud rate for serial port 0
-     * @param baud1 Baud rate for serial port 1 (0 to disable)
+     * @param ttyS1BaudRate Baud rate for serial port 1 (0 to disable)
      */
-    virtual void begin(int baud0, int baud1) = 0;
+    virtual void begin(int ttyS1BaudRate) = 0;
     
     /**
      * @brief Set log handlers for both serial ports
@@ -38,9 +32,9 @@ public:
     
     /**
      * @brief Set MQTT client handler for publishing serial data
-     * @param client Pointer to MQTT client instance
+     * @param client Reference to MQTT client instance
      */
-    virtual void setMqttHandler(IMqttClient* client) = 0;
+    virtual void setMqttHandler(IMqttClient& client) = 0;
     
     /**
      * @brief Read available data from serial port 0

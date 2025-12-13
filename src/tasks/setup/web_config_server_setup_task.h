@@ -10,20 +10,20 @@ class WebConfigServerSetupTask final : public ITask {
 private:
     WebConfigServer& webServer;
     WiFiManager& wifiManager;
-
+    PreferencesStorage& preferencesStorage;
 public:
-    WebConfigServerSetupTask(WebConfigServer& server, WiFiManager& wifi)
-        : webServer(server), wifiManager(wifi) {}
+    WebConfigServerSetupTask(WebConfigServer& server, WiFiManager& wifi, PreferencesStorage& preferencesStorage)
+        : webServer(server), wifiManager(wifi), preferencesStorage(preferencesStorage) {}
     
     void setup() override {
         webServer.setWiFiConfig(
-            wifiManager.getSSID(),
-            wifiManager.getPassword(),
-            wifiManager.getDeviceName(),
-            wifiManager.getMqttBroker(),
-            wifiManager.getMqttPort(),
-            wifiManager.getMqttUser(),
-            wifiManager.getMqttPassword()
+            preferencesStorage.ssid,
+            preferencesStorage.password,
+            preferencesStorage.deviceName,
+            preferencesStorage.mqttBroker,
+            preferencesStorage.mqttPort,
+            preferencesStorage.mqttUser,
+            preferencesStorage.mqttPassword
         );
         webServer.setAPMode(wifiManager.isAPMode());
         if (wifiManager.isAPMode()) {
