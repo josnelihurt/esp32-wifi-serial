@@ -17,7 +17,6 @@ public:
     ~WebConfigServer();
 
     void setup();
-    void loop();
 
     void setWiFiConfig(const String& ssid, const String& password, const String& deviceName,
                       const String& mqttBroker, int mqttPort, const String& mqttUser,

@@ -24,10 +24,6 @@ WebConfigServer::~WebConfigServer() {
   }
 }
 
-void WebConfigServer::loop() {
-  // No longer needed for AsyncWebServer - it handles requests asynchronously
-}
-
 void WebConfigServer::setWiFiConfig(const String &ssid, const String &password,
                                     const String &deviceName,
                                     const String &mqttBroker, int mqttPort,

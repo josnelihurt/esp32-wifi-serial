@@ -26,9 +26,7 @@ Application::Application() {
         preferencesStorage, &mqttClient, debugEnabled,
         [this]() { systemInfo.logSystemInformation(); }
     );
-    buttonHandler = new ButtonHandler(
-        [this]() { systemInfo.logSystemInformation(); }
-    );
+    buttonHandler = new ButtonHandler();
     otaManager = new OTAManager(preferencesStorage, otaEnabled);
     webServer = new WebConfigServer(
         preferencesStorage, serial0Log, serial1Log,
@@ -71,15 +69,13 @@ std::function<void(const char*, unsigned int)> Application::getMqttTty1Callback(
 
 // Static MQTT callback wrappers for C-style function pointers
 void Application::mqttTty0Wrapper(const char* data, unsigned int length) {
-    if (s_instance) {
-        s_instance->onMqttTty0(data, length);
-    }
+    if (s_instance == nullptr) return;
+    s_instance->onMqttTty0(data, length);
 }
 
 void Application::mqttTty1Wrapper(const char* data, unsigned int length) {
-    if (s_instance) {
-        s_instance->onMqttTty1(data, length);
-    }
+    if (s_instance == nullptr) return;
+    s_instance->onMqttTty1(data, length);
 }
 
 void Application::setupMqttCallbacks() {
@@ -148,22 +144,12 @@ void Application::loop() {
     mqttClient.loop();
     ArduinoOTA.handle();
 
-    // MQTT reconnection
     reconnectMqttIfNeeded();
-
-    // MQTT info publishing
     publishInfoIfNeeded();
 
     // Serial bridge tasks (from SerialBridge0Task and SerialBridge1Task)
     handleSerialPort0();
     handleSerialPort1();
-
-    // Web server
-    if (webServer) {
-        webServer->loop();
-    } else {
-        Log.error("No web config server found");
-    }
 
     // MQTT buffer flushing
     for (int i = 0; i < 2; i++) {

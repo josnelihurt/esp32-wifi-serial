@@ -34,10 +34,6 @@ private:
      */
     bool lastButtonState{HIGH};
 
-    /**
-     * @brief Function to execute when a triple press is detected.
-     */
-    std::function<void()> printWelcomeFunc;
 
 public:
     /**
@@ -47,7 +43,8 @@ public:
      *
      * @param printWelcome The function to be called when a triple press is detected.
      */
-    explicit ButtonHandler(std::function<void()> printWelcome) : printWelcomeFunc(printWelcome) {}
+    explicit ButtonHandler() = default;
+    ~ButtonHandler() = default;
     
     /**
      * @brief Checks if a triple press event has occurred.

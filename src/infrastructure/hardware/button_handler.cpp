@@ -40,9 +40,6 @@ bool ButtonHandler::checkTriplePress() {
     lastButtonState = currentButtonState;
     
     if (currentButtonState == LOW && now - buttonPressTime > 200 && buttonPressCount == 0) {
-        if (printWelcomeFunc) {
-            printWelcomeFunc();
-        }
         buttonPressTime = now;
     }
     
