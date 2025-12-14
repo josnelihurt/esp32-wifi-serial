@@ -55,6 +55,9 @@ Application::Application() {
     sshServer = new SSHServer(preferencesStorage, systemInfo);
     sshServer->setSerialCallbacks(
         [this](const char* data, int length) {
+            if(debugEnabled) {
+                Log.infoln("$ssh->ttyS1$%s", data);
+            }
             serialBridge.writeSerial1(data, length);
         },
         [this](char* buffer, int maxLen) {

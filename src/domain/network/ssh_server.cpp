@@ -40,12 +40,11 @@ void SSHServer::sendWelcomeMessage(void* channel) {
 
     ssh_channel chan = (ssh_channel)channel;
 
-    // Send welcome banner
     const char* banner =
         "\r\n"
         "╔══════════════════════════════════════════════════════════╗\r\n"
         "║                                                          ║\r\n"
-        "║          ESP32 WiFi-Serial Bridge - SSH Console         ║\r\n"
+        "║          ESP32 WiFi-Serial Bridge - SSH Console          ║\r\n"
         "║                                                          ║\r\n"
         "╚══════════════════════════════════════════════════════════╝\r\n"
         "\r\n";

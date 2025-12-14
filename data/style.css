@@ -5,7 +5,6 @@ html, body {
     background: #FFFFFF;
     color: #333333;
     height: 100vh;
-    overflow: hidden;
 }
 
 body {
@@ -104,7 +103,6 @@ button:hover {
     padding: 20px;
     background: #FFFFFF;
     flex: 1;
-    overflow: hidden;
 }
 
 .tab-content.active {
