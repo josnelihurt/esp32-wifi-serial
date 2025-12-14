@@ -152,3 +152,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (mqttPwd.value === '********') mqttPwd.value = '';
     });
 });
+
+function togglePassword() {
+    const input = document.getElementById('input1');
+    const btn = document.getElementById('passwordBtn');
+
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+    btn.textContent = isPassword ? 'Password' : 'Show';
+
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+}

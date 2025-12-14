@@ -3,7 +3,7 @@
     <h4 style="margin-top:0;color:#333;">ESP32 WiFi Serial Bridge</h4>
     <p style="line-height:1.6;color:#333;">
         This lightweight WiFi-to-Serial bridge provides emergency console access and remote administration
-        for ARM-based embedded systems like Raspberry Pi and Orange Pi. When SSH connectivity fails or
+        for embedded systems like Raspberry Pi and Orange Pi. When SSH connectivity fails or
         network issues arise in your homelab infrastructure, this ESP32-based solution bridges serial
         console access over WiFi and MQTT, offering a reliable fallback for console access and basic
         administration. It's perfect for managing headless embedded systems without physical access,
@@ -14,6 +14,7 @@
     <h4 style="margin-top:0;color:#333;">Key Features</h4>
     <ul style="line-height:1.8;color:#333;">
         <li><strong>Serial Bridge:</strong> Connect ARM devices via UART serial port</li>
+        <li><strong>SSH Server:</strong> Direct SSH access to serial console on port 22</li>
         <li><strong>USB Debug Port:</strong> Built-in USB serial for debugging</li>
         <li><strong>MQTT Integration:</strong> Send/receive serial data over MQTT topics</li>
         <li><strong>Web Interface:</strong> Configuration and real-time monitoring</li>
@@ -37,12 +38,13 @@
     <p style="margin:5px 0;"><strong>IP Address:</strong> %IP_ADDRESS%</p>
     <p style="margin:5px 0;"><strong>Hostname:</strong> %DEVICE_NAME%.local</p>
     <p style="margin:5px 0;"><strong>MQTT Broker:</strong> %MQTT_BROKER%:%MQTT_PORT%</p>
+    <p style="margin:5px 0;"><strong>SSH Access:</strong> ssh %WEB_USER%@%IP_ADDRESS%</p>
 </div>
 <div style="background:#FFF9C4;padding:20px;border-radius:4px;border:2px solid #FFC107;text-align:center;">
     <h4 style="margin-top:0;color:#333;">Developed By</h4>
-    <p style="font-size:18px;margin:10px 0;"><strong>Josneli Hurt</strong></p>
+    <p style="font-size:18px;margin:10px 0;"><strong>Josnelihurt</strong></p>
     <p style="margin:10px 0;">
-        <a href="http://www.josnelihurt.me" target="_blank" style="color:#2196F3;font-weight:bold;text-decoration:none;font-size:16px;">
+        <a href="http://www.josnelihurt.me" target="_blank" style="color:#FF9800;font-weight:bold;text-decoration:none;font-size:16px;">
             🌐 www.josnelihurt.me
         </a>
     </p>

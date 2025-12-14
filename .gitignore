@@ -5,3 +5,5 @@
 *.hex
 
 .cache/
+.prompts/history.promts
+.crush.json

@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>%DEVICE_NAME% Configuration</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="/style.css">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
+
 <body>
     <h2>%DEVICE_NAME% Configuration</h2>
     <div class="tabs">
@@ -22,17 +24,19 @@
             <input type="text" name="ssid" value="%SSID%" required>
 
             <label>WiFi Password:</label>
-            <input type="password" name="password" id="wifi_password" value="%PASSWORD_DISPLAY%" placeholder="Leave empty to keep current">
+            <input type="password" name="password" id="wifi_password" value="%PASSWORD_DISPLAY%"
+                placeholder="Leave empty to keep current">
             <input type="hidden" id="wifi_password_has_value" value="%PASSWORD_HAS_VALUE%">
-            
+
             <hr style="margin:20px 0;border:0;border-top:1px solid #ccc;">
             <h4>Web Interface Settings</h4>
-            
+
             <label>Web User (default: admin):</label>
             <input type="text" name="web_user" value="%WEB_USER%">
-            
+
             <label>Web Password:</label>
-            <input type="password" name="web_password" id="web_password" value="%WEB_PASSWORD_DISPLAY%" placeholder="Leave empty to keep current">
+            <input type="password" name="web_password" id="web_password" value="%WEB_PASSWORD_DISPLAY%"
+                placeholder="Leave empty to keep current">
             <input type="hidden" id="web_password_has_value" value="%WEB_PASSWORD_HAS_VALUE%">
             <div style="font-size:12px;color:#666666;margin-top:5px;">This password is also used for OTA updates.</div>
             <hr style="margin:20px 0;border:0;border-top:1px solid #ccc;">
@@ -49,15 +53,23 @@
 
             <label>MQTT Topics ttyS0:</label>
             <label style="margin-top:5px;font-size:12px;color:#666666;">RX (ESP32 -> MQTT):</label>
-            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">%TOPIC_TTY0_RX%</div>
+            <div
+                style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">
+                %TOPIC_TTY0_RX%</div>
             <label style="margin-top:5px;font-size:12px;color:#666666;">TX (MQTT -> ESP32):</label>
-            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">%TOPIC_TTY0_TX%</div>
+            <div
+                style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">
+                %TOPIC_TTY0_TX%</div>
 
             <label>MQTT Topics ttyS1:</label>
             <label style="margin-top:5px;font-size:12px;color:#666666;">RX (ESP32 -> MQTT):</label>
-            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">%TOPIC_TTY1_RX%</div>
+            <div
+                style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">
+                %TOPIC_TTY1_RX%</div>
             <label style="margin-top:5px;font-size:12px;color:#666666;">TX (MQTT -> ESP32):</label>
-            <div style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">%TOPIC_TTY1_TX%</div>
+            <div
+                style="padding:10px;background:#f5f5f5;border:2px solid #666666;border-radius:4px;color:#000000;font-family:monospace;margin:5px 0;">
+                %TOPIC_TTY1_TX%</div>
 
             <label>MQTT Port:</label>
             <input type="number" name="port" value="%MQTT_PORT%">
@@ -66,12 +78,15 @@
             <input type="text" name="user" value="%MQTT_USER%">
 
             <label>MQTT Password (optional):</label>
-            <input type="password" name="mqttpass" id="mqtt_password" value="%MQTT_PASSWORD_DISPLAY%" placeholder="Leave empty to keep current">
+            <input type="password" name="mqttpass" id="mqtt_password" value="%MQTT_PASSWORD_DISPLAY%"
+                placeholder="Leave empty to keep current">
             <input type="hidden" id="mqtt_password_has_value" value="%MQTT_PASSWORD_HAS_VALUE%">
 
             <button type="submit">Save Configuration</button>
         </form>
-        <button class="reset-btn" onclick="if(confirm('Are you sure you want to reset the device? This will restart the ESP32.')){fetch('/reset',{method:'POST'}).then(()=>{alert('Device resetting...');});}">Reset Device</button>
+        <button class="reset-btn"
+            onclick="if(confirm('Are you sure you want to reset the device? This will restart the ESP32.')){fetch('/reset',{method:'POST'}).then(()=>{alert('Device resetting...');});}">Reset
+            Device</button>
     </div>
 
     <div id="tab-serial0" class="tab-content">
@@ -93,7 +108,8 @@
             </tr>
         </table>
         <div class="input-group">
-            <input type="text" id="input0" class="serial-input" placeholder="Enter command..." onkeypress="if(event.key==='Enter')sendCommand(0)">
+            <input type="text" id="input0" class="serial-input" placeholder="Enter command..."
+                onkeypress="if(event.key==='Enter')sendCommand(0)">
             <button class="send-btn" onclick="sendCommand(0)">Send</button>
         </div>
     </div>
@@ -117,8 +133,12 @@
             </tr>
         </table>
         <div class="input-group">
-            <input type="text" id="input1" class="serial-input" placeholder="Enter command..." onkeypress="if(event.key==='Enter')sendCommand(1)">
-            <button class="send-btn" onclick="sendCommand(1)">Send</button>
+            <input type="text" id="input1" class="serial-input" placeholder="Enter command..."
+                onkeypress="if(event.key==='Enter')sendCommand(1)">
+            <table class="input-group">
+                <td><button class="password-btn" onclick="togglePassword()">Password</button></td>
+                <td><button class="send-btn" onclick="sendCommand(1)">Send</button></td>
+            </table>
         </div>
     </div>
 
@@ -132,4 +152,5 @@
 
     <script src="/script.js"></script>
 </body>
+
 </html>

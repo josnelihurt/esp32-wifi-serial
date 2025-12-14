@@ -5,6 +5,7 @@
 #include "domain/serial/serial_log.h"
 #include "domain/config/preferences_storage.h"
 #include "domain/network/mqtt_client.h"
+#include "domain/network/ssh_server.h"
 #include "infrastructure/hardware/serial_command_handler.h"
 #include "infrastructure/hardware/button_handler.h"
 #include "system_info.h"
@@ -122,6 +123,7 @@ private:
     ButtonHandler buttonHandler;
     OTAManager* otaManager{nullptr};
     WebConfigServer* webServer{nullptr};
+    SSHServer* sshServer{nullptr};
 
     // Helper methods for loop processing
     void handleSerialPort0();

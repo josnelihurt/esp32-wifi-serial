@@ -33,12 +33,24 @@ Application::Application() {
             handleWebToSerialAndMqtt(portIndex, data);
         }
     );
+
+    // Initialize SSH server (runs in its own FreeRTOS task)
+    sshServer = new SSHServer(preferencesStorage, systemInfo);
+    sshServer->setSerialCallbacks(
+        [this](const char* data, int length) {
+            serialBridge.writeSerial1(data, length);
+        },
+        [this](char* buffer, int maxLen) {
+            return serialBridge.readSerial1(buffer, maxLen);
+        }
+    );
 }
 
 Application::~Application() {
     delete serialCmdHandler;
     delete otaManager;
     delete webServer;
+    delete sshServer;
 }
 
 void Application::onMqttTty0(const char* data, unsigned int length) {
@@ -114,6 +126,11 @@ void Application::setup() {
     }
     webServer->setup();
 
+    // SSH server setup (after network is ready)
+    if (sshServer) {
+        sshServer->setup();
+    }
+
     // Initialize timers
     lastInfoPublish = millis();
 
@@ -140,6 +157,8 @@ void Application::loop() {
 
     handleSerialPort0();
     handleSerialPort1();
+
+    // SSH server runs in its own FreeRTOS task, so no loop() call needed
 
     for (int i = 0; i < 2; i++) {
         if (mqttClient.shouldFlushBuffer(i)) {
@@ -186,8 +205,11 @@ void Application::handleSerialPort0() {
         Log.traceln("[DEBUG TTY0] %.*s", len, serialBuffer[0]);
     }
 
-    // Command detection for ttyS0
+    // Command detection for ttyS0 - use a clean output buffer to avoid corruption
     static bool cmdPrefixReceived = false;
+    static char cleanBuffer[SERIAL_BUFFER_SIZE];
+    int cleanLen = 0;
+
     for (int i = 0; i < len; i++) {
         char c = serialBuffer[0][i];
 
@@ -202,39 +224,34 @@ void Application::handleSerialPort0() {
 
             if (c == CMD_INFO || c == 'I') {
                 systemInfo.logSystemInformation();
-                for (int j = i; j < len - 1; j++) {
-                    serialBuffer[0][j] = serialBuffer[0][j + 1];
-                }
-                len -= 1;
-                i--;
+                // Skip both command prefix and command char
                 continue;
             } else if (c == CMD_DEBUG || c == 'D') {
                 Log.infoln("Command detected: Ctrl+Y + d (Toggle Debug)");
                 debugEnabled = !debugEnabled;
                 Log.infoln("Debug %s", debugEnabled ? "enabled" : "disabled");
-                for (int j = i; j < len - 1; j++) {
-                    serialBuffer[0][j] = serialBuffer[0][j + 1];
-                }
-                len -= 1;
-                i--;
+                // Skip both command prefix and command char
                 continue;
             }
+            // If not a recognized command, pass through the character
+            cleanBuffer[cleanLen++] = c;
+            continue;
         }
 
         if (c == CMD_PREFIX) {
             Log.traceln("DEBUG: Ctrl+Y (command prefix) detected");
             cmdPrefixReceived = true;
-            for (int j = i; j < len - 1; j++) {
-                serialBuffer[0][j] = serialBuffer[0][j + 1];
-            }
-            len -= 1;
-            i--;
+            // Don't add command prefix to output buffer
             continue;
         }
+
+        // Normal character - add to clean buffer
+        cleanBuffer[cleanLen++] = c;
     }
 
-    if (len > 0) {
-        serialBridge.handleSerialToMqttAndWeb(0, serialBuffer[0], len);
+    // Send clean buffer without command sequences
+    if (cleanLen > 0) {
+        serialBridge.handleSerialToMqttAndWeb(0, cleanBuffer, cleanLen);
     }
 }
 

@@ -6,12 +6,7 @@
 
 namespace jrb::wifi_serial {
 
-/**
- * @brief Handles button input and detects triple press events.
- *
- * This class provides functionality to monitor button presses and detect when a triple press occurs,
- * which can be used to trigger specific actions in the firmware.
- */
+// Handles button input and detects triple press events.
 class ButtonHandler final {
 private:
     /**
@@ -46,14 +41,7 @@ public:
     explicit ButtonHandler() = default;
     ~ButtonHandler() = default;
     
-    /**
-     * @brief Checks if a triple press event has occurred.
-     *
-     * This method evaluates the button state and determines if three consecutive presses
-     * have been detected within a predefined time interval. If so, it triggers the associated function.
-     *
-     * @return True if a triple press is detected, false otherwise.
-     */
+// Handles button input and detects triple press events.
     bool checkTriplePress();
 };
 
