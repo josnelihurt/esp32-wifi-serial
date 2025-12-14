@@ -4,6 +4,10 @@ let polling0 = false;
 let polling1 = false;
 let otaLoaded = false;
 let aboutLoaded = false;
+let localEcho0 = false;
+let localEcho1 = false;
+let passwordMode0 = false;
+let passwordMode1 = false;
 
 function switchTab(index) {
     document.querySelectorAll('.tab').forEach((t, i) => {
@@ -86,6 +90,17 @@ function sendCommand(port) {
     const c = i.value;
     if (!c) return;
 
+    // Local echo
+    const localEcho = (port === 0) ? localEcho0 : localEcho1;
+    const passwordMode = (port === 0) ? passwordMode0 : passwordMode1;
+
+    if (localEcho) {
+        const o = document.getElementById('output' + port);
+        const displayText = passwordMode ? '*'.repeat(c.length) : c;
+        o.textContent += '$web$' + displayText + '\n';
+        o.scrollTop = o.scrollHeight;
+    }
+
     fetch('/serial' + port + '/send', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -104,18 +119,58 @@ function clearOutput(port) {
 
 function sendSpecial(port, type) {
     let data = '';
+    let displayName = '';
+
     switch(type) {
-        case 'ESC': data = '\x1b'; break;
-        case 'CTRL+BACKTICK': data = '\x60'; break;
-        case 'TAB': data = '\t'; break;
-        case 'ENTER': data = '\r\n'; break;
-        case 'CTRL+C': data = '\x03'; break;
-        case 'CTRL+Z': data = '\x1a'; break;
-        case 'CTRL+D': data = '\x04'; break;
-        case 'CTRL+A': data = '\x01'; break;
-        case 'CTRL+E': data = '\x05'; break;
-        case 'BACKSPACE': data = '\x08'; break;
+        case 'ESC':
+            data = '\x1b';
+            displayName = '\\e';
+            break;
+        case 'CTRL+BACKTICK':
+            data = '\x60';
+            displayName = '`';
+            break;
+        case 'TAB':
+            data = '\t';
+            displayName = '\\t';
+            break;
+        case 'ENTER':
+            data = '\r\n';
+            displayName = '\\r\\n';
+            break;
+        case 'CTRL+C':
+            data = '\x03';
+            displayName = '^C';
+            break;
+        case 'CTRL+Z':
+            data = '\x1a';
+            displayName = '^Z';
+            break;
+        case 'CTRL+D':
+            data = '\x04';
+            displayName = '^D';
+            break;
+        case 'CTRL+A':
+            data = '\x01';
+            displayName = '^A';
+            break;
+        case 'CTRL+E':
+            data = '\x05';
+            displayName = '^E';
+            break;
+        case 'BACKSPACE':
+            data = '\x08';
+            displayName = '^H';
+            break;
         default: return;
+    }
+
+    // Local echo for special characters
+    const localEcho = (port === 0) ? localEcho0 : localEcho1;
+    if (localEcho) {
+        const o = document.getElementById('output' + port);
+        o.textContent += '$web$' + displayName + '\n';
+        o.scrollTop = o.scrollHeight;
     }
 
     fetch('/serial' + port + '/send', {
@@ -153,14 +208,64 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-function togglePassword() {
-    const input = document.getElementById('input1');
-    const btn = document.getElementById('passwordBtn');
+function togglePassword(port) {
+    const input = document.getElementById('input' + port);
+    const btn = document.getElementById('passwordBtn' + port);
 
-    const isPassword = input.type === 'password';
-    input.type = isPassword ? 'text' : 'password';
-    btn.textContent = isPassword ? 'Password' : 'Show';
+    if (port === 0) {
+        passwordMode0 = !passwordMode0;
+        input.type = passwordMode0 ? 'password' : 'text';
+
+        // Update button appearance
+        if (passwordMode0) {
+            btn.classList.add('active');
+            btn.textContent = 'Password ON';
+        } else {
+            btn.classList.remove('active');
+            btn.textContent = 'Password';
+        }
+    } else if (port === 1) {
+        passwordMode1 = !passwordMode1;
+        input.type = passwordMode1 ? 'password' : 'text';
+
+        // Update button appearance
+        if (passwordMode1) {
+            btn.classList.add('active');
+            btn.textContent = 'Password ON';
+        } else {
+            btn.classList.remove('active');
+            btn.textContent = 'Password';
+        }
+    }
 
     input.focus();
     input.setSelectionRange(input.value.length, input.value.length);
+}
+
+function toggleLocalEcho(port) {
+    const btn = document.getElementById('localEchoBtn' + port);
+
+    if (port === 0) {
+        localEcho0 = !localEcho0;
+
+        // Update button appearance
+        if (localEcho0) {
+            btn.classList.add('active');
+            btn.textContent = 'Echo ON';
+        } else {
+            btn.classList.remove('active');
+            btn.textContent = 'Local Echo';
+        }
+    } else if (port === 1) {
+        localEcho1 = !localEcho1;
+
+        // Update button appearance
+        if (localEcho1) {
+            btn.classList.add('active');
+            btn.textContent = 'Echo ON';
+        } else {
+            btn.classList.remove('active');
+            btn.textContent = 'Local Echo';
+        }
+    }
 }

@@ -1,4 +1,5 @@
 #include "web_config_server.h"
+#include "config.h"
 #include "domain/config/preferences_storage.h"
 #include "domain/serial/serial_log.h"
 #include <Arduino.h>
@@ -11,10 +12,11 @@ namespace jrb::wifi_serial {
 
 WebConfigServer::WebConfigServer(PreferencesStorage &storage,
                                  SerialLog &serial0Log, SerialLog &serial1Log,
-                                 SerialSendCallback sendCallback)
+                                 std::function<void(const String&)> tty0Callback,
+                                 std::function<void(const String&)> tty1Callback)
     : preferencesStorage(storage), serial0Log(serial0Log),
-      serial1Log(serial1Log), sendCallback(sendCallback), server(nullptr),
-      apMode(false) {
+      serial1Log(serial1Log), tty0Callback(tty0Callback),
+      tty1Callback(tty1Callback), server(nullptr), apMode(false) {
   Log.traceln(__PRETTY_FUNCTION__);
 }
 
@@ -120,7 +122,7 @@ void WebConfigServer::setup() {
       if (baudRate <= 1) {
         Log.errorln("Invalid baud rate %d (must be > 1), using default 115200",
                     baudRate);
-        preferencesStorage.baudRateTty1 = 115200;
+        preferencesStorage.baudRateTty1 = DEFAULT_BAUD_RATE_TTY1;
       } else {
         preferencesStorage.baudRateTty1 = baudRate;
       }
@@ -236,8 +238,8 @@ void WebConfigServer::setup() {
           return;
         }
         String data = request->getParam("data", true)->value();
-        if (sendCallback) {
-          sendCallback(0, data);
+        if (tty0Callback) {
+          tty0Callback(data);
         }
         request->send(200, "text/plain", "OK");
       });
@@ -255,8 +257,8 @@ void WebConfigServer::setup() {
           return;
         }
         String data = request->getParam("data", true)->value();
-        if (sendCallback) {
-          sendCallback(1, data);
+        if (tty1Callback) {
+          tty1Callback(data);
         }
         request->send(200, "text/plain", "OK");
       });

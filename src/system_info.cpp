@@ -1,4 +1,5 @@
 #include "system_info.h"
+#include "domain/serial/serial_buffer_manager.h"
 #include "ArduinoLog.h"
 namespace jrb::wifi_serial {
 namespace {

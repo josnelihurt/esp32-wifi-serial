@@ -13,6 +13,10 @@ Application* Application::s_instance = nullptr;
 
 Application::Application() {
     // Set static instance for MQTT callbacks
+    tty0Buffer.reserve(SERIAL_BUFFER_SIZE);
+    tty1Buffer.reserve(SERIAL_BUFFER_SIZE);
+    tty0LastFlushMillis = millis();
+    tty1LastFlushMillis = millis();
     s_instance = this;
 
     // Load preferences and setup core systems
@@ -29,8 +33,21 @@ Application::Application() {
     otaManager = new OTAManager(preferencesStorage, otaEnabled);
     webServer = new WebConfigServer(
         preferencesStorage, serial0Log, serial1Log,
-        [this](int portIndex, const String& data) {
-            handleWebToSerialAndMqtt(portIndex, data);
+        [this](const String& data) {
+            //Handle web to serial and mqtt
+            if(debugEnabled) {
+                Log.infoln("$web->ttyS0$%s", data.c_str());
+            }
+            std::vector<char> dataVector(data.begin(), data.end());
+            mqttClient.appendToTty0Buffer(dataVector);
+        },
+        [this](const String& data) {
+            //Handle web to serial and mqtt
+            if(debugEnabled) {
+                Log.infoln("$web->ttyS1$%s", data.c_str());
+            }
+            std::vector<char> dataVector(data.begin(), data.end());
+            mqttClient.appendToTty1Buffer(dataVector);
         }
     );
 
@@ -54,15 +71,14 @@ Application::~Application() {
 }
 
 void Application::onMqttTty0(const char* data, unsigned int length) {
-    serialBridge.handleMqttToSerialAndWeb(0, data, length);
+    serialBridge.writeSerial0(data, length);
 }
 
 void Application::onMqttTty1(const char* data, unsigned int length) {
-    serialBridge.handleMqttToSerialAndWeb(1, data, length);
-}
-
-void Application::handleWebToSerialAndMqtt(int portIndex, const String& data) {
-    serialBridge.handleWebToSerialAndMqtt(portIndex, data);
+    serialBridge.writeSerial1(data, length);
+    if(debugEnabled) {
+        Log.infoln("$mqtt->ttyS1$%s", data);
+    }
 }
 
 std::function<void(const char*, unsigned int)> Application::getMqttTty0Callback() {
@@ -157,16 +173,6 @@ void Application::loop() {
 
     handleSerialPort0();
     handleSerialPort1();
-
-    // SSH server runs in its own FreeRTOS task, so no loop() call needed
-
-    for (int i = 0; i < 2; i++) {
-        if (mqttClient.shouldFlushBuffer(i)) {
-            mqttClient.flushBuffer(i);
-        }
-    }
-
-    delay(50);
 }
 
 void Application::reconnectMqttIfNeeded() {
@@ -195,77 +201,60 @@ void Application::publishInfoIfNeeded() {
     }
 }
 
-void Application::handleSerialPort0() {
-    if (!serialBridge.available0()) return;
 
-    int len = serialBridge.readSerial0(serialBuffer[0], SERIAL_BUFFER_SIZE);
-    if (len <= 0) return;
-
-    if (debugEnabled) {
-        Log.traceln("[DEBUG TTY0] %.*s", len, serialBuffer[0]);
+bool Application::handleSpecialCharacter(char c) {
+    static bool isSpecialCharacter = false;
+    if (c == CMD_PREFIX) {
+        isSpecialCharacter = true;
+        Log.infoln("Ctrl+Y");
+        return true;
     }
-
-    // Command detection for ttyS0 - use a clean output buffer to avoid corruption
-    static bool cmdPrefixReceived = false;
-    static char cleanBuffer[SERIAL_BUFFER_SIZE];
-    int cleanLen = 0;
-
-    for (int i = 0; i < len; i++) {
-        char c = serialBuffer[0][i];
-
-        if (cmdPrefixReceived) {
-            cmdPrefixReceived = false;
-
-            if (c >= 32 && c <= 126) {
-                Log.traceln("DEBUG: After Ctrl+Y, got char: 0x%X ('%c')", (int)c, c);
-            } else {
-                Log.traceln("DEBUG: After Ctrl+Y, got char: 0x%X", (int)c);
-            }
-
-            if (c == CMD_INFO || c == 'I') {
-                systemInfo.logSystemInformation();
-                // Skip both command prefix and command char
-                continue;
-            } else if (c == CMD_DEBUG || c == 'D') {
-                Log.infoln("Command detected: Ctrl+Y + d (Toggle Debug)");
-                debugEnabled = !debugEnabled;
-                Log.infoln("Debug %s", debugEnabled ? "enabled" : "disabled");
-                // Skip both command prefix and command char
-                continue;
-            }
-            // If not a recognized command, pass through the character
-            cleanBuffer[cleanLen++] = c;
-            continue;
-        }
-
-        if (c == CMD_PREFIX) {
-            Log.traceln("DEBUG: Ctrl+Y (command prefix) detected");
-            cmdPrefixReceived = true;
-            // Don't add command prefix to output buffer
-            continue;
-        }
-
-        // Normal character - add to clean buffer
-        cleanBuffer[cleanLen++] = c;
-    }
-
-    // Send clean buffer without command sequences
-    if (cleanLen > 0) {
-        serialBridge.handleSerialToMqttAndWeb(0, cleanBuffer, cleanLen);
+    if (!isSpecialCharacter) return false;
+    isSpecialCharacter = false;
+    switch (c) {
+        case CMD_INFO:
+            systemInfo.logSystemInformation();
+            break;
+        case CMD_DEBUG:
+            Log.infoln("Debug %s", debugEnabled ? "enabled" : "disabled");
+            debugEnabled = !debugEnabled;
+            break;
+        default:
+            Log.errorln("Unknown special character: %c", c);
+            break;
     }
 }
 
-void Application::handleSerialPort1() {
-    if (!serialBridge.available1()) return;
-
-    int len = serialBridge.readSerial1(serialBuffer[1], SERIAL_BUFFER_SIZE);
-    if (len <= 0) return;
-
-    if (debugEnabled) {
-        Log.traceln("[DEBUG TTY1] %.*s", len, serialBuffer[1]);
+void Application::handleSerialPort0() {
+    while (Serial.available() > 0) {
+        tty0Buffer.push_back(Serial.read());
+        if(debugEnabled && !handleSpecialCharacter(tty0Buffer.back())){
+            Serial.print(tty0Buffer.back());
+        }
     }
+    if(tty0Buffer.empty()) return; // No data to flush
+    if(millis() - tty0LastFlushMillis < 50) return; // Not enough time has passed since last flush
+    tty0LastFlushMillis = millis();
+    if(mqttClient.isConnected()) {
+        mqttClient.appendToTty0Buffer(tty0Buffer);
+    }
+    tty0Buffer.clear();
+}
 
-    serialBridge.handleSerialToMqttAndWeb(1, serialBuffer[1], len);
+void Application::handleSerialPort1() {
+    while (Serial.available() > 0) {
+        tty1Buffer.push_back(Serial.read());
+        if(debugEnabled){
+            Serial.print(tty1Buffer.back());
+        }
+    }
+    if(tty1Buffer.empty()) return; // No data to flush
+    if(millis() - tty0LastFlushMillis < 50) return; // Not enough time has passed since last flush
+    tty0LastFlushMillis = millis();
+    if(mqttClient.isConnected()) {
+        mqttClient.appendToTty1Buffer(tty1Buffer);
+    }
+    tty1Buffer.clear();
 }
 
 }  // namespace jrb::wifi_serial

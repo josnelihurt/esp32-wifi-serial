@@ -5,7 +5,7 @@
 #include <ArduinoLog.h>
 namespace jrb::wifi_serial {
 
-SerialBridge::SerialBridge(MqttClient& mqttClient) : mqttClient(mqttClient), serial1{}, buffer0Index{0}, buffer1Index{0} {
+SerialBridge::SerialBridge(MqttClient& mqttClient) : mqttClient(mqttClient), serial1{} {
   Log.traceln(__PRETTY_FUNCTION__);
 }
 
@@ -23,7 +23,6 @@ void SerialBridge::setup(int ttyS1BaudRate) {
 }
 
 int SerialBridge::readSerial0(char *buffer, int maxLen) {
-  Log.traceln(__PRETTY_FUNCTION__);
   if (!available0()) {
     return 0;
   }
@@ -40,7 +39,6 @@ int SerialBridge::readSerial0(char *buffer, int maxLen) {
 }
 
 int SerialBridge::readSerial1(char *buffer, int maxLen) {
-  Log.traceln(__PRETTY_FUNCTION__);
   if (!serial1 || !available1()) {
     return 0;
   }
@@ -57,12 +55,10 @@ int SerialBridge::readSerial1(char *buffer, int maxLen) {
 }
 
 void SerialBridge::writeSerial0(const char *data, int length) {
-  Log.traceln(__PRETTY_FUNCTION__);
   Serial.write((uint8_t *)data, length);
 }
 
 void SerialBridge::writeSerial1(const char *data, int length) {
-  Log.traceln(__PRETTY_FUNCTION__);
   if (!serial1) {
     Log.errorln("serial1 is not initialized! Cannot write to ttyS1.");
     Log.errorln("Check that baudRateTty1 is set correctly (> 1)");
@@ -78,14 +74,12 @@ bool SerialBridge::available1() const {
 }
 
 void SerialBridge::setLogs(SerialLog &log0, SerialLog &log1) {
-  Log.traceln(__PRETTY_FUNCTION__);
   serial0Log = &log0;
   serial1Log = &log1;
 }
 
 void SerialBridge::writeToSerialAndLog(int portIndex, const String &serialData,
                                        const String &logData) {
-  Log.traceln(__PRETTY_FUNCTION__);
   if (portIndex == 0) {
     writeSerial0(serialData.c_str(), serialData.length());
     if (serial0Log) {
@@ -100,49 +94,8 @@ void SerialBridge::writeToSerialAndLog(int portIndex, const String &serialData,
   }
 }
 
-void SerialBridge::handleSerialToMqttAndWeb(int portIndex, const char *data,
-                                            unsigned int length) {
-  Log.traceln(__PRETTY_FUNCTION__);
-  if (length == 0 || portIndex < 0 || portIndex > 1)
-    return;
-
-  SerialLog *log = (portIndex == 0) ? serial0Log : serial1Log;
-  if (log) {
-    log->append(data, length);
-  }
-
-  if (!mqttClient.isConnected())
-    return;
-  mqttClient.appendToBuffer(portIndex, data, length);
-
-  // Also publish visible version for debugging
-  String visibleData = makeSpecialCharsVisible(String(data, length));
-  String debugMsg = "$serial$ " + visibleData;
-  if (portIndex == 0) {
-    mqttClient.publishTty0(debugMsg);
-  } else {
-    mqttClient.publishTty1(debugMsg);
-  }
-}
-
-void SerialBridge::handleWebToSerialAndMqtt(int portIndex, const String &data) {
-  Log.traceln(__PRETTY_FUNCTION__);
-  String dataWithNewline = data + "\n";
-  String visibleData = makeSpecialCharsVisible(data);
-  String webMsg = "$web$ " + visibleData + "\n";
-
-  writeToSerialAndLog(portIndex, dataWithNewline, webMsg);
-
-  if (portIndex == 0) {
-    mqttClient.publishTty0(webMsg);
-  } else {
-    mqttClient.publishTty1(webMsg);
-  }
-}
-
 void SerialBridge::handleMqttToSerialAndWeb(int portIndex, const char *data,
                                             unsigned int length) {
-  Log.traceln(__PRETTY_FUNCTION__);
   String dataWithNewline = String(data, length) + "\n";
   String visibleData = makeSpecialCharsVisible(String(data, length));
   String mqttMsg = "$mqtt$ " + visibleData + "\n";
@@ -151,7 +104,6 @@ void SerialBridge::handleMqttToSerialAndWeb(int portIndex, const char *data,
 }
 
 String SerialBridge::makeSpecialCharsVisible(const String &data) {
-  Log.traceln(__PRETTY_FUNCTION__);
   String result;
   result.reserve(data.length() * 3); // Reserve space for expanded characters
 

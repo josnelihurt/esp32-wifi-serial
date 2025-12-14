@@ -3,6 +3,7 @@
 #include "domain/network/wifi_manager.h"
 #include "domain/serial/serial_bridge.h"
 #include "domain/serial/serial_log.h"
+#include "domain/serial/serial_buffer_manager.h"
 #include "domain/config/preferences_storage.h"
 #include "domain/network/mqtt_client.h"
 #include "domain/network/ssh_server.h"
@@ -74,14 +75,6 @@ public:
      */
     void onMqttTty1(const char* data, unsigned int length);
 
-
-    /**
-     * @brief Forward data received from the web UI to serial and MQTT.
-     *
-     * @param portIndex Serial port index to forward to.
-     * @param data String payload coming from the web UI.
-     */
-    void handleWebToSerialAndMqtt(int portIndex, const String& data);
     
     /**
      * @brief Return a callable suitable for use as an MQTT message handler
@@ -100,12 +93,15 @@ public:
 
 
 private:
+    std::vector<char> tty0Buffer;
+    std::vector<char> tty1Buffer;
+    unsigned long tty0LastFlushMillis{0};
+    unsigned long tty1LastFlushMillis{0};
     // Primitives (initialize first)
     bool otaEnabled{false};
     bool debugEnabled{true};
     unsigned long lastInfoPublish{0};
     unsigned long lastMqttReconnectAttempt{0};
-    char serialBuffer[2][SERIAL_BUFFER_SIZE];
 
     // Stack objects (order matters - dependencies flow down)
     ::Preferences preferences;
@@ -128,6 +124,7 @@ private:
     // Helper methods for loop processing
     void handleSerialPort0();
     void handleSerialPort1();
+    bool handleSpecialCharacter(char c);
     void reconnectMqttIfNeeded();
     void publishInfoIfNeeded();
     void setupMqttCallbacks();

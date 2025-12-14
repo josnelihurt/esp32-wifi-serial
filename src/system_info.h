@@ -7,6 +7,8 @@
 
 namespace jrb::wifi_serial {
 
+class SerialBufferManager;
+
 class SystemInfo final {
 private:
     PreferencesStorage& preferencesStorage;
@@ -16,8 +18,9 @@ private:
 public:
     SystemInfo(PreferencesStorage& storage, MqttClient& client, bool& ota)
         : preferencesStorage(storage), mqttClient(client), otaEnabled(ota) {}
-    
+
     void logSystemInformation() const;
+    void logBufferMetrics(const SerialBufferManager& bufferMgr) const;
 };
 
 }  // namespace jrb::wifi_serial

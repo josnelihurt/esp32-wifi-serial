@@ -82,6 +82,13 @@ public:
      * @return True if data is available, false otherwise.
      */
     bool available1() const ;
+
+    /**
+     * @brief Get pointer to the second serial interface.
+     *
+     * @return Pointer to serial1 HardwareSerial object, or nullptr if not initialized.
+     */
+    HardwareSerial* getSerial1() { return serial1; }
     
     /**
      * @brief Sends data to a specified serial port and appends it to the corresponding log buffer.
@@ -92,22 +99,6 @@ public:
      */
     void writeToSerialAndLog(int portIndex, const String& serialData, const String& logData) ;
 
-    /**
-     * @brief Handles data received from a serial interface and forwards it via MQTT and web.
-     *
-     * @param portIndex Index of the source serial port (0 or 1).
-     * @param data Pointer to the incoming data buffer.
-     * @param length Number of bytes in the data buffer.
-     */
-    void handleSerialToMqttAndWeb(int portIndex, const char* data, unsigned int length) ;
-
-    /**
-     * @brief Handles data received from a web interface and forwards it to serial and MQTT.
-     *
-     * @param portIndex Index of the target serial port (0 or 1).
-     * @param data String object containing the data from the web interface.
-     */
-    void handleWebToSerialAndMqtt(int portIndex, const String& data) ;
 
      /**
       * @brief Handles an MQTT message and forwards it to a serial port and web interface.
@@ -120,11 +111,7 @@ public:
 
 private:
     HardwareSerial* serial1;
-    char buffer0[SERIAL_BUFFER_SIZE];
-    char buffer1[SERIAL_BUFFER_SIZE];
-    int buffer0Index;
-    int buffer1Index;
-    
+
     SerialLog* serial0Log{};
     SerialLog* serial1Log{};
     MqttClient& mqttClient;

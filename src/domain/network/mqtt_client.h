@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
+#include <functional>
+#include <vector>
 
 namespace jrb::wifi_serial {
 
@@ -29,11 +31,6 @@ public:
   bool reconnect();
   void loop();
 
-  // Publishes raw data to tty0/tty1 topics.
-  bool publishTty0(const char *data, unsigned int length);
-  bool publishTty1(const char *data, unsigned int length);
-  bool publishTty0(const String &data);
-  bool publishTty1(const String &data);
   bool publishInfo(const String &data);
 
   // Connection state query.
@@ -42,10 +39,8 @@ public:
 
   PubSubClient *getMqttClient() const { return mqttClient; }
 
-  // Buffer handling for MQTT payloads.
-  void appendToBuffer(int portIndex, const char *data, unsigned int length);
-  void flushBuffer(int portIndex);
-  bool shouldFlushBuffer(int portIndex) const;
+  void appendToTty0Buffer(const std::vector<char> &data);
+  void appendToTty1Buffer(const std::vector<char> &data);
 
 private:
   PubSubClient *mqttClient;
@@ -60,13 +55,19 @@ private:
   void (*onTty0Callback)(const char *, unsigned int);
   void (*onTty1Callback)(const char *, unsigned int);
 
-  // Buffer per port to reduce heap fragmentation.
-  char mqttPublishBuffer[2][MQTT_PUBLISH_BUFFER_SIZE];
-  int mqttPublishBufferLen[2];
-  unsigned long lastMqttPublish[2];
+  std::vector<char> tty0Buffer;
+  std::vector<char> tty1Buffer;
+  unsigned long tty0LastFlushMillis{0};
+  unsigned long tty1LastFlushMillis{0};
 
+  void appendToBufferWithFlush(std::vector<char> &buffer,
+                               const std::vector<char> &data,
+                               std::function<void()> flushFunction,
+                               const char* func = __PRETTY_FUNCTION__);
+  void flushBuffer(std::vector<char> &buffer, const String &topic, unsigned long &lastFlushMillis, const char* func = __PRETTY_FUNCTION__);
+  void flushTty0Buffer();
+  void flushTty1Buffer();
   static void mqttCallback(char *topic, byte *payload, unsigned int length);
-  bool publish(int portIndex, const char *data, unsigned int length);
 };
 
 } // namespace jrb::wifi_serial

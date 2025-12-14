@@ -110,7 +110,11 @@
         <div class="input-group">
             <input type="text" id="input0" class="serial-input" placeholder="Enter command..."
                 onkeypress="if(event.key==='Enter')sendCommand(0)">
-            <button class="send-btn" onclick="sendCommand(0)">Send</button>
+            <table class="input-group">
+                <td><button class="toggle-btn" id="localEchoBtn0" onclick="toggleLocalEcho(0)">Local Echo</button></td>
+                <td><button class="toggle-btn" id="passwordBtn0" onclick="togglePassword(0)">Password</button></td>
+                <td><button class="send-btn" onclick="sendCommand(0)">Send</button></td>
+            </table>
         </div>
     </div>
 
@@ -136,7 +140,8 @@
             <input type="text" id="input1" class="serial-input" placeholder="Enter command..."
                 onkeypress="if(event.key==='Enter')sendCommand(1)">
             <table class="input-group">
-                <td><button class="password-btn" onclick="togglePassword()">Password</button></td>
+                <td><button class="toggle-btn" id="localEchoBtn1" onclick="toggleLocalEcho(1)">Local Echo</button></td>
+                <td><button class="toggle-btn" id="passwordBtn1" onclick="togglePassword(1)">Password</button></td>
                 <td><button class="send-btn" onclick="sendCommand(1)">Send</button></td>
             </table>
         </div>

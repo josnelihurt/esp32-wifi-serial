@@ -10,10 +10,8 @@ namespace jrb::wifi_serial {
 
 class WebConfigServer final {
 public:
-    using SerialSendCallback = std::function<void(int portIndex, const String& data)>;
-
     WebConfigServer(PreferencesStorage& storage, SerialLog& serial0Log, SerialLog& serial1Log,
-                    SerialSendCallback sendCallback);
+                    std::function<void(const String&)> tty0Callback, std::function<void(const String&)> tty1Callback);
     ~WebConfigServer();
 
     void setup();
@@ -29,7 +27,8 @@ private:
     PreferencesStorage& preferencesStorage;
     SerialLog& serial0Log;
     SerialLog& serial1Log;
-    SerialSendCallback sendCallback;
+    std::function<void(const String&)> tty0Callback;
+    std::function<void(const String&)> tty1Callback;
 
     AsyncWebServer* server;
     bool apMode;
