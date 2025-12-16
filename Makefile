@@ -15,6 +15,11 @@ PIO = pio
 # Default target
 .DEFAULT_GOAL := help
 
+CLANG_FORMAT := clang-format
+SRC_DIR := src
+FORMAT_FILES := $(shell find $(SRC_DIR) \
+  \( -name '*.c' -o -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \))
+
 .PHONY: help
 help:
 	@echo "ESP32 WiFi Serial Bridge - Available Commands:"
@@ -85,8 +90,8 @@ clean:
 
 .PHONY: format
 format:
-	@echo "Formatting code..."
-	find src -name "*.cpp" -o -name "*.h" | xargs clang-format -i
+	@echo "Running clang-format on $(words $(FORMAT_FILES)) files..."
+	@$(CLANG_FORMAT) -i $(FORMAT_FILES)
 
 .PHONY: size
 size:
