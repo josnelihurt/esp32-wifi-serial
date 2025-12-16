@@ -32,16 +32,28 @@ private:
   PreferencesStorage &preferencesStorage;
   SystemInfo &systemInfo;
   void *sshBind; // Opaque pointer to libssh bind
+  void *hostKey; // Opaque pointer to ssh_key (must outlive sshBind)
   bool running;
   TaskHandle_t sshTaskHandle;
-  bool activeSSHSession;
+  volatile bool activeSSHSession;
+  bool specialCharacterMode;
   SerialWriteCallback serialWrite;
   SpecialCharacterHandler &specialCharacterHandler;
 
   // FreeRTOS queue for thread-safe serial→SSH data transfer
   QueueHandle_t serialToSSHQueue;
   static constexpr size_t SSH_QUEUE_SIZE = 10;
-  static constexpr size_t SSH_QUEUE_ITEM_SIZE = 128;
+  static constexpr size_t SSH_QUEUE_PAYLOAD_SIZE = 127;
+  static constexpr size_t SSH_QUEUE_ITEM_SIZE = SSH_QUEUE_PAYLOAD_SIZE + 1; // +1 length byte
+  static constexpr int SSH_PORT = 22;
+  static constexpr int SSH_RSA_KEY_BITS = 2048;
+  static constexpr uint32_t SSH_TASK_STACK_SIZE = 8192;
+  static constexpr UBaseType_t SSH_TASK_PRIORITY = 1;
+  static constexpr TickType_t SSH_QUEUE_TIMEOUT_MS = 10;
+  static constexpr uint32_t SSH_AUTH_TIMEOUT_MS = 30000;
+  static constexpr uint32_t SSH_CHANNEL_TIMEOUT_MS = 10000;
+  static constexpr uint32_t SSH_SHELL_TIMEOUT_MS = 10000;
+  static constexpr uint32_t SSH_SESSION_TIMEOUT_MS = 3600000; // 1 hour
 
 public:
   SSHServer(PreferencesStorage &storage, SystemInfo &sysInfo,
@@ -91,6 +103,9 @@ private:
   bool authenticateUser(const char *user, const char *password);
   void sendWelcomeMessage(void *channel);
   String handleSpecialCharacter(char c);
+  bool authenticateSession(void *session);
+  bool waitForChannelSession(void *session, void **channel);
+  bool waitForShellRequest(void *session, void *channel);
 };
 
 } // namespace jrb::wifi_serial

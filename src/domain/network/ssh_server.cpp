@@ -13,9 +13,9 @@ namespace jrb::wifi_serial {
 SSHServer::SSHServer(PreferencesStorage &storage, SystemInfo &sysInfo,
                      SpecialCharacterHandler &specialCharacterHandler)
     : preferencesStorage(storage), systemInfo(sysInfo), sshBind(nullptr),
-      running(false), sshTaskHandle(nullptr), serialWrite(nullptr),
+      hostKey(nullptr), running(false), sshTaskHandle(nullptr), serialWrite(nullptr),
       serialToSSHQueue(nullptr), activeSSHSession(false),
-      specialCharacterHandler(specialCharacterHandler) {
+      specialCharacterMode(false), specialCharacterHandler(specialCharacterHandler) {
   Log.traceln(__PRETTY_FUNCTION__);
 
   // Create FreeRTOS queue for thread-safe serial→SSH data transfer
@@ -32,6 +32,12 @@ SSHServer::~SSHServer() {
   stop();
   if (sshBind) {
     ssh_bind_free((ssh_bind)sshBind);
+    sshBind = nullptr;
+  }
+  // Free hostKey AFTER freeing sshBind (sshBind may reference it)
+  if (hostKey) {
+    ssh_key_free((ssh_key)hostKey);
+    hostKey = nullptr;
   }
   if (serialToSSHQueue) {
     vQueueDelete(serialToSSHQueue);
@@ -47,25 +53,30 @@ void SSHServer::sendToSSHClients(const nonstd::span<const uint8_t> &data) {
   if (!running || !serialToSSHQueue || data.empty() || !activeSSHSession)
     return;
 
-  // Prepare data for queue (fixed-size buffer)
-  uint8_t queueItem[SSH_QUEUE_ITEM_SIZE] = {0};
-  size_t copySize =
-      data.size() < SSH_QUEUE_ITEM_SIZE ? data.size() : SSH_QUEUE_ITEM_SIZE;
-  memcpy(queueItem, data.data(), copySize);
+  size_t copySize = data.size() < SSH_QUEUE_PAYLOAD_SIZE ? data.size() : SSH_QUEUE_PAYLOAD_SIZE;
+  if (copySize < data.size()) {
+    Log.warningln("SSH: Truncating %d bytes to %d", (int)data.size(), (int)copySize);
+  }
 
-  // Send to queue (non-blocking from loop context)
+  uint8_t queueItem[SSH_QUEUE_ITEM_SIZE] = {0};
+  queueItem[0] = static_cast<uint8_t>(copySize);
+  memcpy(queueItem + 1, data.data(), copySize);
+
   if (xQueueSend(serialToSSHQueue, queueItem, 0) != pdTRUE) {
-    Log.warningln("SSH: Queue full, dropping %d bytes", data.size());
+    Log.warningln("SSH: Queue full, dropping %d bytes", (int)data.size());
   }
 }
 
 bool SSHServer::authenticateUser(const char *user, const char *password) {
+  if (!user || !password) return false;
+  
   bool userMatch = preferencesStorage.webUser.equals(user);
   bool passMatch = preferencesStorage.webPassword.equals(password);
+  bool success = userMatch && passMatch;
 
   Log.infoln("SSH auth attempt - user: %s, result: %s", user,
-             (userMatch && passMatch) ? "SUCCESS" : "FAILED");
-  return userMatch && passMatch;
+             success ? "SUCCESS" : "FAILED");
+  return success;
 }
 
 void SSHServer::sendWelcomeMessage(void *channel) {
@@ -106,7 +117,6 @@ void SSHServer::sendWelcomeMessage(void *channel) {
 }
 
 String SSHServer::handleSpecialCharacter(char c) {
-  static bool specialCharacterMode = false;
   if (c == CMD_PREFIX) {
     specialCharacterMode = true;
     return 
@@ -131,20 +141,17 @@ String SSHServer::handleSpecialCharacter(char c) {
   }
 }
 
-void SSHServer::handleSSHSession(void *session) {
-  if (!session)
-    return;
-
+bool SSHServer::authenticateSession(void *session) {
   ssh_session sshSession = (ssh_session)session;
   ssh_message message;
-  ssh_channel channel = nullptr;
-  bool authenticated = false;
-
-  // Authentication loop
-  do {
+  uint32_t startTime = millis();
+  
+  while (millis() - startTime < SSH_AUTH_TIMEOUT_MS) {
     message = ssh_message_get(sshSession);
-    if (!message)
-      break;
+    if (!message) {
+      vTaskDelay(pdMS_TO_TICKS(10));
+      continue;
+    }
 
     int type = ssh_message_type(message);
     int subtype = ssh_message_subtype(message);
@@ -155,9 +162,8 @@ void SSHServer::handleSSHSession(void *session) {
 
       if (authenticateUser(user, pass)) {
         ssh_message_auth_reply_success(message, 0);
-        authenticated = true;
         ssh_message_free(message);
-        break;
+        return true;
       }
       ssh_message_auth_set_methods(message, SSH_AUTH_METHOD_PASSWORD);
       ssh_message_reply_default(message);
@@ -165,61 +171,88 @@ void SSHServer::handleSSHSession(void *session) {
       ssh_message_reply_default(message);
     }
     ssh_message_free(message);
-  } while (!authenticated);
-
-  if (!authenticated) {
-    Log.warningln("SSH: Authentication failed");
-    return;
   }
+  
+  Log.warningln("SSH: Authentication timeout after %d ms", SSH_AUTH_TIMEOUT_MS);
+  return false;
+}
 
-  Log.infoln("SSH: User authenticated successfully");
-
-  // Wait for channel session
-  do {
+bool SSHServer::waitForChannelSession(void *session, void **channel) {
+  ssh_session sshSession = (ssh_session)session;
+  ssh_message message;
+  uint32_t startTime = millis();
+  
+  while (millis() - startTime < SSH_CHANNEL_TIMEOUT_MS) {
     message = ssh_message_get(sshSession);
-    if (!message)
-      break;
+    if (!message) {
+      vTaskDelay(pdMS_TO_TICKS(10));
+      continue;
+    }
 
     if (ssh_message_type(message) == SSH_REQUEST_CHANNEL_OPEN &&
         ssh_message_subtype(message) == SSH_CHANNEL_SESSION) {
-      channel = ssh_message_channel_request_open_reply_accept(message);
+      *channel = ssh_message_channel_request_open_reply_accept(message);
       ssh_message_free(message);
-      break;
+      return true;
     }
     ssh_message_reply_default(message);
     ssh_message_free(message);
-  } while (!channel);
-
-  if (!channel) {
-    Log.errorln("SSH: No channel session requested");
-    return;
   }
+  
+  Log.warningln("SSH: Channel session timeout after %d ms", SSH_CHANNEL_TIMEOUT_MS);
+  return false;
+}
 
-  Log.infoln("SSH: Channel opened");
-
-  // Wait for PTY and shell requests
-  bool gotShell = false;
-  do {
+bool SSHServer::waitForShellRequest(void *session, void *channel) {
+  ssh_session sshSession = (ssh_session)session;
+  ssh_message message;
+  uint32_t startTime = millis();
+  
+  while (millis() - startTime < SSH_SHELL_TIMEOUT_MS) {
     message = ssh_message_get(sshSession);
-    if (!message)
-      break;
+    if (!message) {
+      vTaskDelay(pdMS_TO_TICKS(10));
+      continue;
+    }
 
     if (ssh_message_type(message) == SSH_REQUEST_CHANNEL) {
       if (ssh_message_subtype(message) == SSH_CHANNEL_REQUEST_PTY) {
         ssh_message_channel_request_reply_success(message);
       } else if (ssh_message_subtype(message) == SSH_CHANNEL_REQUEST_SHELL) {
         ssh_message_channel_request_reply_success(message);
-        gotShell = true;
         ssh_message_free(message);
-        break;
+        return true;
       } else {
         ssh_message_reply_default(message);
       }
     }
     ssh_message_free(message);
-  } while (!gotShell);
+  }
+  
+  Log.warningln("SSH: Shell request timeout after %d ms", SSH_SHELL_TIMEOUT_MS);
+  return false;
+}
 
-  if (!gotShell) {
+void SSHServer::handleSSHSession(void *session) {
+  if (!session) return;
+  specialCharacterMode = false;
+
+  if (!authenticateSession(session)) {
+    Log.warningln("SSH: Authentication failed");
+    return;
+  }
+
+  Log.infoln("SSH: User authenticated successfully");
+
+  ssh_channel channel = nullptr;
+  if (!waitForChannelSession(session, (void**)&channel)) {
+    Log.errorln("SSH: No channel session requested");
+    return;
+  }
+
+  Log.infoln("SSH: Channel opened");
+
+  if (!waitForShellRequest(session, channel)) {
     Log.errorln("SSH: No shell requested");
     ssh_channel_close(channel);
     ssh_channel_free(channel);
@@ -228,16 +261,18 @@ void SSHServer::handleSSHSession(void *session) {
 
   Log.infoln("SSH: Shell session started");
   activeSSHSession = true;
-
-  // Send welcome message
   sendWelcomeMessage(channel);
 
-  // Main SSH <-> Serial bridge loop
   uint8_t sshToSerialBuffer[128];
   uint8_t serialToSSHBuffer[SSH_QUEUE_ITEM_SIZE];
+  uint32_t sessionStartTime = millis();
 
   while (ssh_channel_is_open(channel) && !ssh_channel_is_eof(channel)) {
-    // SSH -> Serial (user typing into SSH goes to serial port)
+    if (millis() - sessionStartTime > 3600000) { // 1 hour timeout
+      Log.warningln("SSH: Session timeout after 1 hour");
+      ssh_channel_write(channel, "\r\nSSH session timeout (1 hour). Disconnecting...\r\n", 52);
+      break;
+    }
     int nbytes = ssh_channel_read_nonblocking(channel, sshToSerialBuffer,
                                               sizeof(sshToSerialBuffer), 0);
     if (nbytes > 0 && serialWrite) {
@@ -245,13 +280,15 @@ void SSHServer::handleSSHSession(void *session) {
           handleSpecialCharacter(sshToSerialBuffer[0]);
       specialCharacterResponse.replace("\n", "\r\n");
       if (specialCharacterResponse == "TERMINATE") {
-        ssh_channel_write(channel, "See you later alligator!...\r\n", 33);
+        const char *msg = "See you later alligator!...\r\n";
+        ssh_channel_write(channel, msg, strlen(msg));
         ssh_channel_close(channel);
         ssh_channel_free(channel);
         return;
       }
       if (specialCharacterResponse == "RESET") {
-        ssh_channel_write(channel, "Bye bye, cruel world… BRB rebooting!...\r\n", 25);
+        const char *msg = "Bye bye, cruel world… BRB rebooting!...\r\n";
+        ssh_channel_write(channel, msg, strlen(msg));
         vTaskDelay(pdMS_TO_TICKS(1000));
         ESP.restart();
         return;
@@ -264,30 +301,15 @@ void SSHServer::handleSSHSession(void *session) {
       Log.verboseln("$ssh->ttyS1$: %d bytes", nbytes);
       ssh_channel_write(channel, sshToSerialBuffer,
                         nbytes); // echo back to SSH client
-      nonstd::span<const uint8_t> bufferView(sshToSerialBuffer, nbytes);
-      serialWrite(bufferView);
+      serialWrite(nonstd::span<const uint8_t>(sshToSerialBuffer, static_cast<size_t>(nbytes)));
     }
 
-    // Serial -> SSH (data from serial port goes to SSH client)
     if (serialToSSHQueue && xQueueReceive(serialToSSHQueue, serialToSSHBuffer,
-                                          pdMS_TO_TICKS(10)) == pdTRUE) {
-      // Determine actual size (queue stores fixed-size items, find null
-      // terminator or use max)
-      size_t actualSize = 0;
-      for (size_t i = 0; i < SSH_QUEUE_ITEM_SIZE; i++) {
-        if (serialToSSHBuffer[i] == 0) {
-          actualSize = i;
-          break;
-        }
-      }
-      if (actualSize == 0) {
-        actualSize =
-            SSH_QUEUE_ITEM_SIZE; // No null terminator found, use full buffer
-      }
-
-      if (actualSize > 0) {
+                                          pdMS_TO_TICKS(SSH_QUEUE_TIMEOUT_MS)) == pdTRUE) {
+      size_t actualSize = serialToSSHBuffer[0];
+      if (actualSize > 0 && actualSize <= SSH_QUEUE_PAYLOAD_SIZE) {
         Log.verboseln("$ttyS1->ssh$: %d bytes", actualSize);
-        ssh_channel_write(channel, serialToSSHBuffer, actualSize);
+        ssh_channel_write(channel, serialToSSHBuffer + 1, actualSize);
       }
     }
   }
@@ -295,6 +317,7 @@ void SSHServer::handleSSHSession(void *session) {
   Log.infoln("SSH: Session ended");
   ssh_channel_close(channel);
   ssh_channel_free(channel);
+  activeSSHSession = false;
 }
 
 void SSHServer::setup() {
@@ -328,9 +351,9 @@ void SSHServer::setup() {
   ssh_bind_options_set((ssh_bind)sshBind, SSH_BIND_OPTIONS_BINDPORT_STR, "22");
 
   Log.infoln("%s: Generating RSA host key", __PRETTY_FUNCTION__);
-  ssh_key hostkey = nullptr;
-  rc = ssh_pki_generate(SSH_KEYTYPE_RSA, 2048, &hostkey);
-  if (rc != SSH_OK || !hostkey) {
+  ssh_key tempHostkey = nullptr;
+  rc = ssh_pki_generate(SSH_KEYTYPE_RSA, SSH_RSA_KEY_BITS, &tempHostkey);
+  if (rc != SSH_OK || !tempHostkey) {
     Log.errorln("%s: Failed to generate RSA host key", __PRETTY_FUNCTION__);
     ssh_bind_free((ssh_bind)sshBind);
     sshBind = nullptr;
@@ -340,23 +363,24 @@ void SSHServer::setup() {
 
   Log.infoln("%s: Setting host key for SSH bind", __PRETTY_FUNCTION__);
   rc = ssh_bind_options_set((ssh_bind)sshBind, SSH_BIND_OPTIONS_IMPORT_KEY,
-                            hostkey);
+                            tempHostkey);
   if (rc != SSH_OK) {
     Log.errorln("%s: Failed to set host key", __PRETTY_FUNCTION__);
-    ssh_key_free(hostkey);
+    ssh_key_free(tempHostkey);
     ssh_bind_free((ssh_bind)sshBind);
     sshBind = nullptr;
     ssh_finalize();
     return;
   }
 
+  // Store hostkey for later cleanup - DO NOT free here as sshBind references it
+  hostKey = tempHostkey;
   Log.infoln("SSH Server: RSA host key generated successfully");
 
   Log.infoln("%s: Starting listening", __PRETTY_FUNCTION__);
   if (ssh_bind_listen((ssh_bind)sshBind) < 0) {
     Log.errorln("SSH Server: Failed to listen on port 22: %s",
                 ssh_get_error((ssh_bind)sshBind));
-    ssh_key_free(hostkey);
     ssh_bind_free((ssh_bind)sshBind);
     sshBind = nullptr;
     ssh_finalize();
@@ -371,10 +395,10 @@ void SSHServer::setup() {
 
   Log.infoln("%s: Starting SSH task", __PRETTY_FUNCTION__);
   xTaskCreate(sshTask, "SSH_Server",
-              8192, // Stack size
-              this,
-              1, // Priority
-              &sshTaskHandle);
+               SSH_TASK_STACK_SIZE, // Stack size
+               this,
+               SSH_TASK_PRIORITY, // Priority
+               &sshTaskHandle);
 
   if (sshTaskHandle) {
     Log.infoln("%s: Task created successfully", __PRETTY_FUNCTION__);
@@ -401,7 +425,6 @@ void SSHServer::runSSHTask() {
   Log.infoln("%s: Started", __PRETTY_FUNCTION__);
 
   while (running) {
-    // Accept new SSH connection (blocking, but in separate task)
     ssh_session newSession = ssh_new();
     if (!newSession) {
       vTaskDelay(pdMS_TO_TICKS(100));
@@ -409,26 +432,25 @@ void SSHServer::runSSHTask() {
     }
 
     int rc = ssh_bind_accept((ssh_bind)sshBind, newSession);
-
-    if (rc == SSH_OK) {
-      Log.infoln("SSH Task: New connection accepted");
-
-      // Handle key exchange
-      if (ssh_handle_key_exchange(newSession) == SSH_OK) {
-        Log.infoln("SSH Task: Key exchange successful");
-        handleSSHSession(newSession);
-      } else {
-        Log.errorln("SSH Task: Key exchange failed: %s",
-                    ssh_get_error(newSession));
-      }
-
-      // Clean up session
-      ssh_disconnect(newSession);
-      ssh_free(newSession);
-    } else {
+    if (rc != SSH_OK) {
       ssh_free(newSession);
       vTaskDelay(pdMS_TO_TICKS(100));
+      continue;
     }
+
+    Log.infoln("SSH Task: New connection accepted");
+
+    if (ssh_handle_key_exchange(newSession) != SSH_OK) {
+      Log.errorln("SSH Task: Key exchange failed: %s", ssh_get_error(newSession));
+      ssh_disconnect(newSession);
+      ssh_free(newSession);
+      continue;
+    }
+
+    Log.infoln("SSH Task: Key exchange successful");
+    handleSSHSession(newSession);
+    ssh_disconnect(newSession);
+    ssh_free(newSession);
   }
 
   Log.infoln("SSH Task: Stopped");
