@@ -5,6 +5,7 @@ html, body {
     background: #FFFFFF;
     color: #333333;
     height: 100vh;
+    overflow: hidden;
 }
 
 body {
@@ -103,6 +104,8 @@ button:hover {
     padding: 20px;
     background: #FFFFFF;
     flex: 1;
+    min-height: 0; 
+    overflow: scroll;
 }
 
 .tab-content.active {
@@ -120,11 +123,12 @@ button:hover {
     font-family: monospace;
     background: #000000;
     color: #00FF00;
-    overflow-y: auto;
     white-space: pre-wrap;
     word-wrap: break-word;
     border-radius: 4px;
     margin-bottom: 10px;
+    overflow-y: scroll;
+    overflow-x: hidden;
 }
 
 .serial-input {
