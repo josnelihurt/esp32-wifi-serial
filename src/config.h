@@ -4,12 +4,15 @@ namespace jrb::wifi_serial {
 
 #define TRIPLE_PRESS_TIMEOUT 2000
 
-#define SERIAL_BUFFER_SIZE 256
+#define SERIAL_BUFFER_SIZE 4096
 #define SERIAL_LOG_SIZE 4096
 
 #define CMD_PREFIX 0x19 // Ctrl+Y
 #define CMD_INFO 'i'
 #define CMD_DEBUG 'd'
+#define CMD_TTY0_TO_TTY1_BRIDGE 'b'
+#define CMD_RESET 0x0E
+#define CMD_DISCONNECT_SSH 'x'
 #define LED_PIN 8
 #define BOOT_BUTTON_PIN 9
 
