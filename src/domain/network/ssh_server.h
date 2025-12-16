@@ -1,14 +1,15 @@
 #pragma once
 
+#include "domain/config/special_character_handler.h"
 #include <Arduino.h>
-#include <functional>
 #include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
 #include <freertos/queue.h>
+#include <freertos/task.h>
+#include <functional>
+#include <nonstd/span.hpp>
 
 namespace jrb::wifi_serial {
 
-class SerialBridge;
 class PreferencesStorage;
 class SystemInfo;
 
@@ -19,57 +20,77 @@ class SystemInfo;
  * remote emergency access when traditional network access fails. It uses
  * the existing web credentials for authentication and runs in its own task
  * to avoid blocking the main loop.
+ *
+ * Uses a FreeRTOS queue for thread-safe communication of serial data from
+ * the main loop to the SSH task.
  */
 class SSHServer final {
 public:
-    using SerialWriteCallback = std::function<void(const char* data, int length)>;
-    using SerialReadCallback = std::function<int(char* buffer, int maxLen)>;
-
-    SSHServer(PreferencesStorage& storage, SystemInfo& sysInfo);
-    ~SSHServer();
-
-    /**
-     * @brief Initialize the SSH server and start the FreeRTOS task
-     *
-     * Starts listening on port 22 for incoming SSH connections
-     */
-    void setup();
-
-    /**
-     * @brief Stop the SSH server task
-     */
-    void stop();
-
-    /**
-     * @brief Set callbacks for serial communication
-     *
-     * @param writeCallback Function to write data to serial port
-     * @param readCallback Function to read data from serial port
-     */
-    void setSerialCallbacks(SerialWriteCallback writeCallback, SerialReadCallback readCallback);
-
-    /**
-     * @brief Check if SSH server is running
-     *
-     * @return true if server is active and accepting connections
-     */
-    bool isRunning() const;
+  using SerialWriteCallback = void (*)(const nonstd::span<const uint8_t> &);
 
 private:
-    PreferencesStorage& preferencesStorage;
-    SystemInfo& systemInfo;
-    void* sshBind;     // Opaque pointer to libssh bind
-    bool running;
-    TaskHandle_t sshTaskHandle;
+  PreferencesStorage &preferencesStorage;
+  SystemInfo &systemInfo;
+  void *sshBind; // Opaque pointer to libssh bind
+  bool running;
+  TaskHandle_t sshTaskHandle;
+  bool activeSSHSession;
+  SerialWriteCallback serialWrite;
+  SpecialCharacterHandler &specialCharacterHandler;
 
-    SerialWriteCallback serialWrite;
-    SerialReadCallback serialRead;
+  // FreeRTOS queue for thread-safe serial→SSH data transfer
+  QueueHandle_t serialToSSHQueue;
+  static constexpr size_t SSH_QUEUE_SIZE = 10;
+  static constexpr size_t SSH_QUEUE_ITEM_SIZE = 128;
 
-    static void sshTask(void* parameter);
-    void runSSHTask();
-    void handleSSHSession(void* session);
-    bool authenticateUser(const char* user, const char* password);
-    void sendWelcomeMessage(void* channel);
+public:
+  SSHServer(PreferencesStorage &storage, SystemInfo &sysInfo,
+            SpecialCharacterHandler &specialCharacterHandler);
+  ~SSHServer();
+
+  /**
+   * @brief Initialize the SSH server and start the FreeRTOS task
+   *
+   * Starts listening on port 22 for incoming SSH connections
+   */
+  void setup();
+
+  /**
+   * @brief Stop the SSH server task
+   */
+  void stop();
+
+  /**
+   * @brief Set callback for writing data to serial port
+   *
+   * @param writeCallback Function to write data to serial port
+   */
+  void setSerialWriteCallback(SerialWriteCallback writeCallback);
+
+  /**
+   * @brief Send data to connected SSH clients (called from main loop)
+   *
+   * This method is thread-safe and non-blocking. Data is queued for
+   * transmission to SSH clients.
+   *
+   * @param data Data to send to SSH clients
+   */
+  void sendToSSHClients(const nonstd::span<const uint8_t> &data);
+
+  /**
+   * @brief Check if SSH server is running
+   *
+   * @return true if server is active and accepting connections
+   */
+  bool isRunning() const;
+
+private:
+  static void sshTask(void *parameter);
+  void runSSHTask();
+  void handleSSHSession(void *session);
+  bool authenticateUser(const char *user, const char *password);
+  void sendWelcomeMessage(void *channel);
+  String handleSpecialCharacter(char c);
 };
 
-}  // namespace jrb::wifi_serial
+} // namespace jrb::wifi_serial

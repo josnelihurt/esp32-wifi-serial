@@ -14,17 +14,17 @@ namespace jrb::wifi_serial {
 class PreferencesStorage final {
 private:
   Preferences preferences;
-  /**
-   * @brief Generates default MQTT topics.
-   */
-  void generateDefaultTopics();
 
 public:
   /**
    * @brief Constructor for PreferencesStorage.
    */
-  PreferencesStorage();
+  PreferencesStorage() ;
+  PreferencesStorage(const PreferencesStorage &) = delete;
+  PreferencesStorage &operator=(const PreferencesStorage &) = delete;
+
   ~PreferencesStorage() = default;
+
   String deviceName;
   int baudRateTty1;
   String mqttBroker;
@@ -39,6 +39,8 @@ public:
   String password;
   String webUser;
   String webPassword;
+  bool debugEnabled;
+  bool tty02tty1Bridge;
 
   /**
    * @brief Serializes the configuration to a JSON string.
@@ -46,20 +48,12 @@ public:
    */
   String serialize(const String &ipAddress, const String &macAddress,
                    const String &ssid);
-  /**
-   * @brief Loads configuration from preferences storage.
-   */
-  void load();
-
-  /**
-   * @brief Saves current configuration to preferences storage.
-   */
   void save();
-
-  /**
-   * @brief Clears all configuration in the preferences storage.
-   */
   void clear();
+
+private:
+  void load();
+  void generateDefaultTopics();
 };
 
 } // namespace jrb::wifi_serial

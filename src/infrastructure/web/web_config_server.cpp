@@ -1,7 +1,7 @@
 #include "web_config_server.h"
 #include "config.h"
 #include "domain/config/preferences_storage.h"
-#include "domain/serial/serial_log.h"
+#include "domain/serial/serial_log.hpp"
 #include <Arduino.h>
 #include <ArduinoLog.h>
 #include <ESPAsyncWebServer.h>
@@ -10,13 +10,9 @@
 #include <WiFi.h>
 namespace jrb::wifi_serial {
 
-WebConfigServer::WebConfigServer(PreferencesStorage &storage,
-                                 SerialLog &serial0Log, SerialLog &serial1Log,
-                                 std::function<void(const String&)> tty0Callback,
-                                 std::function<void(const String&)> tty1Callback)
-    : preferencesStorage(storage), serial0Log(serial0Log),
-      serial1Log(serial1Log), tty0Callback(tty0Callback),
-      tty1Callback(tty1Callback), server(nullptr), apMode(false) {
+WebConfigServer::WebConfigServer(PreferencesStorage &storage)
+    : preferencesStorage(storage), serial0Log(), serial1Log(), tty0(tty0),
+      tty1(tty1), server(nullptr), apMode(false) {
   Log.traceln(__PRETTY_FUNCTION__);
 }
 
@@ -42,8 +38,11 @@ void WebConfigServer::setAPIP(const IPAddress &ip) {
   this->apIP = ip;
 }
 
-void WebConfigServer::setup() {
+void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
+                            WebConfigServer::SerialWriteCallback onTtyS1Write) {
   // Initialize LittleFS
+  tty0 = onTtyS0Write;
+  tty1 = onTtyS1Write;
   if (!LittleFS.begin(true)) {
     Log.errorln("LittleFS mount failed");
     return;
@@ -208,8 +207,11 @@ void WebConfigServer::setup() {
       return request->requestAuthentication();
     }
     Log.traceln("%s: Handling /serial0/poll request", __PRETTY_FUNCTION__);
-    static int lastPos0 = 0;
-    String newData = serial0Log.getNewData(lastPos0);
+    if (!serial0Log.hasData()) {
+      request->send(200, "text/plain", "");
+      return;
+    }
+    String newData = serial0Log.toString();
     request->send(200, "text/plain", newData);
   });
 
@@ -220,48 +222,53 @@ void WebConfigServer::setup() {
       return request->requestAuthentication();
     }
     Log.traceln("%s: Handling /serial1/poll request", __PRETTY_FUNCTION__);
-    static int lastPos1 = 0;
-    String newData = serial1Log.getNewData(lastPos1);
+    if (!serial1Log.hasData()) {
+      request->send(200, "text/plain", "");
+      return;
+    }
+    String newData = serial1Log.toString();
     request->send(200, "text/plain", newData);
   });
 
   // Serial0 send
-  server->on(
-      "/serial0/send", HTTP_POST, [this](AsyncWebServerRequest *request) {
-        if (!request->authenticate(preferencesStorage.webUser.c_str(),
-                                   preferencesStorage.webPassword.c_str())) {
-          return request->requestAuthentication();
-        }
-        Log.traceln("%s: Handling /serial0/send request", __PRETTY_FUNCTION__);
-        if (!request->hasParam("data", true)) {
-          request->send(400, "text/plain", "Missing data");
-          return;
-        }
-        String data = request->getParam("data", true)->value();
-        if (tty0Callback) {
-          tty0Callback(data);
-        }
-        request->send(200, "text/plain", "OK");
-      });
+  server->on("/serial0/send", HTTP_POST, [&](AsyncWebServerRequest *request) {
+    if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                               preferencesStorage.webPassword.c_str())) {
+      return request->requestAuthentication();
+    }
+    Log.traceln("%s: Handling /serial0/send request", __PRETTY_FUNCTION__);
+    if (!request->hasParam("data", true)) {
+      request->send(400, "text/plain", "Missing data");
+      return;
+    }
+    const String &data = request->getParam("data", true)->value();
+    if (tty0) {
+      const nonstd::span<const uint8_t> span(
+          reinterpret_cast<const uint8_t *>(data.c_str()), data.length());
+      tty0(span);
+    }
+    request->send(200, "text/plain", "OK");
+  });
 
   // Serial1 send
-  server->on(
-      "/serial1/send", HTTP_POST, [this](AsyncWebServerRequest *request) {
-        if (!request->authenticate(preferencesStorage.webUser.c_str(),
-                                   preferencesStorage.webPassword.c_str())) {
-          return request->requestAuthentication();
-        }
-        Log.traceln("%s: Handling /serial1/send request", __PRETTY_FUNCTION__);
-        if (!request->hasParam("data", true)) {
-          request->send(400, "text/plain", "Missing data");
-          return;
-        }
-        String data = request->getParam("data", true)->value();
-        if (tty1Callback) {
-          tty1Callback(data);
-        }
-        request->send(200, "text/plain", "OK");
-      });
+  server->on("/serial1/send", HTTP_POST, [&](AsyncWebServerRequest *request) {
+    if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                               preferencesStorage.webPassword.c_str())) {
+      return request->requestAuthentication();
+    }
+    Log.traceln("%s: Handling /serial1/send request", __PRETTY_FUNCTION__);
+    if (!request->hasParam("data", true)) {
+      request->send(400, "text/plain", "Missing data");
+      return;
+    }
+    const String &data = request->getParam("data", true)->value();
+    if (tty1) {
+      const nonstd::span<const uint8_t> span(
+          reinterpret_cast<const uint8_t *>(data.c_str()), data.length());
+      tty1(span);
+    }
+    request->send(200, "text/plain", "OK");
+  });
 
   server->begin();
   Log.infoln("Async web server started");

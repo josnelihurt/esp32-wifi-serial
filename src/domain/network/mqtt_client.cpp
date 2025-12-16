@@ -1,29 +1,46 @@
 #include "mqtt_client.h"
 #include "config.h"
+#include "domain/config/preferences_storage.h"
 #include <ArduinoLog.h>
 #include <cstring>
+#include <string_view>
 
 namespace jrb::wifi_serial {
+
+// Constants
+namespace {
+constexpr size_t MQTT_CALLBACK_BUFFER_SIZE = 512;
+constexpr uint8_t MQTT_QOS_LEVEL = 1;
+constexpr uint16_t MQTT_KEEPALIVE_SEC = 60;
+constexpr uint16_t MQTT_SOCKET_TIMEOUT_SEC = 15;
+constexpr uint8_t MQTT_SUBSCRIPTION_DELAY_MS = 10;
+constexpr uint8_t MQTT_LOOP_ITERATIONS = 3;
+} // namespace
 
 // Static pointer to MqttClient instance for C-style callback from PubSubClient.
 // PubSubClient requires a C function pointer, so we use this to access instance
 // data.
 static MqttClient *g_mqttInstance{};
 
-MqttClient::MqttClient(WiFiClient &wifiClient)
-    : mqttClient{new PubSubClient(wifiClient)}, wifiClient{&wifiClient},
-      deviceName{DEFAULT_DEVICE_NAME}, connected{false},
-      lastReconnectAttempt{0}, onTty0Callback{nullptr}, onTty1Callback{nullptr},
-      tty0Buffer{0}, tty1Buffer{0}, tty0LastFlushMillis{0},
-      tty1LastFlushMillis{0} {
-  tty0Buffer.reserve(MQTT_BUFFER_SIZE);
-  tty1Buffer.reserve(MQTT_BUFFER_SIZE);
-  tty0LastFlushMillis = millis();
-  tty1LastFlushMillis = millis();
+MqttClient::MqttClient(WiFiClient &wifiClient,
+                       PreferencesStorage &preferencesStorage)
+    : mqttClient{std::make_unique<PubSubClient>(wifiClient)},
+      wifiClient{&wifiClient}, preferencesStorage{preferencesStorage},
+      connected{false}, lastReconnectAttempt{0},
+      onTty0Callback{nullptr},
+      onTty1Callback{nullptr},
+      tty0Stream{MqttFlushPolicy{*mqttClient, topicTty0Tx}, "tty0"},
+      tty1Stream{MqttFlushPolicy{*mqttClient, topicTty1Tx}, "tty1"},
+      tty0LastFlushMillis{0}, tty1LastFlushMillis{0} {
+
   mqttClient->setBufferSize(MQTT_BUFFER_SIZE);
-  mqttClient->setCallback(mqttCallback);
-  mqttClient->setKeepAlive(60);
-  mqttClient->setSocketTimeout(15);
+  mqttClient->setCallback([&](char *topic, byte *payload, unsigned int length) {
+    mqttCallback(topic, payload, length);
+  });
+  mqttClient->setKeepAlive(MQTT_KEEPALIVE_SEC);
+  mqttClient->setSocketTimeout(MQTT_SOCKET_TIMEOUT_SEC);
+  setTopics(preferencesStorage.topicTty0Rx, preferencesStorage.topicTty0Tx,
+            preferencesStorage.topicTty1Rx, preferencesStorage.topicTty1Tx);
   g_mqttInstance = this;
 }
 
@@ -31,12 +48,8 @@ MqttClient::~MqttClient() {
   if (g_mqttInstance == this) {
     g_mqttInstance = nullptr;
   }
-  if (!mqttClient)
-    return;
-  delete mqttClient;
+  // mqttClient is automatically cleaned up by unique_ptr
 }
-
-void MqttClient::setDeviceName(const String &name) { deviceName = name; }
 
 void MqttClient::setTopics(const String &tty0Rx, const String &tty0Tx,
                            const String &tty1Rx, const String &tty1Tx) {
@@ -54,8 +67,8 @@ void MqttClient::setTopics(const String &tty0Rx, const String &tty0Tx,
   Log.infoln("MQTT info topic set to: %s", topicInfo.c_str());
 }
 
-void MqttClient::setCallbacks(void (*tty0)(const char *, unsigned int),
-                              void (*tty1)(const char *, unsigned int)) {
+void MqttClient::setCallbacks(void (*tty0)(const nonstd::span<const uint8_t> &),
+                              void (*tty1)(const nonstd::span<const uint8_t> &)) {
   onTty0Callback = tty0;
   onTty1Callback = tty1;
 }
@@ -64,8 +77,8 @@ bool MqttClient::connect(const char *broker, int port, const char *user,
                          const char *password) {
   mqttClient->setServer(broker, port);
 
-  String clientId =
-      "ESP32-C3-" + deviceName + "-" + String(random(0xffff), HEX);
+  String clientId = "ESP32-C3-" + preferencesStorage.deviceName + "-" +
+                    String(random(0xffff), HEX);
 
   Log.infoln("MQTT connecting to %s:%d (ClientID: %s)", broker, port,
              clientId.c_str());
@@ -85,19 +98,7 @@ bool MqttClient::connect(const char *broker, int port, const char *user,
 
   Log.infoln("MQTT connected successfully!");
 
-  if (topicTty0Tx.length() > 0) {
-    mqttClient->subscribe(topicTty0Tx.c_str(), 1);
-    mqttClient->loop();
-    delay(10);
-    mqttClient->loop();
-  }
-
-  if (topicTty1Tx.length() > 0) {
-    mqttClient->subscribe(topicTty1Tx.c_str(), 1);
-    mqttClient->loop();
-    delay(10);
-    mqttClient->loop();
-  }
+  subscribeToConfiguredTopics();
 
   return true;
 }
@@ -114,58 +115,90 @@ void MqttClient::disconnect() {
   Log.infoln("MQTT disconnected");
 }
 
+// Note: This method updates internal connection state but doesn't perform
+// actual reconnection. To reconnect, call connect() again.
 bool MqttClient::reconnect() {
   if (!mqttClient)
     return false;
+
   connected = mqttClient->connected();
   return connected;
+}
+
+void MqttClient::subscribeToConfiguredTopics() {
+  if (topicTty0Tx.length() > 0) {
+    Log.infoln("Subscribing to tty0Rx: %s", topicTty0Rx.c_str());
+    mqttClient->subscribe(topicTty0Rx.c_str(), MQTT_QOS_LEVEL);
+    mqttClient->loop();
+    delay(MQTT_SUBSCRIPTION_DELAY_MS);
+    mqttClient->loop();
+  }
+
+  if (topicTty1Tx.length() > 0) {
+    Log.infoln("Subscribing to tty1Rx: %s", topicTty1Rx.c_str());
+    mqttClient->subscribe(topicTty1Rx.c_str(), MQTT_QOS_LEVEL);
+    mqttClient->loop();
+    delay(MQTT_SUBSCRIPTION_DELAY_MS);
+    mqttClient->loop();
+  }
+}
+
+void MqttClient::handleConnectionStateChange(bool wasConnected) {
+  if (wasConnected && !connected) {
+    Log.warningln("MQTT connection lost!");
+    return;
+  }
+
+  if (!wasConnected && connected) {
+    Log.infoln("MQTT reconnected successfully!");
+    subscribeToConfiguredTopics();
+  }
+}
+
+void MqttClient::flushBuffersIfNeeded() {
+  if ((millis() - tty0LastFlushMillis >= MQTT_PUBLISH_INTERVAL_MS)) {
+    Log.verboseln("Flushing tty0 buffer due to interval");
+    tty0LastFlushMillis = millis();
+    tty0Stream.flush();
+  }
+
+  if ((millis() - tty1LastFlushMillis >= MQTT_PUBLISH_INTERVAL_MS)) {
+    Log.verboseln("Flushing tty1 buffer due to interval");
+    tty1LastFlushMillis = millis();
+    tty1Stream.flush();
+  }
 }
 
 void MqttClient::loop() {
   if (!mqttClient)
     return;
 
-  bool wasConnected = connected;
+  // Transfer pending data from web task to MQTT buffers
+  if (!tty0PendingBuffer.empty()) {
+    tty0Stream.append(nonstd::span<const uint8_t>(tty0PendingBuffer.data(), tty0PendingBuffer.size()));
+    tty0PendingBuffer.clear();
+  }
 
-  // Call loop() multiple times to ensure all messages are processed
-  mqttClient->loop();
-  mqttClient->loop();
-  mqttClient->loop();
+  if (!tty1PendingBuffer.empty()) {
+    tty1Stream.append(nonstd::span<const uint8_t>(tty1PendingBuffer.data(), tty1PendingBuffer.size()));
+    tty1PendingBuffer.clear();
+  }
+
+  const bool wasConnected = connected;
+
+  // Process pending MQTT messages (PubSubClient requires multiple calls)
+  for (uint8_t i = 0; i < MQTT_LOOP_ITERATIONS; i++) {
+    mqttClient->loop();
+  }
 
   connected = mqttClient->connected();
 
-  if (wasConnected && !connected) {
-    Log.warningln("MQTT connection lost!");
-    connected = false;
-  }
+  handleConnectionStateChange(wasConnected);
 
-  if (!wasConnected && connected) {
-    Log.infoln("MQTT reconnected successfully!");
-    if (topicTty0Tx.length() > 0) {
-      mqttClient->subscribe(topicTty0Tx.c_str(), 1);
-      mqttClient->loop();
-      delay(10);
-      mqttClient->loop();
-    }
-    if (topicTty1Tx.length() > 0) {
-      mqttClient->subscribe(topicTty1Tx.c_str(), 1);
-      mqttClient->loop();
-      delay(10);
-      mqttClient->loop();
-    }
-  }
-  if (connected) {
-    if (tty0LastFlushMillis < millis() - MQTT_PUBLISH_INTERVAL_MS && tty0Buffer.size() > 0) {
-      Log.infoln("Flushing tty0 buffer due to interval");
-      tty0LastFlushMillis = millis();
-      flushTty0Buffer();
-    }
-    if (tty1LastFlushMillis < millis() - MQTT_PUBLISH_INTERVAL_MS && tty1Buffer.size() > 0) {
-      Log.infoln("Flushing tty1 buffer due to interval");
-      tty1LastFlushMillis = millis();
-      flushTty1Buffer();
-    }
-  }
+  if (!connected)
+    return;
+
+  flushBuffersIfNeeded();
 }
 
 bool MqttClient::publishInfo(const String &data) {
@@ -196,92 +229,38 @@ bool MqttClient::publishInfo(const String &data) {
   } else {
     Log.traceln("MQTT info published successfully");
   }
+
   return result;
 }
 
-void MqttClient::appendToBufferWithFlush(std::vector<char> &buffer,
-                                         const std::vector<char> &data,
-                                         std::function<void()> flushFunction,
-                                         const char* const flushFunctionName) {
-  if (data.empty()) {
-    return;
-  }
-  Log.verboseln("%s: Appending %d bytes to buffer", flushFunctionName,
-             data.size());
-  if (data.size() + buffer.size() > MQTT_BUFFER_SIZE) {
-    Log.verboseln("%s: Buffer size exceeded, flushing buffer", flushFunctionName);
-    flushFunction();
-  }
-  buffer.insert(buffer.end(), data.begin(), data.end());
-  if(buffer.back() == '\n') {
-    Log.verboseln("%s: Flushing buffer due to newline", flushFunctionName);
-    flushFunction();
-  }
+void MqttClient::appendToTty0Buffer(const nonstd::span<const uint8_t> &data) {
+  // Accumulate only - main loop transfers to MQTT
+  tty0PendingBuffer.insert(tty0PendingBuffer.end(), data.data(), data.data() + data.size());
 }
 
-void MqttClient::appendToTty0Buffer(const std::vector<char> &data) {
-  appendToBufferWithFlush(tty0Buffer, data, [&]() { flushTty0Buffer(); });
+void MqttClient::appendToTty1Buffer(const nonstd::span<const uint8_t> &data) {
+  // Accumulate only - main loop transfers to MQTT
+  tty1PendingBuffer.insert(tty1PendingBuffer.end(), data.data(), data.data() + data.size());
 }
 
-void MqttClient::appendToTty1Buffer(const std::vector<char> &data) {
-  appendToBufferWithFlush(tty1Buffer, data, [&]() { flushTty1Buffer(); });
-}
-
-void MqttClient::flushBuffer(std::vector<char> &buffer,
-                             const String &topic, unsigned long &lastFlushMillis,
-                             const char *flushFunctionName) {
-  if (buffer.size() == 0) {
-    return;
-  }
-  if (!connected) {
-    Log.warningln("MQTT connection lost, dropping buffer for %s",
-                  flushFunctionName);
-    buffer.clear();
-    lastFlushMillis = millis();
-    return;
-  }
-  mqttClient->publish(topic.c_str(), (uint8_t *)buffer.data(), buffer.size(),
-                      false);
-  buffer.clear();
-  lastFlushMillis = millis();
-  Log.infoln("%s: Buffer flushed for %s", flushFunctionName, topic.c_str());
-}
-
-void MqttClient::flushTty0Buffer() {
-  flushBuffer(tty0Buffer, topicTty0Rx, tty0LastFlushMillis);
-}
-
-void MqttClient::flushTty1Buffer() {
-  flushBuffer(tty1Buffer, topicTty1Rx, tty1LastFlushMillis);
-}
 
 void MqttClient::mqttCallback(char *topic, byte *payload, unsigned int length) {
-  if (!g_mqttInstance)
+  if (length >= MQTT_CALLBACK_BUFFER_SIZE)
+  return;
+  String topicStr(topic); // This can be expensive, I would like to use a string_view instead.
+
+  nonstd::span<const uint8_t> payloadSpan(payload, length);
+  if (topicStr == topicTty0Rx) {
+    onTty0Callback(payloadSpan);
     return;
-  if (length >= 512)
+  } else if (topicStr == topicTty1Rx) {
+    onTty1Callback(payloadSpan);
     return;
-
-  static char buffer[512];
-  memcpy(buffer, payload, length);
-  buffer[length] = '\0';
-
-  String topicStr = String(topic);
-
-  if ((topicStr == g_mqttInstance->topicTty0Tx ||
-       strcmp(topic, g_mqttInstance->topicTty0Tx.c_str()) == 0)) {
-    if (g_mqttInstance->onTty0Callback) {
-      g_mqttInstance->onTty0Callback(buffer, length);
-    }
-    return;
-  }
-
-  if ((topicStr == g_mqttInstance->topicTty1Tx ||
-       strcmp(topic, g_mqttInstance->topicTty1Tx.c_str()) == 0)) {
-    if (g_mqttInstance->onTty1Callback) {
-      g_mqttInstance->onTty1Callback(buffer, length);
-    }
+  } else {
+    Log.errorln("MQTT callback received for unknown topic: %s", topic);
     return;
   }
 }
+
 
 } // namespace jrb::wifi_serial

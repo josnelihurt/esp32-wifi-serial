@@ -1,5 +1,4 @@
 #include "application.h"
-#include "domain/serial/serial_bridge.h"
 #include "domain/network/mqtt_client.h"
 #include <Arduino.h>
 #include <ArduinoLog.h>
@@ -9,256 +8,219 @@
 namespace jrb::wifi_serial {
 
 // Static instance pointer for MQTT callbacks
-Application* Application::s_instance = nullptr;
+Application *Application::s_instance = nullptr;
 
-Application::Application() {
-    // Set static instance for MQTT callbacks
-    tty0Buffer.reserve(SERIAL_BUFFER_SIZE);
-    tty1Buffer.reserve(SERIAL_BUFFER_SIZE);
-    tty0LastFlushMillis = millis();
-    tty1LastFlushMillis = millis();
-    s_instance = this;
+Application::Application()
+    : preferencesStorage(), wifiManager(preferencesStorage),
+      mqttClient(wifiClient, preferencesStorage),
+      systemInfo(preferencesStorage, mqttClient, otaEnabled),
+      sshServer(preferencesStorage, systemInfo, specialCharacterHandler), sshSubscriber(sshServer),
+      webServer(preferencesStorage),
+      tty0Broadcaster(webServer.getTty0Stream(), mqttClient.getTty0Stream()),
+      tty1Broadcaster(webServer.getTty1Stream(), mqttClient.getTty1Stream(), sshSubscriber),
+      otaManager(preferencesStorage, otaEnabled),
+      specialCharacterHandler(systemInfo, preferencesStorage){
+  // Set static instance for MQTT callbacks
+  s_instance = this;
+  systemInfo.logSystemInformation();
 
-    // Load preferences and setup core systems
-    preferencesStorage.load();
-    systemInfo.logSystemInformation();
-    serialBridge.setup(preferencesStorage.baudRateTty1);
-    serialBridge.setLogs(serial0Log, serial1Log);
+  // Setup serial1 hardware
+  setupSerial1();
 
-    // Create heap-allocated handlers
-    serialCmdHandler = new SerialCommandHandler(
-        preferencesStorage, mqttClient, debugEnabled,
-        [this]() { systemInfo.logSystemInformation(); }
-    );
-    otaManager = new OTAManager(preferencesStorage, otaEnabled);
-    webServer = new WebConfigServer(
-        preferencesStorage, serial0Log, serial1Log,
-        [this](const String& data) {
-            //Handle web to serial and mqtt
-            if(debugEnabled) {
-                Log.infoln("$web->ttyS0$%s", data.c_str());
-            }
-            std::vector<char> dataVector(data.begin(), data.end());
-            mqttClient.appendToTty0Buffer(dataVector);
-        },
-        [this](const String& data) {
-            //Handle web to serial and mqtt
-            if(debugEnabled) {
-                Log.infoln("$web->ttyS1$%s", data.c_str());
-            }
-            std::vector<char> dataVector(data.begin(), data.end());
-            mqttClient.appendToTty1Buffer(dataVector);
-        }
-    );
-
-    // Initialize SSH server (runs in its own FreeRTOS task)
-    sshServer = new SSHServer(preferencesStorage, systemInfo);
-    sshServer->setSerialCallbacks(
-        [this](const char* data, int length) {
-            if(debugEnabled) {
-                Log.infoln("$ssh->ttyS1$%s", data);
-            }
-            serialBridge.writeSerial1(data, length);
-        },
-        [this](char* buffer, int maxLen) {
-            return serialBridge.readSerial1(buffer, maxLen);
-        }
-    );
-}
-
-Application::~Application() {
-    delete serialCmdHandler;
-    delete otaManager;
-    delete webServer;
-    delete sshServer;
-}
-
-void Application::onMqttTty0(const char* data, unsigned int length) {
-    serialBridge.writeSerial0(data, length);
-}
-
-void Application::onMqttTty1(const char* data, unsigned int length) {
-    serialBridge.writeSerial1(data, length);
-    if(debugEnabled) {
-        Log.infoln("$mqtt->ttyS1$%s", data);
+  // Initialize SSH server (runs in its own FreeRTOS task)
+  sshServer.setSerialWriteCallback([](const nonstd::span<const uint8_t> &data) {
+    if (s_instance->preferencesStorage.debugEnabled) {
+      String dataString((const char *)data.data(), data.size());
+      Log.infoln("$ssh->ttyS1$%s", dataString.c_str());
     }
-}
-
-std::function<void(const char*, unsigned int)> Application::getMqttTty0Callback() {
-    return [this](const char* data, unsigned int length) {
-        onMqttTty0(data, length);
-    };
-}
-
-std::function<void(const char*, unsigned int)> Application::getMqttTty1Callback() {
-    return [this](const char* data, unsigned int length) {
-        onMqttTty1(data, length);
-    };
-}
-
-// Static MQTT callback wrappers for C-style function pointers
-void Application::mqttTty0Wrapper(const char* data, unsigned int length) {
-    if (s_instance == nullptr) return;
-    s_instance->onMqttTty0(data, length);
-}
-
-void Application::mqttTty1Wrapper(const char* data, unsigned int length) {
-    if (s_instance == nullptr) return;
-    s_instance->onMqttTty1(data, length);
-}
-
-void Application::setupMqttCallbacks() {
-    mqttClient.setDeviceName(preferencesStorage.deviceName);
-    mqttClient.setTopics(preferencesStorage.topicTty0Rx, preferencesStorage.topicTty0Tx,
-                         preferencesStorage.topicTty1Rx, preferencesStorage.topicTty1Tx);
-    mqttClient.setCallbacks(mqttTty0Wrapper, mqttTty1Wrapper);
-
-    if (preferencesStorage.mqttBroker.length() > 0) {
-        const char* user = preferencesStorage.mqttUser.length() > 0 ? preferencesStorage.mqttUser.c_str() : nullptr;
-        const char* pass = preferencesStorage.mqttPassword.length() > 0 ? preferencesStorage.mqttPassword.c_str() : nullptr;
-        mqttClient.connect(preferencesStorage.mqttBroker.c_str(), preferencesStorage.mqttPort, user, pass);
+    if (s_instance->serial1) {
+      s_instance->serial1->write(data.data(), data.size());
     }
+  });
+}
+
+Application::~Application() {}
+
+void Application::setupSerial1() {
+  int baudRate = preferencesStorage.baudRateTty1;
+  if (baudRate <= 1) {
+    Log.errorln("%s: baudRateTty1 is %d (<= 1), using default 115200",
+                __PRETTY_FUNCTION__, baudRate);
+    baudRate = DEFAULT_BAUD_RATE_TTY1;
+  }
+  Log.infoln("%s: Initializing serial1 with baud rate: %d, RX: %d, TX: %d, "
+             "config: 0x%x",
+             __PRETTY_FUNCTION__, baudRate, SERIAL1_RX_PIN, SERIAL1_TX_PIN,
+             SERIAL_8N1);
+  serial1 = new HardwareSerial(1);
+  serial1->begin(baudRate, SERIAL_8N1, SERIAL1_RX_PIN, SERIAL1_TX_PIN);
 }
 
 void Application::setup() {
-    Log.traceln(__PRETTY_FUNCTION__);
+  Log.traceln(__PRETTY_FUNCTION__);
 
-    // Network setup (from NetworkSetupTask)
-    wifiManager.setup();
-    otaManager->setup();
-    systemInfo.logSystemInformation();
+  // Network setup (from NetworkSetupTask)
+  wifiManager.setup();
+  otaManager.setup();
+  systemInfo.logSystemInformation();
 
-    // MQTT setup (from MqttHandlerCreateTask)
-    setupMqttCallbacks();
-    // Save preferences
-    preferencesStorage.save();
+  mqttClient.setCallbacks(
+      [](const nonstd::span<const uint8_t> &data) {
+        Serial.write(data.data(), data.size());
+        s_instance->tty0Broadcaster.append(data);
+      },
+      [](const nonstd::span<const uint8_t> &data) {
+        if (s_instance->preferencesStorage.debugEnabled) {
+          String dataString(data.data(), data.size());
+          Log.infoln("$mqtt->ttyS1$%s", dataString.c_str());
+        }
+        if (s_instance->serial1) {
+          s_instance->serial1->write(data.data(), data.size());
+        }
+        s_instance->sshServer.sendToSSHClients(data);
+      });
+  preferencesStorage.save();
 
-    // Web server setup
-    webServer->setWiFiConfig(
-        preferencesStorage.ssid, preferencesStorage.password, preferencesStorage.deviceName,
-        preferencesStorage.mqttBroker, preferencesStorage.mqttPort,
-        preferencesStorage.mqttUser, preferencesStorage.mqttPassword
-    );
-    webServer->setAPMode(wifiManager.isAPMode());
-    if (wifiManager.isAPMode()) {
-        webServer->setAPIP(wifiManager.getAPIP());
-    }
-    webServer->setup();
+  webServer.setWiFiConfig(
+      preferencesStorage.ssid, preferencesStorage.password,
+      preferencesStorage.deviceName, preferencesStorage.mqttBroker,
+      preferencesStorage.mqttPort, preferencesStorage.mqttUser,
+      preferencesStorage.mqttPassword);
+  webServer.setAPMode(wifiManager.isAPMode());
+  if (wifiManager.isAPMode()) {
+    webServer.setAPIP(wifiManager.getAPIP());
+  }
+  webServer.setup(
+      [](const nonstd::span<const uint8_t> &data) {
+        // Handle web to serial and mqtt
+        if (s_instance->preferencesStorage.debugEnabled) {
+          String dataString(data.data(), data.size());
+          Log.info("$web->ttyS0$%s", dataString.c_str());
+        }
+        s_instance->mqttClient.appendToTty0Buffer(data);
+      },
+      [](const nonstd::span<const uint8_t> &data) {
+        // Handle web to serial and mqtt
+        if (s_instance->preferencesStorage.debugEnabled) {
+          String dataString(data.data(), data.size());
+          Log.info("$web->ttyS1$%s", dataString.c_str());
+        }
+        s_instance->mqttClient.appendToTty1Buffer(data);
+        if (s_instance->serial1) {
+          s_instance->serial1->write(data.data(), data.size());
+        }
+        s_instance->sshServer.sendToSSHClients(data);
+      });
 
-    // SSH server setup (after network is ready)
-    if (sshServer) {
-        sshServer->setup();
-    }
+  // SSH server setup (after network is ready)
+  sshServer.setup();
 
-    // Initialize timers
-    lastInfoPublish = millis();
-
-    Log.infoln("Setup complete!");
+  lastInfoPublish = millis();
+  systemInfo.logSystemInformation();
+  Log.infoln("Setup complete!");
 }
 
 void Application::loop() {
-    if(buttonHandler.checkTriplePress()) {
-        Log.infoln("Triple press detected! Resetting configuration and restarting...");
-        preferencesStorage.clear();
-        ESP.restart();
-    }
+  if (buttonHandler.checkTriplePress()) {
+    Log.infoln(
+        "Triple press detected! Resetting configuration and restarting...");
+    preferencesStorage.clear();
+    ESP.restart();
+  }
 
-    if (serialCmdHandler) {
-        serialCmdHandler->handle();
-    }
+  wifiManager.loop();
+  mqttClient.loop();
+  ArduinoOTA.handle();
 
-    wifiManager.loop();
-    mqttClient.loop();
-    ArduinoOTA.handle();
+  reconnectMqttIfNeeded();
+  publishInfoIfNeeded();
 
-    reconnectMqttIfNeeded();
-    publishInfoIfNeeded();
-
-    handleSerialPort0();
-    handleSerialPort1();
+  handleSerialPort0();
+  handleSerialPort1();
 }
 
 void Application::reconnectMqttIfNeeded() {
-    if (!wifiManager.isAPMode() && preferencesStorage.mqttBroker.length() > 0 && !mqttClient.isConnected()) {
-        unsigned long now = millis();
-        if (now - lastMqttReconnectAttempt >= 5000) {
-            lastMqttReconnectAttempt = now;
-            const char* user = preferencesStorage.mqttUser.length() > 0 ? preferencesStorage.mqttUser.c_str() : nullptr;
-            const char* pass = preferencesStorage.mqttPassword.length() > 0 ? preferencesStorage.mqttPassword.c_str() : nullptr;
-            mqttClient.connect(preferencesStorage.mqttBroker.c_str(), preferencesStorage.mqttPort, user, pass);
-        }
+  if (!wifiManager.isAPMode() && preferencesStorage.mqttBroker.length() > 0 &&
+      !mqttClient.isConnected()) {
+    unsigned long now = millis();
+    if (now - lastMqttReconnectAttempt >= 5000) {
+      lastMqttReconnectAttempt = now;
+      const char *user = preferencesStorage.mqttUser.length() > 0
+                             ? preferencesStorage.mqttUser.c_str()
+                             : nullptr;
+      const char *pass = preferencesStorage.mqttPassword.length() > 0
+                             ? preferencesStorage.mqttPassword.c_str()
+                             : nullptr;
+      mqttClient.connect(preferencesStorage.mqttBroker.c_str(),
+                         preferencesStorage.mqttPort, user, pass);
     }
+  }
 }
 
 void Application::publishInfoIfNeeded() {
-    if (!wifiManager.isAPMode() && mqttClient.isConnected()) {
-        static constexpr unsigned long INFO_PUBLISH_INTERVAL_MS = 30000;
+  if (!wifiManager.isAPMode() && mqttClient.isConnected()) {
+    static constexpr unsigned long INFO_PUBLISH_INTERVAL_MS = 30000;
 
-        if (millis() - lastInfoPublish >= INFO_PUBLISH_INTERVAL_MS) {
-            String macAddress = WiFi.macAddress();
-            String ipAddress = WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : "Not connected";
-            String ssid = WiFi.status() == WL_CONNECTED ? WiFi.SSID() : "Not configured";
-            mqttClient.publishInfo(preferencesStorage.serialize(ipAddress, macAddress, ssid));
-            lastInfoPublish = millis();
-        }
+    if (millis() - lastInfoPublish >= INFO_PUBLISH_INTERVAL_MS) {
+      String macAddress = WiFi.macAddress();
+      String ipAddress = WiFi.status() == WL_CONNECTED
+                             ? WiFi.localIP().toString()
+                             : "Not connected";
+      String ssid =
+          WiFi.status() == WL_CONNECTED ? WiFi.SSID() : "Not configured";
+      mqttClient.publishInfo(
+          preferencesStorage.serialize(ipAddress, macAddress, ssid));
+      lastInfoPublish = millis();
     }
-}
-
-
-bool Application::handleSpecialCharacter(char c) {
-    static bool isSpecialCharacter = false;
-    if (c == CMD_PREFIX) {
-        isSpecialCharacter = true;
-        Log.infoln("Ctrl+Y");
-        return true;
-    }
-    if (!isSpecialCharacter) return false;
-    isSpecialCharacter = false;
-    switch (c) {
-        case CMD_INFO:
-            systemInfo.logSystemInformation();
-            break;
-        case CMD_DEBUG:
-            Log.infoln("Debug %s", debugEnabled ? "enabled" : "disabled");
-            debugEnabled = !debugEnabled;
-            break;
-        default:
-            Log.errorln("Unknown special character: %c", c);
-            break;
-    }
+  }
 }
 
 void Application::handleSerialPort0() {
-    while (Serial.available() > 0) {
-        tty0Buffer.push_back(Serial.read());
-        if(debugEnabled && !handleSpecialCharacter(tty0Buffer.back())){
-            Serial.print(tty0Buffer.back());
-        }
+  while (Serial.available() > 0) {
+    uint8_t byte = Serial.read();
+
+    // Handle special commands BEFORE broadcasting
+    if (specialCharacterHandler.handle(byte)) {
+      continue;
     }
-    if(tty0Buffer.empty()) return; // No data to flush
-    if(millis() - tty0LastFlushMillis < 50) return; // Not enough time has passed since last flush
-    tty0LastFlushMillis = millis();
-    if(mqttClient.isConnected()) {
-        mqttClient.appendToTty0Buffer(tty0Buffer);
+
+    // Local echo (if debug enabled)
+    if (preferencesStorage.debugEnabled) {
+      Serial.write(byte);
     }
-    tty0Buffer.clear();
+    if(preferencesStorage.tty02tty1Bridge) {
+      writeToSerial1(byte);
+    }
+    // Broadcast to all tty0 subscribers via type-erased broadcaster
+    tty0Broadcaster.append(byte);
+  }
 }
 
 void Application::handleSerialPort1() {
-    while (Serial.available() > 0) {
-        tty1Buffer.push_back(Serial.read());
-        if(debugEnabled){
-            Serial.print(tty1Buffer.back());
-        }
+  if (serial1 == nullptr){
+    Log.errorln("%s: serial1 is nullptr", __PRETTY_FUNCTION__);
+    return;
+  }
+
+  // Read from hardware Serial1 and broadcast to all subscribers
+  while (serial1->available() > 0) {
+    uint8_t byte = serial1->read();
+
+    // Local echo (if debug enabled)
+    if (preferencesStorage.tty02tty1Bridge) {
+      Serial.write(byte);
     }
-    if(tty1Buffer.empty()) return; // No data to flush
-    if(millis() - tty0LastFlushMillis < 50) return; // Not enough time has passed since last flush
-    tty0LastFlushMillis = millis();
-    if(mqttClient.isConnected()) {
-        mqttClient.appendToTty1Buffer(tty1Buffer);
-    }
-    tty1Buffer.clear();
+
+    // Broadcast to all tty1 subscribers via type-erased broadcaster
+    tty1Broadcaster.append(byte);
+  }
 }
 
-}  // namespace jrb::wifi_serial
-
+void Application::writeToSerial1(uint8_t byte) {
+  if (serial1 == nullptr) {
+    Log.errorln("%s: serial1 is nullptr", __PRETTY_FUNCTION__);
+    return;
+  }
+  serial1->write(byte);
+}
+} // namespace jrb::wifi_serial

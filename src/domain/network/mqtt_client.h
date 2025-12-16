@@ -1,29 +1,28 @@
 #pragma once
 
 #include "config.h"
+#include "domain/network/mqtt/buffered_stream.hpp"
+#include "domain/network/mqtt/mqtt_flush_policy.h"
 #include <Arduino.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <functional>
+#include <memory>
+#include <nonstd/span.hpp>
 #include <vector>
 
 namespace jrb::wifi_serial {
 
+class PreferencesStorage;
+
 class MqttClient final {
 public:
-  MqttClient(WiFiClient &wifiClient);
+  MqttClient(WiFiClient &wifiClient, PreferencesStorage &preferencesStorage);
   ~MqttClient();
 
-  // Sets device name used in MQTT topics and info messages.
-  void setDeviceName(const String &name);
-
-  // Configures the four serial topic pairs (Rx/Tx for tty0/tty1).
-  void setTopics(const String &tty0Rx, const String &tty0Tx,
-                 const String &tty1Rx, const String &tty1Tx);
-
   // Registers callbacks for Rx topics.
-  void setCallbacks(void (*tty0)(const char *, unsigned int),
-                    void (*tty1)(const char *, unsigned int));
+  void setCallbacks(void (*tty0)(const nonstd::span<const uint8_t> &),
+                    void (*tty1)(const nonstd::span<const uint8_t> &));
 
   bool connect(const char *broker, int port, const char *user = nullptr,
                const char *password = nullptr);
@@ -37,37 +36,41 @@ public:
   bool isConnected() const { return connected; }
   void setConnected(bool state) { connected = state; }
 
-  PubSubClient *getMqttClient() const { return mqttClient; }
-
-  void appendToTty0Buffer(const std::vector<char> &data);
-  void appendToTty1Buffer(const std::vector<char> &data);
+  void appendToTty0Buffer(const nonstd::span<const uint8_t> &data);
+  void appendToTty1Buffer(const nonstd::span<const uint8_t> &data);
+  BufferedStream<MqttFlushPolicy> &getTty0Stream() { return tty0Stream; }
+  BufferedStream<MqttFlushPolicy> &getTty1Stream() { return tty1Stream; }
 
 private:
-  PubSubClient *mqttClient;
+  std::unique_ptr<PubSubClient> mqttClient;
+  PreferencesStorage &preferencesStorage;
   WiFiClient *wifiClient;
-  String deviceName;
   String topicTty0Rx, topicTty0Tx;
   String topicTty1Rx, topicTty1Tx;
   String topicInfo;
   bool connected;
   unsigned long lastReconnectAttempt;
 
-  void (*onTty0Callback)(const char *, unsigned int);
-  void (*onTty1Callback)(const char *, unsigned int);
+  void (*onTty0Callback)(const nonstd::span<const uint8_t> &);
+  void (*onTty1Callback)(const nonstd::span<const uint8_t> &);
 
-  std::vector<char> tty0Buffer;
-  std::vector<char> tty1Buffer;
-  unsigned long tty0LastFlushMillis{0};
-  unsigned long tty1LastFlushMillis{0};
+  // Pending buffers for cross-task data transfer (web task → main loop)
+  std::vector<uint8_t> tty0PendingBuffer;
+  std::vector<uint8_t> tty1PendingBuffer;
 
-  void appendToBufferWithFlush(std::vector<char> &buffer,
-                               const std::vector<char> &data,
-                               std::function<void()> flushFunction,
-                               const char* func = __PRETTY_FUNCTION__);
-  void flushBuffer(std::vector<char> &buffer, const String &topic, unsigned long &lastFlushMillis, const char* func = __PRETTY_FUNCTION__);
-  void flushTty0Buffer();
-  void flushTty1Buffer();
-  static void mqttCallback(char *topic, byte *payload, unsigned int length);
+  BufferedStream<MqttFlushPolicy> tty0Stream;
+  unsigned long tty0LastFlushMillis;
+  BufferedStream<MqttFlushPolicy> tty1Stream;
+  unsigned long tty1LastFlushMillis;
+
+  void subscribeToConfiguredTopics();
+  void handleConnectionStateChange(bool wasConnected);
+  void flushBuffersIfNeeded();
+  void flushBuffer(std::vector<char> &buffer, const String &topic,
+                   unsigned long &lastFlushMillis, const char *bufferName);
+  void setTopics(const String &tty0Rx, const String &tty0Tx,
+                 const String &tty1Rx, const String &tty1Tx);
+  void mqttCallback(char *topic, byte *payload, unsigned int length);
 };
 
 } // namespace jrb::wifi_serial

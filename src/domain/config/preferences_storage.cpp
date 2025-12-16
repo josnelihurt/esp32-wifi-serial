@@ -9,7 +9,33 @@ PreferencesStorage::PreferencesStorage()
     : deviceName{DEFAULT_DEVICE_NAME}, mqttBroker{},
       mqttPort{DEFAULT_MQTT_PORT}, mqttUser{}, mqttPassword{}, topicTty0Rx{},
       topicTty0Tx{}, topicTty1Rx{}, topicTty1Tx{}, webUser{"admin"},
-      webPassword{} {}
+      webPassword{}, debugEnabled{false}, tty02tty1Bridge{false} {
+  load();
+}
+
+void PreferencesStorage::load() {
+  Log.infoln("Loading preferences");
+  preferences.begin("esp32bridge", true);
+
+  deviceName = preferences.getString("deviceName", DEFAULT_DEVICE_NAME);
+  baudRateTty1 = preferences.getInt("baudRateTty1", DEFAULT_BAUD_RATE_TTY1);
+  mqttBroker = preferences.getString("mqttBroker", "");
+  mqttPort = preferences.getInt("mqttPort", DEFAULT_MQTT_PORT);
+  mqttUser = preferences.getString("mqttUser", "");
+  mqttPassword = preferences.getString("mqttPassword", "");
+
+  topicTty0Rx = preferences.getString("topicTty0Rx", "");
+  topicTty0Tx = preferences.getString("topicTty0Tx", "");
+  topicTty1Rx = preferences.getString("topicTty1Rx", "");
+  topicTty1Tx = preferences.getString("topicTty1Tx", "");
+  ssid = preferences.getString("ssid", "");
+  password = preferences.getString("password", "");
+  webUser = preferences.getString("webUser", "admin");
+  webPassword = preferences.getString("webPassword", "");
+
+  preferences.end();
+  generateDefaultTopics();
+}
 
 String PreferencesStorage::serialize(const String &ipAddress,
                                      const String &macAddress,
@@ -20,7 +46,7 @@ String PreferencesStorage::serialize(const String &ipAddress,
   obj["mqttBroker"] = mqttBroker;
   obj["mqttPort"] = mqttPort;
   obj["mqttUser"] = mqttUser;
-  obj["mqttPassword"] = "******";
+  obj["mqttPassword"] = mqttPassword.length() > 0 ? "NO_PASSWORD" : "********";
   obj["topicTty0Rx"] = topicTty0Rx;
   obj["topicTty0Tx"] = topicTty0Tx;
   obj["topicTty1Rx"] = topicTty1Rx;
@@ -29,12 +55,15 @@ String PreferencesStorage::serialize(const String &ipAddress,
   obj["macAddress"] = macAddress;
   obj["ssid"] = ssid;
   obj["mqtt"] = (mqttBroker.length() > 0 ? "connected" : "disconnected");
-  obj["password"] = "******";
+  obj["password"] = password.length() > 0 ? "NO_PASSWORD" : "********";
   obj["webUser"] = webUser;
-  obj["webPassword"] = "******";
+  obj["webPassword"] = webPassword.length() > 0 ? "NO_PASSWORD" : "** ******";
+  obj["debugEnabled"] = debugEnabled;
+  obj["tty02tty1Bridge"] = tty02tty1Bridge;
   serializeJsonPretty(obj, output);
   return output;
 }
+
 void PreferencesStorage::generateDefaultTopics() {
   Log.infoln("Generating default topics with device name: %s",
              deviceName.c_str());
@@ -77,30 +106,6 @@ void PreferencesStorage::generateDefaultTopics() {
   } else if (!topicTty1Tx.startsWith("wifi_serial/")) {
     topicTty1Tx = "wifi_serial/" + topicTty1Tx;
   }
-}
-
-void PreferencesStorage::load() {
-  Log.infoln("Loading preferences");
-  preferences.begin("esp32bridge", true);
-
-  deviceName = preferences.getString("deviceName", DEFAULT_DEVICE_NAME);
-  baudRateTty1 = preferences.getInt("baudRateTty1", DEFAULT_BAUD_RATE_TTY1);
-  mqttBroker = preferences.getString("mqttBroker", "");
-  mqttPort = preferences.getInt("mqttPort", DEFAULT_MQTT_PORT);
-  mqttUser = preferences.getString("mqttUser", "");
-  mqttPassword = preferences.getString("mqttPassword", "");
-
-  topicTty0Rx = preferences.getString("topicTty0Rx", "");
-  topicTty0Tx = preferences.getString("topicTty0Tx", "");
-  topicTty1Rx = preferences.getString("topicTty1Rx", "");
-  topicTty1Tx = preferences.getString("topicTty1Tx", "");
-  ssid = preferences.getString("ssid", "");
-  password = preferences.getString("password", "");
-  webUser = preferences.getString("webUser", "admin");
-  webPassword = preferences.getString("webPassword", "");
-
-  preferences.end();
-  generateDefaultTopics();
 }
 
 void PreferencesStorage::save() {

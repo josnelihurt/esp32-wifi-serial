@@ -1,24 +1,28 @@
 #pragma once
 
-#include "domain/network/wifi_manager.h"
-#include "domain/serial/serial_bridge.h"
-#include "domain/serial/serial_log.h"
-#include "domain/serial/serial_buffer_manager.h"
+#include "broadcaster.hpp"
+#include "config.h"
 #include "domain/config/preferences_storage.h"
+#include "domain/config/special_character_handler.h"
+#include "domain/network/mqtt/buffered_stream.hpp"
+#include "domain/network/mqtt/mqtt_flush_policy.h"
 #include "domain/network/mqtt_client.h"
 #include "domain/network/ssh_server.h"
-#include "infrastructure/hardware/serial_command_handler.h"
+#include "domain/network/ssh_subscriber.h"
+#include "domain/network/wifi_manager.h"
+#include "domain/serial/serial_log.hpp"
 #include "infrastructure/hardware/button_handler.h"
-#include "system_info.h"
-#include "ota_manager.h"
 #include "infrastructure/web/web_config_server.h"
-#include <WiFiClient.h>
-#include <Preferences.h>
-#include "config.h"
+#include "ota_manager.h"
+#include "system_info.h"
 #include <Arduino.h>
+#include <HardwareSerial.h>
+#include <WiFiClient.h>
 #include <functional>
+#include <vector>
 
 namespace jrb::wifi_serial {
+
 /**
  * @brief Top-level application coordinator.
  *
@@ -39,101 +43,65 @@ namespace jrb::wifi_serial {
  */
 class Application final {
 public:
-    Application();
-    ~Application();
+  Application();
+  ~Application();
 
-    /**
-     * @brief Run one-time setup routines.
-     *
-     * Called after initialization to perform setup tasks that should run
-     * once (for example, starting servers, synchronizing configuration,
-     * or creating persistent resources).
-     */
-    void setup();
+  /**
+   * @brief Run one-time setup routines.
+   *
+   * Called after initialization to perform setup tasks that should run
+   * once (for example, starting servers, synchronizing configuration,
+   * or creating persistent resources).
+   */
+  void setup();
 
-    /**
-     * @brief Called continuously from the main Arduino loop.
-     *
-     * This drives the application's periodic processing by delegating to
-     * registered loop tasks in the `TaskRegistry`.
-     */
-    void loop();
-    
-    /**
-     * @brief Handle incoming MQTT payload for TTY port 0.
-     *
-     * @param data Pointer to the raw payload bytes.
-     * @param length Number of bytes in the payload.
-     */
-    void onMqttTty0(const char* data, unsigned int length);
-
-    /**
-     * @brief Handle incoming MQTT payload for TTY port 1.
-     *
-     * @param data Pointer to the raw payload bytes.
-     * @param length Number of bytes in the payload.
-     */
-    void onMqttTty1(const char* data, unsigned int length);
-
-    
-    /**
-     * @brief Return a callable suitable for use as an MQTT message handler
-     *        for TTY port 0.
-     *
-     * The returned function accepts a pointer to bytes and their length and
-     * forwards the data into `onMqttTty0`.
-     */
-    std::function<void(const char*, unsigned int)> getMqttTty0Callback();
-
-    /**
-     * @brief Return a callable suitable for use as an MQTT message handler
-     *        for TTY port 1.
-     */
-    std::function<void(const char*, unsigned int)> getMqttTty1Callback();
-
+  /**
+   * @brief Called continuously from the main Arduino loop.
+   *
+   * This drives the application's periodic processing by delegating to
+   * registered loop tasks in the `TaskRegistry`.
+   */
+  void loop();
 
 private:
-    std::vector<char> tty0Buffer;
-    std::vector<char> tty1Buffer;
-    unsigned long tty0LastFlushMillis{0};
-    unsigned long tty1LastFlushMillis{0};
-    // Primitives (initialize first)
-    bool otaEnabled{false};
-    bool debugEnabled{true};
-    unsigned long lastInfoPublish{0};
-    unsigned long lastMqttReconnectAttempt{0};
+  // Primitives (initialize first)
+  bool otaEnabled{false};
+  unsigned long lastInfoPublish{0};
+  unsigned long lastMqttReconnectAttempt{0};
 
-    // Stack objects (order matters - dependencies flow down)
-    ::Preferences preferences;
-    PreferencesStorage preferencesStorage;
-    WiFiManager wifiManager{preferencesStorage};
-    WiFiClient wifiClient;
-    MqttClient mqttClient{wifiClient};
-    SerialBridge serialBridge{mqttClient};
-    SerialLog serial0Log;
-    SerialLog serial1Log;
-    SystemInfo systemInfo{preferencesStorage, mqttClient, otaEnabled};
+  // Stack objects (order matters - dependencies flow down)
+  PreferencesStorage preferencesStorage;
+  WiFiManager wifiManager;
+  WiFiClient wifiClient;
+  MqttClient mqttClient;
+  SystemInfo systemInfo;
+  SSHServer sshServer;
+  SSHSubscriber sshSubscriber;
+  SpecialCharacterHandler specialCharacterHandler;
+  
+  WebConfigServer webServer;
+  Broadcaster<SerialLog, BufferedStream<MqttFlushPolicy>> tty0Broadcaster;
+  Broadcaster<SerialLog, BufferedStream<MqttFlushPolicy>, SSHSubscriber>
+      tty1Broadcaster;
 
-    // Heap objects (lazy init in constructor)
-    SerialCommandHandler* serialCmdHandler{nullptr};
-    ButtonHandler buttonHandler;
-    OTAManager* otaManager{nullptr};
-    WebConfigServer* webServer{nullptr};
-    SSHServer* sshServer{nullptr};
+  // Serial hardware (heap-allocated to control initialization timing)
+  HardwareSerial *serial1{nullptr};
 
-    // Helper methods for loop processing
-    void handleSerialPort0();
-    void handleSerialPort1();
-    bool handleSpecialCharacter(char c);
-    void reconnectMqttIfNeeded();
-    void publishInfoIfNeeded();
-    void setupMqttCallbacks();
+  // Heap objects (lazy init in constructor)
+  ButtonHandler buttonHandler;
+  OTAManager otaManager;
 
-    // MQTT callback wrappers (need to be static for C-style function pointers)
-    static void mqttTty0Wrapper(const char* data, unsigned int length);
-    static void mqttTty1Wrapper(const char* data, unsigned int length);
-    static Application* s_instance;
+  // Helper methods for setup
+  void setupSerial1();
+
+  // Helper methods for loop processing
+  void handleSerialPort0();
+  void handleSerialPort1();
+  void reconnectMqttIfNeeded();
+  void publishInfoIfNeeded();
+  void writeToSerial1(uint8_t byte);
+
+  static Application *s_instance;
 };
 
-}  // namespace jrb::wifi_serial
-
+} // namespace jrb::wifi_serial
