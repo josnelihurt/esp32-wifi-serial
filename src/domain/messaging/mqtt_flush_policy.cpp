@@ -4,10 +4,10 @@
 namespace jrb::wifi_serial {
 
 MqttFlushPolicy::MqttFlushPolicy(PubSubClient &mqttClient, const String &topic)
-    : mqttClient{mqttClient}, topic{topic} {
-}
+    : mqttClient{mqttClient}, topic{topic} {}
 
-void MqttFlushPolicy::flush(const nonstd::span<const uint8_t> &buffer, const char *name) {
+void MqttFlushPolicy::flush(const nonstd::span<const uint8_t> &buffer,
+                            const char *name) {
   if (buffer.empty())
     return;
 
@@ -19,7 +19,8 @@ void MqttFlushPolicy::flush(const nonstd::span<const uint8_t> &buffer, const cha
     return;
   }
 
-  Log.verboseln("MQTT publishing %d bytes to topic: %s", buffer.size(), topic.c_str());
+  Log.verboseln("MQTT publishing %d bytes to topic: %s", buffer.size(),
+                topic.c_str());
   bool result = mqttClient.publish(topic.c_str(), buffer.data(), buffer.size());
   if (!result) {
     Log.errorln("MQTT publish failed for topic: %s", topic.c_str());

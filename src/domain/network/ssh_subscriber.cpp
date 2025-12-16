@@ -2,8 +2,7 @@
 
 namespace jrb::wifi_serial {
 
-SSHSubscriber::SSHSubscriber(SSHServer& server)
-    : sshServer(server) {
+SSHSubscriber::SSHSubscriber(SSHServer &server) : sshServer(server) {
   buffer.reserve(128);
 }
 
@@ -12,8 +11,9 @@ void SSHSubscriber::append(uint8_t byte) {
   flushIfNeeded();
 }
 
-void SSHSubscriber::append(const nonstd::span<const uint8_t>& data) {
-  if (data.empty()) return;
+void SSHSubscriber::append(const nonstd::span<const uint8_t> &data) {
+  if (data.empty())
+    return;
 
   buffer.insert(buffer.end(), data.data(), data.data() + data.size());
   flushIfNeeded();

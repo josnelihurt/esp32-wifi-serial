@@ -19,7 +19,7 @@ public:
   /**
    * @brief Constructor for PreferencesStorage.
    */
-  PreferencesStorage() ;
+  PreferencesStorage();
   PreferencesStorage(const PreferencesStorage &) = delete;
   PreferencesStorage &operator=(const PreferencesStorage &) = delete;
 

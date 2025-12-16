@@ -1,5 +1,5 @@
 #include "application.h"
-#include "domain/network/mqtt_client.h"
+#include "infrastructure/mqttt/mqtt_client.h"
 #include <Arduino.h>
 #include <ArduinoLog.h>
 #include <ArduinoOTA.h>
@@ -14,12 +14,13 @@ Application::Application()
     : preferencesStorage(), wifiManager(preferencesStorage),
       mqttClient(wifiClient, preferencesStorage),
       systemInfo(preferencesStorage, mqttClient, otaEnabled),
-      sshServer(preferencesStorage, systemInfo, specialCharacterHandler), sshSubscriber(sshServer),
-      webServer(preferencesStorage),
+      sshServer(preferencesStorage, systemInfo, specialCharacterHandler),
+      sshSubscriber(sshServer), webServer(preferencesStorage),
       tty0Broadcaster(webServer.getTty0Stream(), mqttClient.getTty0Stream()),
-      tty1Broadcaster(webServer.getTty1Stream(), mqttClient.getTty1Stream(), sshSubscriber),
+      tty1Broadcaster(webServer.getTty1Stream(), mqttClient.getTty1Stream(),
+                      sshSubscriber),
       otaManager(preferencesStorage, otaEnabled),
-      specialCharacterHandler(systemInfo, preferencesStorage){
+      specialCharacterHandler(systemInfo, preferencesStorage) {
   // Set static instance for MQTT callbacks
   s_instance = this;
   systemInfo.logSystemInformation();
@@ -188,7 +189,7 @@ void Application::handleSerialPort0() {
     if (preferencesStorage.debugEnabled) {
       Serial.write(byte);
     }
-    if(preferencesStorage.tty02tty1Bridge) {
+    if (preferencesStorage.tty02tty1Bridge) {
       writeToSerial1(byte);
     }
     // Broadcast to all tty0 subscribers via type-erased broadcaster
@@ -197,7 +198,7 @@ void Application::handleSerialPort0() {
 }
 
 void Application::handleSerialPort1() {
-  if (serial1 == nullptr){
+  if (serial1 == nullptr) {
     Log.errorln("%s: serial1 is nullptr", __PRETTY_FUNCTION__);
     return;
   }

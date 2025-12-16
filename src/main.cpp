@@ -1,4 +1,4 @@
-#include "core/application.h"
+#include "app/application.h"
 #include <Arduino.h>
 #include <ArduinoLog.h>
 #include <driver/uart.h>
@@ -31,8 +31,8 @@ void setupHardware() {
   delay(100);
   Log.traceln(__PRETTY_FUNCTION__);
 }
-//LOG_LEVEL_VERBOSE
-//LOG_LEVEL_INFO
+// LOG_LEVEL_VERBOSE
+// LOG_LEVEL_INFO
 void setup() {
   setupHardware();
   Log.begin(LOG_LEVEL_INFO, &Serial);

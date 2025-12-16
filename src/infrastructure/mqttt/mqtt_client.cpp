@@ -26,8 +26,7 @@ MqttClient::MqttClient(WiFiClient &wifiClient,
                        PreferencesStorage &preferencesStorage)
     : mqttClient{std::make_unique<PubSubClient>(wifiClient)},
       wifiClient{&wifiClient}, preferencesStorage{preferencesStorage},
-      connected{false}, lastReconnectAttempt{0},
-      onTty0Callback{nullptr},
+      connected{false}, lastReconnectAttempt{0}, onTty0Callback{nullptr},
       onTty1Callback{nullptr},
       tty0Stream{MqttFlushPolicy{*mqttClient, topicTty0Tx}, "tty0"},
       tty1Stream{MqttFlushPolicy{*mqttClient, topicTty1Tx}, "tty1"},
@@ -67,8 +66,9 @@ void MqttClient::setTopics(const String &tty0Rx, const String &tty0Tx,
   Log.infoln("MQTT info topic set to: %s", topicInfo.c_str());
 }
 
-void MqttClient::setCallbacks(void (*tty0)(const nonstd::span<const uint8_t> &),
-                              void (*tty1)(const nonstd::span<const uint8_t> &)) {
+void MqttClient::setCallbacks(
+    void (*tty0)(const nonstd::span<const uint8_t> &),
+    void (*tty1)(const nonstd::span<const uint8_t> &)) {
   onTty0Callback = tty0;
   onTty1Callback = tty1;
 }
@@ -175,12 +175,14 @@ void MqttClient::loop() {
 
   // Transfer pending data from web task to MQTT buffers
   if (!tty0PendingBuffer.empty()) {
-    tty0Stream.append(nonstd::span<const uint8_t>(tty0PendingBuffer.data(), tty0PendingBuffer.size()));
+    tty0Stream.append(nonstd::span<const uint8_t>(tty0PendingBuffer.data(),
+                                                  tty0PendingBuffer.size()));
     tty0PendingBuffer.clear();
   }
 
   if (!tty1PendingBuffer.empty()) {
-    tty1Stream.append(nonstd::span<const uint8_t>(tty1PendingBuffer.data(), tty1PendingBuffer.size()));
+    tty1Stream.append(nonstd::span<const uint8_t>(tty1PendingBuffer.data(),
+                                                  tty1PendingBuffer.size()));
     tty1PendingBuffer.clear();
   }
 
@@ -235,19 +237,21 @@ bool MqttClient::publishInfo(const String &data) {
 
 void MqttClient::appendToTty0Buffer(const nonstd::span<const uint8_t> &data) {
   // Accumulate only - main loop transfers to MQTT
-  tty0PendingBuffer.insert(tty0PendingBuffer.end(), data.data(), data.data() + data.size());
+  tty0PendingBuffer.insert(tty0PendingBuffer.end(), data.data(),
+                           data.data() + data.size());
 }
 
 void MqttClient::appendToTty1Buffer(const nonstd::span<const uint8_t> &data) {
   // Accumulate only - main loop transfers to MQTT
-  tty1PendingBuffer.insert(tty1PendingBuffer.end(), data.data(), data.data() + data.size());
+  tty1PendingBuffer.insert(tty1PendingBuffer.end(), data.data(),
+                           data.data() + data.size());
 }
-
 
 void MqttClient::mqttCallback(char *topic, byte *payload, unsigned int length) {
   if (length >= MQTT_CALLBACK_BUFFER_SIZE)
-  return;
-  String topicStr(topic); // This can be expensive, I would like to use a string_view instead.
+    return;
+  String topicStr(topic); // This can be expensive, I would like to use a
+                          // string_view instead.
 
   nonstd::span<const uint8_t> payloadSpan(payload, length);
   if (topicStr == topicTty0Rx) {
@@ -261,6 +265,5 @@ void MqttClient::mqttCallback(char *topic, byte *payload, unsigned int length) {
     return;
   }
 }
-
 
 } // namespace jrb::wifi_serial

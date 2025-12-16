@@ -14,15 +14,15 @@ namespace jrb::wifi_serial {
  */
 class SSHSubscriber final {
 public:
-  explicit SSHSubscriber(SSHServer& server);
+  explicit SSHSubscriber(SSHServer &server);
 
   void append(uint8_t byte);
-  void append(const nonstd::span<const uint8_t>& data);
+  void append(const nonstd::span<const uint8_t> &data);
 
 private:
-  SSHServer& sshServer;
+  SSHServer &sshServer;
   std::vector<uint8_t> buffer;
-  static constexpr size_t FLUSH_THRESHOLD = 64;  // Flush every 64 bytes
+  static constexpr size_t FLUSH_THRESHOLD = 64; // Flush every 64 bytes
 
   void flushIfNeeded();
 };

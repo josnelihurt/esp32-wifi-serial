@@ -13,24 +13,27 @@ String getSerialString() {
 
 String SystemInfo::getSpecialCharacterSettings() const {
   return String(
-R"(Special characters for USB interface:
+      R"(Special characters for USB interface:
 Ctrl+Y i: print system information
 Ctrl+Y d: debug mode on/off
 Ctrl+Y b: tty02tty1 bridge on/off
 Ctrl+Y n reset the device (operation can be cancelled by hitting any key within the countdown))");
 }
 
-String SystemInfo::getWelcomeString() const{
+String SystemInfo::getWelcomeString() const {
   String macAddress = WiFi.macAddress();
-  String ipAddress = (WiFi.status() == WL_CONNECTED) ? WiFi.localIP().toString() : "Not connected";
-  String ssid = (WiFi.status() == WL_CONNECTED) ? WiFi.SSID() : "Not configured";
+  String ipAddress = (WiFi.status() == WL_CONNECTED) ? WiFi.localIP().toString()
+                                                     : "Not connected";
+  String ssid =
+      (WiFi.status() == WL_CONNECTED) ? WiFi.SSID() : "Not configured";
 
   String result = "\n========================================\n";
   result += "Welcome to ESP32-C3 Serial Bridge\n";
   result += "========================================\n";
   result += "Serial: " + getSerialString() + "\n";
   result += "MAC: " + macAddress + "\n";
-  result += "Settings JSON: " + preferencesStorage.serialize(ipAddress, macAddress, ssid) + "\n";
+  result += "Settings JSON: " +
+            preferencesStorage.serialize(ipAddress, macAddress, ssid) + "\n";
   result += "OTA: " + String(otaEnabled ? "Enabled" : "Disabled") + "\n";
   result += getSpecialCharacterSettings() + "\n";
   result += "========================================\n";

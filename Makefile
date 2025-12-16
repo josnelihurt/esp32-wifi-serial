@@ -37,6 +37,7 @@ help:
 	@echo "  Monitoring & Debugging:"
 	@echo "    make monitor         - Monitor serial output"
 	@echo "    make clean           - Clean build files"
+	@echo "    make test            - Run googletest tests (native)"
 	@echo ""
 	@echo "  Examples:"
 	@echo "    make upload-fs-ota IP=192.168.1.100   # Update frontend only"
@@ -81,7 +82,7 @@ upload-fs-ota:
 .PHONY: monitor
 monitor:
 	@echo "Starting serial monitor (Ctrl+C to exit)..."
-	$(PIO) device monitor --baud 115200
+	$(PIO) device monitor
 
 .PHONY: clean
 clean:
@@ -97,3 +98,8 @@ format:
 size:
 	@echo "Checking firmware size..."
 	$(PIO) run --target size
+
+.PHONY: test
+test:
+	@echo "Running googletest tests (native environment)..."
+	$(PIO) test -e native

@@ -20,7 +20,8 @@ public:
   WebConfigServer(PreferencesStorage &storage);
   ~WebConfigServer();
 
-  void setup(SerialWriteCallback tty0Callback, SerialWriteCallback tty1Callback);
+  void setup(SerialWriteCallback tty0Callback,
+             SerialWriteCallback tty1Callback);
 
   void setWiFiConfig(const String &ssid, const String &password,
                      const String &deviceName, const String &mqttBroker,

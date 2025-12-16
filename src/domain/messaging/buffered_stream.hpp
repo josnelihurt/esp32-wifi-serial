@@ -1,10 +1,10 @@
 #pragma once
 
 #include "config.h"
-#include <cstdint>
 #include <ArduinoLog.h>
-#include <nonstd/span.hpp>
 #include <array>
+#include <cstdint>
+#include <nonstd/span.hpp>
 
 namespace jrb::wifi_serial {
 

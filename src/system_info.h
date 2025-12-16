@@ -1,7 +1,7 @@
 #pragma once
 
 #include "domain/config/preferences_storage.h"
-#include "domain/network/mqtt_client.h"
+#include "infrastructure/mqttt/mqtt_client.h"
 #include <Arduino.h>
 #include <WiFi.h>
 

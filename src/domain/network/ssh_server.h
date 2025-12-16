@@ -44,7 +44,8 @@ private:
   QueueHandle_t serialToSSHQueue;
   static constexpr size_t SSH_QUEUE_SIZE = 10;
   static constexpr size_t SSH_QUEUE_PAYLOAD_SIZE = 127;
-  static constexpr size_t SSH_QUEUE_ITEM_SIZE = SSH_QUEUE_PAYLOAD_SIZE + 1; // +1 length byte
+  static constexpr size_t SSH_QUEUE_ITEM_SIZE =
+      SSH_QUEUE_PAYLOAD_SIZE + 1; // +1 length byte
   static constexpr int SSH_PORT = 22;
   static constexpr int SSH_RSA_KEY_BITS = 2048;
   static constexpr uint32_t SSH_TASK_STACK_SIZE = 8192;

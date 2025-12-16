@@ -1,8 +1,8 @@
 #pragma once
 
+#include <Arduino.h>
 #include <PubSubClient.h>
 #include <nonstd/span.hpp>
-#include <Arduino.h>
 
 namespace jrb::wifi_serial {
 

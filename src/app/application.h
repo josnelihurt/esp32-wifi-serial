@@ -4,15 +4,15 @@
 #include "config.h"
 #include "domain/config/preferences_storage.h"
 #include "domain/config/special_character_handler.h"
-#include "domain/network/mqtt/buffered_stream.hpp"
-#include "domain/network/mqtt/mqtt_flush_policy.h"
-#include "domain/network/mqtt_client.h"
+#include "domain/messaging/buffered_stream.hpp"
+#include "domain/messaging/mqtt_flush_policy.h"
 #include "domain/network/ssh_server.h"
 #include "domain/network/ssh_subscriber.h"
-#include "domain/network/wifi_manager.h"
 #include "domain/serial/serial_log.hpp"
 #include "infrastructure/hardware/button_handler.h"
+#include "infrastructure/mqttt/mqtt_client.h"
 #include "infrastructure/web/web_config_server.h"
+#include "infrastructure/wifi/wifi_manager.h"
 #include "ota_manager.h"
 #include "system_info.h"
 #include <Arduino.h>
@@ -78,7 +78,7 @@ private:
   SSHServer sshServer;
   SSHSubscriber sshSubscriber;
   SpecialCharacterHandler specialCharacterHandler;
-  
+
   WebConfigServer webServer;
   Broadcaster<SerialLog, BufferedStream<MqttFlushPolicy>> tty0Broadcaster;
   Broadcaster<SerialLog, BufferedStream<MqttFlushPolicy>, SSHSubscriber>

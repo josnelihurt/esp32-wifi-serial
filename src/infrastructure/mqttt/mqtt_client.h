@@ -1,8 +1,8 @@
 #pragma once
 
 #include "config.h"
-#include "domain/network/mqtt/buffered_stream.hpp"
-#include "domain/network/mqtt/mqtt_flush_policy.h"
+#include "domain/messaging/buffered_stream.hpp"
+#include "domain/messaging/mqtt_flush_policy.h"
 #include <Arduino.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
