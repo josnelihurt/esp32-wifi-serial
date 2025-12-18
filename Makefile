@@ -8,6 +8,7 @@
 
 # Default IP address (can be overridden: make upload-fs IP=192.168.1.50)
 IP ?= 192.168.4.1
+PASSWORD ?= password
 
 # PlatformIO commands
 PIO = pio
@@ -77,7 +78,7 @@ upload-fs-ota:
 	@echo "Uploading filesystem (frontend files) via OTA to $(IP)..."
 	@echo "Note: This only updates HTML/CSS/JS files, not firmware"
 	@echo "Note: Device must be connected to WiFi (not in AP mode)"
-	$(PIO) run --target uploadfs --upload-port $(IP)
+	$(PIO) run --target uploadfs --upload-port $(IP) 
 
 .PHONY: monitor
 monitor:
