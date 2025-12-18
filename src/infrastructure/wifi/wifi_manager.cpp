@@ -28,18 +28,55 @@ bool WiFiManager::connect() {
   if (preferencesStorage.ssid.length() == 0)
     return false;
 
+  // Clean up any previous WiFi state
+  WiFi.disconnect(true);
+  delay(100);
+
   WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(false);
+
+  Log.infoln("%s: Attempting to connect to SSID: '%s'", __PRETTY_FUNCTION__,
+             preferencesStorage.ssid.c_str());
+
   WiFi.begin(preferencesStorage.ssid.c_str(),
              preferencesStorage.password.c_str());
 
+  // Wait for connection to initialize before checking status
+  delay(1000);
+
   int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+  while (WiFi.status() != WL_CONNECTED && attempts < 30) {
     delay(500);
-    Log.traceln("WiFi connecting...");
     attempts++;
+
+    wl_status_t status = WiFi.status();
+    const char* statusStr;
+    switch(status) {
+      case WL_IDLE_STATUS: statusStr = "IDLE"; break;
+      case WL_NO_SSID_AVAIL: statusStr = "NO_SSID_AVAIL"; break;
+      case WL_SCAN_COMPLETED: statusStr = "SCAN_COMPLETED"; break;
+      case WL_CONNECTED: statusStr = "CONNECTED"; break;
+      case WL_CONNECT_FAILED: statusStr = "CONNECT_FAILED"; break;
+      case WL_CONNECTION_LOST: statusStr = "CONNECTION_LOST"; break;
+      case WL_DISCONNECTED: statusStr = "DISCONNECTED"; break;
+      default: statusStr = "UNKNOWN"; break;
+    }
+
+    Log.traceln("%s: connecting to '%s' (password_len: %u), attempts: %d of "
+                "30, status: %d (%s)",
+                __PRETTY_FUNCTION__, preferencesStorage.ssid.c_str(),
+                preferencesStorage.password.length(), attempts, status, statusStr);
+
+    // If we see NO_SSID_AVAIL, the network isn't visible - bail out early
+    if (status == WL_NO_SSID_AVAIL && attempts > 5) {
+      Log.errorln("%s: SSID '%s' not found. Is it a 2.4GHz network? ESP32-C3 doesn't support 5GHz",
+                  __PRETTY_FUNCTION__, preferencesStorage.ssid.c_str());
+      break;
+    }
   }
 
   if (WiFi.status() != WL_CONNECTED) {
+    WiFi.disconnect(true);
     apMode = true;
     return false;
   }
