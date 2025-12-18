@@ -8,3 +8,4 @@
 .prompts/history.promts
 .crush.json
 compile_commands.json
+.ignore
