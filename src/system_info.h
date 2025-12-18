@@ -1,27 +1,22 @@
 #pragma once
 
-#include "domain/config/preferences_storage.h"
-#include "infrastructure/mqttt/mqtt_client.h"
 #include <Arduino.h>
 #include <WiFi.h>
 
 namespace jrb::wifi_serial {
 
-class SerialBufferManager;
-
+class PreferencesStorage;
 class SystemInfo final {
 private:
-  PreferencesStorage &preferencesStorage;
-  MqttClient &mqttClient;
+  const PreferencesStorage &preferencesStorage;
   bool &otaEnabled;
 
 public:
-  SystemInfo(PreferencesStorage &storage, MqttClient &client, bool &ota)
-      : preferencesStorage(storage), mqttClient(client), otaEnabled(ota) {}
+  SystemInfo(const PreferencesStorage &storage, bool &ota);
 
-  void logSystemInformation() const;
   String getSpecialCharacterSettings() const;
   String getWelcomeString() const;
+  void logSystemInformation() const;
 };
 
 } // namespace jrb::wifi_serial

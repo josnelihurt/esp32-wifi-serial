@@ -47,7 +47,7 @@ public:
    * @return The configuration as a JSON string.
    */
   String serialize(const String &ipAddress, const String &macAddress,
-                   const String &ssid);
+                   const String &ssid) const;
   void save();
   void clear();
 

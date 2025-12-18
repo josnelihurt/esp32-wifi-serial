@@ -1,5 +1,6 @@
 #include "system_info.h"
 #include "ArduinoLog.h"
+#include "domain/config/preferences_storage.h"
 namespace jrb::wifi_serial {
 namespace {
 String getSerialString() {
@@ -10,6 +11,10 @@ String getSerialString() {
   return String(serialStr);
 }
 } // namespace
+
+
+SystemInfo::SystemInfo(const PreferencesStorage &storage, bool &ota)
+: preferencesStorage(storage), otaEnabled(ota) {}
 
 String SystemInfo::getSpecialCharacterSettings() const {
   return String(

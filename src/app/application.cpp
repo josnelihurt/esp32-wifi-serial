@@ -13,7 +13,7 @@ Application *Application::s_instance = nullptr;
 Application::Application()
     : preferencesStorage(), wifiManager(preferencesStorage),
       mqttClient(wifiClient, preferencesStorage),
-      systemInfo(preferencesStorage, mqttClient, otaEnabled),
+      systemInfo(preferencesStorage, otaEnabled),
       sshServer(preferencesStorage, systemInfo, specialCharacterHandler),
       sshSubscriber(sshServer), webServer(preferencesStorage),
       tty0Broadcaster(webServer.getTty0Stream(), mqttClient.getTty0Stream()),

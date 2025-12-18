@@ -1,4 +1,5 @@
 #include "special_character_handler.h"
+#include "ArduinoLog.h"
 
 namespace jrb::wifi_serial {
 

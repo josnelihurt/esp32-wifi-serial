@@ -39,7 +39,7 @@ void PreferencesStorage::load() {
 
 String PreferencesStorage::serialize(const String &ipAddress,
                                      const String &macAddress,
-                                     const String &ssid) {
+                                     const String &ssid) const {
   String output;
   StaticJsonDocument<1024> obj;
   obj["deviceName"] = deviceName;
