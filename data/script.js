@@ -80,7 +80,7 @@ function pollSerial(port) {
                 o.textContent += d;
                 o.scrollTop = o.scrollHeight;
             }
-            setTimeout(() => pollSerial(port), 100);
+            setTimeout(() => pollSerial(port), 500);
         })
         .catch(e => setTimeout(() => pollSerial(port), 1000));
 }
