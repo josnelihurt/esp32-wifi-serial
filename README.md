@@ -159,7 +159,8 @@ The web interface provides a clean, functional design with yellow accents. The i
 - **ttyS0**: Serial console for the connected ARM device (USB)
 - **ttyS1**: Additional serial port (UART)
 
-![Web Interface](screenshots/web-interface.png)
+![Web Interface - Configuration](screenshots/web-interface.png)
+![Web Interface - Console](screenshots/web-interface2.png)
 
 ## Configuration
 
