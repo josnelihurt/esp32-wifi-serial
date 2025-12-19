@@ -1,813 +1,438 @@
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
 #include "domain/serial/circular_buffer.hpp"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <nonstd/span.hpp>
+#include <vector>
 
 namespace jrb::wifi_serial {
 namespace {
-// Matcher to verify that a CircularBuffer has the expected state
-struct BufferState {
-    std::size_t expectedSize;
-    bool expectedHasData;
-    bool expectedFull;
-    bool expectedEmpty;
-};
-
-// Creates a human-readable description of buffer state for error messages
-inline std::ostream& operator<<(std::ostream& os, const BufferState& state) {
-    os << "Buffer{size=" << state.expectedSize 
-       << ", hasData=" << (state.expectedHasData ? "true" : "false")
-       << ", full=" << (state.expectedFull ? "true" : "false")
-       << ", empty=" << (state.expectedEmpty ? "true" : "false")
-       << "}";
-    return os;
-}
 
 // Matcher to verify buffer state with detailed error reporting
-MATCHER_P4(BufferHasExpectedState, expectedSize, expectedHasData, expectedFull, expectedEmpty, 
-          "Circular buffer should have specific state") {
-    const auto& buffer = arg;
-    
-    bool success = true;
-    
-    // Check each field with specific error reporting
-    if (buffer.size() != expectedSize) {
-        *result_listener << " where size expected " << expectedSize 
-                         << " but is " << buffer.size();
-        success = false;
-    }
-    
-    if (buffer.hasData() != expectedHasData) {
-        *result_listener << " where hasData expected " << expectedHasData 
-                         << " but is " << buffer.hasData();
-        success = false;
-    }
-    
-    if (buffer.full() != expectedFull) {
-        *result_listener << " where full expected " << expectedFull 
-                         << " but is " << buffer.full();
-        success = false;
-    }
-    
-    if (buffer.empty() != expectedEmpty) {
-        *result_listener << " where empty expected " << expectedEmpty 
-                         << " but is " << buffer.empty();
-        success = false;
-    }
-    
-    return success;
+MATCHER_P4(BufferHasExpectedState, expectedSize, expectedHasData, expectedFull,
+           expectedEmpty, "Circular buffer should have specific state") {
+  const auto &buffer = arg;
+
+  bool success = true;
+
+  if (buffer.size() != expectedSize) {
+    *result_listener << " where size expected " << expectedSize << " but is "
+                     << buffer.size();
+    success = false;
+  }
+
+  if (buffer.hasData() != expectedHasData) {
+    *result_listener << " where hasData expected " << expectedHasData
+                     << " but is " << buffer.hasData();
+    success = false;
+  }
+
+  if (buffer.full() != expectedFull) {
+    *result_listener << " where full expected " << expectedFull << " but is "
+                     << buffer.full();
+    success = false;
+  }
+
+  if (buffer.empty() != expectedEmpty) {
+    *result_listener << " where empty expected " << expectedEmpty << " but is "
+                     << buffer.empty();
+    success = false;
+  }
+
+  return success;
 }
 
-// Test fixture for basic CircularBuffer tests
-template <typename T, std::size_t SIZE>
-class CircularBufferFixture : public ::testing::Test {
-protected:
-    CircularBuffer<T, SIZE> buffer;
+// ============================================================================
+// Test Parameter Structures (using designated initializers)
+// ============================================================================
 
-    void SetUp() override {
-        // Buffer is initialized empty
-    }
-
-    void TearDown() override {
-        // Clean up if needed
-    }
-
-    // Helper to fill buffer completely
-    void fillBuffer() {
-        for (std::size_t i = 0; i < SIZE; ++i) {
-            buffer.append(static_cast<T>(i));
-        }
-    }
-
+struct BufferStateTest {
+  std::vector<int> values;
+  std::size_t expected_size;
+  bool expected_has_data;
+  bool expected_full;
+  bool expected_empty;
 };
 
-// Type alias for common test cases
-using IntBuffer8 = CircularBufferFixture<int, 8>;
-using IntBuffer16 = CircularBufferFixture<int, 16>;
-using CharBuffer8 = CircularBufferFixture<char, 8>;
-using UInt8Buffer32 = CircularBufferFixture<uint8_t, 32>;
+struct SpanAppendTest {
+  std::vector<int> span_data;
+  std::size_t expected_size;
+  bool expected_has_data;
+  bool expected_full;
+  bool expected_empty;
+};
+
+struct WraparoundTest {
+  std::size_t initial_fill;
+  std::size_t pop_count;
+  std::size_t append_count;
+  std::vector<int> append_values;
+};
 
 // ============================================================================
-// Constructor and Initial State Tests
+// Basic Operations Tests
 // ============================================================================
 
-TEST_F(IntBuffer8, InitialStateIsEmpty) {
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));;
+class BasicOperationsTest : public ::testing::TestWithParam<BufferStateTest> {};
+
+INSTANTIATE_TEST_SUITE_P(
+    CircularBuffer, BasicOperationsTest,
+    ::testing::Values(
+        // Initial state
+        BufferStateTest{.values = {},
+                        .expected_size = 0,
+                        .expected_has_data = false,
+                        .expected_full = false,
+                        .expected_empty = true},
+        // Single element
+        BufferStateTest{.values = {42},
+                        .expected_size = 1,
+                        .expected_has_data = true,
+                        .expected_full = false,
+                        .expected_empty = false},
+        // Multiple elements
+        BufferStateTest{.values = {1, 2, 3, 4, 5},
+                        .expected_size = 5,
+                        .expected_has_data = true,
+                        .expected_full = false,
+                        .expected_empty = false},
+        // Fill buffer completely
+        BufferStateTest{.values = {0, 1, 2, 3, 4, 5, 6, 7},
+                        .expected_size = 8,
+                        .expected_has_data = true,
+                        .expected_full = true,
+                        .expected_empty = false}));
+
+TEST_P(BasicOperationsTest, AppendAndVerifyState) {
+  CircularBuffer<int, 8> buffer;
+  const auto &param = GetParam();
+
+  for (auto value : param.values) {
+    buffer.append(value);
+  }
+
+  EXPECT_THAT(buffer, BufferHasExpectedState(param.expected_size,
+                                             param.expected_has_data,
+                                             param.expected_full,
+                                             param.expected_empty));
+
+  for (auto value : param.values) {
+    EXPECT_EQ(buffer.popFront(), value);
+  }
+
+  EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
-TEST_F(CharBuffer8, InitialStateIsEmpty) {
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));;
-}
-
-TEST_F(UInt8Buffer32, InitialStateIsEmpty) {
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));;
-}
-
-// ============================================================================
-// Single Element Append Tests
-// ============================================================================
-
-TEST_F(IntBuffer8, AppendSingleElement) {
-    buffer.append(42);
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(1, true, false, false));;
-    EXPECT_EQ(buffer.popFront(), 42);
-}
-
-TEST_F(CharBuffer8, AppendSingleCharacter) {
-    buffer.append('A');
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(1, true, false, false));;
-    EXPECT_EQ(buffer.popFront(), 'A');
-}
-
-TEST_F(IntBuffer8, AppendMultipleElementsNotFull) {
-    buffer.append(1);
-    buffer.append(2);
-    buffer.append(3);
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(3, true, false, false));;
-
-    EXPECT_EQ(buffer.popFront(), 1);
-    EXPECT_EQ(buffer.popFront(), 2);
-    EXPECT_EQ(buffer.popFront(), 3);
-}
-
-TEST_F(IntBuffer8, AppendUntilFull) {
-    for (int i = 0; i < 8; ++i) {
-        buffer.append(i);
-        EXPECT_EQ(buffer.size(), static_cast<std::size_t>(i + 1));
-    }
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));;
-}
-
-TEST_F(IntBuffer8, AppendWhenFull_OverwritesOldestData) {
-    // Fill buffer with 0-7
-    fillBuffer();
-
-    // Append one more element (should overwrite oldest)
-    buffer.append(100);
-
-    // Buffer should still be full
-    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));;
-
-    // First element should be 1 (0 was overwritten)
-    EXPECT_EQ(buffer.popFront(), 1);
-}
-
-TEST_F(IntBuffer8, AppendWhenFull_OverwritesMultipleOldest) {
-    // Fill buffer with 0-7
-    fillBuffer();
-
-    // Append 3 more elements
-    buffer.append(100);
-    buffer.append(101);
-    buffer.append(102);
-
-    // Buffer should still be full
-    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));;
-
-    // First elements should be 3, 4, 5, 6, 7, 100, 101, 102
-    EXPECT_EQ(buffer.popFront(), 3);
-    EXPECT_EQ(buffer.popFront(), 4);
-    EXPECT_EQ(buffer.popFront(), 5);
-    EXPECT_EQ(buffer.popFront(), 6);
-    EXPECT_EQ(buffer.popFront(), 7);
-    EXPECT_EQ(buffer.popFront(), 100);
-    EXPECT_EQ(buffer.popFront(), 101);
-    EXPECT_EQ(buffer.popFront(), 102);
-}
 
 // ============================================================================
 // Span Append Tests
 // ============================================================================
 
-TEST_F(IntBuffer8, AppendSpan_EmptySpan) {
-    std::array<int, 0> data{};
-    nonstd::span<const int> span(data.data(), 0);
+class SpanAppendTestSuite : public ::testing::TestWithParam<SpanAppendTest> {};
 
-    buffer.append(span);
+INSTANTIATE_TEST_SUITE_P(
+    CircularBuffer, SpanAppendTestSuite,
+    ::testing::Values(
+        // Empty span
+        SpanAppendTest{.span_data = {},
+                       .expected_size = 0,
+                       .expected_has_data = false,
+                       .expected_full = false,
+                       .expected_empty = true},
+        // Single element
+        SpanAppendTest{.span_data = {100},
+                       .expected_size = 1,
+                       .expected_has_data = true,
+                       .expected_full = false,
+                       .expected_empty = false},
+        // Multiple elements
+        SpanAppendTest{.span_data = {1, 2, 3, 4, 5},
+                       .expected_size = 5,
+                       .expected_has_data = true,
+                       .expected_full = false,
+                       .expected_empty = false},
+        // Exactly fills buffer
+        SpanAppendTest{.span_data = {0, 1, 2, 3, 4, 5, 6, 7},
+                       .expected_size = 8,
+                       .expected_has_data = true,
+                       .expected_full = true,
+                       .expected_empty = false},
+        // Larger than buffer (overwrites oldest)
+        SpanAppendTest{.span_data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+                       .expected_size = 8,
+                       .expected_has_data = true,
+                       .expected_full = true,
+                       .expected_empty = false}));
 
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
-}
+TEST_P(SpanAppendTestSuite, AppendSpanAndVerifyState) {
+  CircularBuffer<int, 8> buffer;
+  const auto &param = GetParam();
 
-TEST_F(IntBuffer8, AppendSpan_SingleElement) {
-    std::array<int, 1> data{42};
-    nonstd::span<const int> span(data.data(), data.size());
+  nonstd::span<const int> span(param.span_data.data(), param.span_data.size());
+  buffer.append(span);
 
-    buffer.append(span);
+  EXPECT_THAT(buffer, BufferHasExpectedState(param.expected_size,
+                                             param.expected_has_data,
+                                             param.expected_full,
+                                             param.expected_empty));
 
-    EXPECT_THAT(buffer, BufferHasExpectedState(1, true, false, false));
-    EXPECT_EQ(buffer.popFront(), 42);
-}
+  // Verify FIFO order - for larger spans, only check last SIZE elements
+  std::size_t start_idx =
+      param.span_data.size() > 8 ? param.span_data.size() - 8 : 0;
+  for (std::size_t i = start_idx; i < param.span_data.size(); ++i) {
+    EXPECT_EQ(buffer.popFront(), param.span_data[i]);
+  }
 
-TEST_F(IntBuffer8, AppendSpan_MultipleElements) {
-    std::array<int, 4> data{10, 20, 30, 40};
-    nonstd::span<const int> span(data.data(), data.size());
-
-    buffer.append(span);
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(4, true, false, false));
-
-    EXPECT_EQ(buffer.popFront(), 10);
-    EXPECT_EQ(buffer.popFront(), 20);
-    EXPECT_EQ(buffer.popFront(), 30);
-    EXPECT_EQ(buffer.popFront(), 40);
-}
-
-TEST_F(IntBuffer8, AppendSpan_ExactlyFillsBuffer) {
-    std::array<int, 8> data{0, 1, 2, 3, 4, 5, 6, 7};
-    nonstd::span<const int> span(data.data(), data.size());
-
-    buffer.append(span);
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
-
-    for (int i = 0; i < 8; ++i) {
-        EXPECT_EQ(buffer.popFront(), i);
-    }
-}
-
-TEST_F(IntBuffer8, AppendSpan_LargerThanBuffer_OverwritesOldest) {
-    std::array<int, 12> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    nonstd::span<const int> span(data.data(), data.size());
-
-    buffer.append(span);
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
-
-    // Should contain last 8 elements: 4, 5, 6, 7, 8, 9, 10, 11
-    for (int i = 4; i < 12; ++i) {
-        EXPECT_EQ(buffer.popFront(), i);
-    }
-}
-
-TEST_F(CharBuffer8, AppendSpan_Characters) {
-    const char* str = "ABCD";
-    nonstd::span<const char> span(str, 4);
-
-    buffer.append(span);
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(4, true, false, false));
-
-    EXPECT_EQ(buffer.popFront(), 'A');
-    EXPECT_EQ(buffer.popFront(), 'B');
-    EXPECT_EQ(buffer.popFront(), 'C');
-    EXPECT_EQ(buffer.popFront(), 'D');
+  EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 // ============================================================================
-// PopFront Tests
+// State Operations Tests (popFront, clear)
 // ============================================================================
 
-TEST_F(IntBuffer8, PopFront_FromEmptyBuffer_ReturnsDefault) {
-    int value = buffer.popFront();
-
-    EXPECT_EQ(value, int{});
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
+TEST(StateOperationsTest, PopFrontFromEmpty) {
+  CircularBuffer<int, 8> buffer;
+  EXPECT_EQ(buffer.popFront(), int{});
+  EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
-TEST_F(CharBuffer8, PopFront_FromEmptyBuffer_ReturnsDefault) {
-    char value = buffer.popFront();
-
-    EXPECT_EQ(value, char{});
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
+TEST(StateOperationsTest, PopFrontWithData) {
+  CircularBuffer<int, 8> buffer;
+  buffer.append(42);
+  EXPECT_EQ(buffer.popFront(), 42);
+  EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
-TEST_F(IntBuffer8, PopFront_SingleElement) {
-    buffer.append(99);
-
-    int value = buffer.popFront();
-
-    EXPECT_EQ(value, 99);
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
+TEST(StateOperationsTest, ClearEmpty) {
+  CircularBuffer<int, 8> buffer;
+  buffer.clear();
+  EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
-TEST_F(IntBuffer8, PopFront_MultipleElements) {
-    buffer.append(10);
-    buffer.append(20);
-    buffer.append(30);
-
-    EXPECT_EQ(buffer.popFront(), 10);
-    EXPECT_THAT(buffer, BufferHasExpectedState(2, true, false, false));
-
-    EXPECT_EQ(buffer.popFront(), 20);
-    EXPECT_THAT(buffer, BufferHasExpectedState(1, true, false, false));
-
-    EXPECT_EQ(buffer.popFront(), 30);
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
+TEST(StateOperationsTest, ClearPartiallyFilled) {
+  CircularBuffer<int, 8> buffer;
+  buffer.append(1);
+  buffer.append(2);
+  buffer.append(3);
+  buffer.clear();
+  EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
-TEST_F(IntBuffer8, PopFront_AllElements_HasDataBecomesFalse) {
-    fillBuffer();
-
-    for (int i = 0; i < 8; ++i) {
-        int value = buffer.popFront();
-        EXPECT_EQ(value, i);
-
-        if (i < 7) {
-            EXPECT_TRUE(buffer.hasData());
-        } else {
-            EXPECT_FALSE(buffer.hasData());
-        }
-    }
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
-}
-
-TEST_F(IntBuffer8, PopFront_AfterWraparound) {
-    // Fill buffer
-    fillBuffer();
-
-    // Pop some elements
-    buffer.popFront();
-    buffer.popFront();
-    buffer.popFront();
-
-    // Add new elements (causing head to wrap)
-    buffer.append(100);
-    buffer.append(101);
-    buffer.append(102);
-
-    // Verify FIFO order
-    EXPECT_EQ(buffer.popFront(), 3);
-    EXPECT_EQ(buffer.popFront(), 4);
-    EXPECT_EQ(buffer.popFront(), 5);
-    EXPECT_EQ(buffer.popFront(), 6);
-    EXPECT_EQ(buffer.popFront(), 7);
-    EXPECT_EQ(buffer.popFront(), 100);
-    EXPECT_EQ(buffer.popFront(), 101);
-    EXPECT_EQ(buffer.popFront(), 102);
-}
-
-// ============================================================================
-// Clear Tests
-// ============================================================================
-
-TEST_F(IntBuffer8, Clear_EmptyBuffer) {
-    buffer.clear();
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
-}
-
-TEST_F(IntBuffer8, Clear_PartiallyFilledBuffer) {
-    buffer.append(1);
-    buffer.append(2);
-    buffer.append(3);
-
-    buffer.clear();
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
-}
-
-TEST_F(IntBuffer8, Clear_FullBuffer) {
-    fillBuffer();
-
-    buffer.clear();
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
-}
-
-TEST_F(IntBuffer8, Clear_ThenReuse) {
-    buffer.append(1);
-    buffer.append(2);
-    buffer.clear();
-
-    buffer.append(10);
-    buffer.append(20);
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(2, true, false, false));
-
-    EXPECT_EQ(buffer.popFront(), 10);
-    EXPECT_EQ(buffer.popFront(), 20);
+TEST(StateOperationsTest, ClearWhenFull) {
+  CircularBuffer<int, 8> buffer;
+  for (int i = 0; i < 8; ++i) {
+    buffer.append(i);
+  }
+  buffer.clear();
+  EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 // ============================================================================
 // State Query Tests
 // ============================================================================
 
-TEST_F(IntBuffer8, HasData_InitiallyFalse) {
-    EXPECT_FALSE(buffer.hasData());
-}
+TEST(StateQueryTest, SizeTracksCorrectly) {
+  CircularBuffer<int, 8> buffer;
+  EXPECT_EQ(buffer.size(), 0);
 
-TEST_F(IntBuffer8, HasData_TrueAfterAppend) {
-    buffer.append(1);
-    EXPECT_TRUE(buffer.hasData());
-}
+  buffer.append(1);
+  EXPECT_EQ(buffer.size(), 1);
 
-TEST_F(IntBuffer8, HasData_FalseAfterPoppingAll) {
-    buffer.append(1);
-    buffer.popFront();
-    EXPECT_FALSE(buffer.hasData());
-}
+  buffer.append(2);
+  EXPECT_EQ(buffer.size(), 2);
 
-TEST_F(IntBuffer8, HasData_FalseAfterClear) {
-    buffer.append(1);
-    buffer.clear();
-    EXPECT_FALSE(buffer.hasData());
-}
+  buffer.popFront();
+  EXPECT_EQ(buffer.size(), 1);
 
-TEST_F(IntBuffer8, Full_InitiallyFalse) {
-    EXPECT_FALSE(buffer.full());
-}
-
-TEST_F(IntBuffer8, Full_TrueWhenFilled) {
-    fillBuffer();
-    EXPECT_TRUE(buffer.full());
-}
-
-TEST_F(IntBuffer8, Full_FalseAfterPop) {
-    fillBuffer();
-    buffer.popFront();
-    EXPECT_FALSE(buffer.full());
-}
-
-TEST_F(IntBuffer8, Empty_InitiallyTrue) {
-    EXPECT_TRUE(buffer.empty());
-}
-
-TEST_F(IntBuffer8, Empty_FalseAfterAppend) {
-    buffer.append(1);
-    EXPECT_FALSE(buffer.empty());
-}
-
-TEST_F(IntBuffer8, Empty_TrueAfterPoppingAll) {
-    buffer.append(1);
-    buffer.popFront();
-    EXPECT_TRUE(buffer.empty());
-}
-
-TEST_F(IntBuffer8, Size_TracksCorrectly) {
-    EXPECT_EQ(buffer.size(), 0);
-
-    buffer.append(1);
-    EXPECT_EQ(buffer.size(), 1);
-
-    buffer.append(2);
-    EXPECT_EQ(buffer.size(), 2);
-
-    buffer.popFront();
-    EXPECT_EQ(buffer.size(), 1);
-
-    buffer.popFront();
-    EXPECT_EQ(buffer.size(), 0);
+  buffer.popFront();
+  EXPECT_EQ(buffer.size(), 0);
 }
 
 // ============================================================================
 // Edge Cases and Boundary Conditions
 // ============================================================================
 
-TEST_F(IntBuffer8, AlternatingAppendAndPop) {
-    for (int i = 0; i < 20; ++i) {
-        buffer.append(i);
-        EXPECT_EQ(buffer.popFront(), i);
-        EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
-    }
+TEST(EdgeCasesTest, OverfillBySmallAmount) {
+  CircularBuffer<int, 8> buffer;
+
+  // Append 12 elements (4 more than capacity)
+  for (int i = 0; i < 12; ++i) {
+    buffer.append(i);
+  }
+
+  EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
+
+  // Should contain last 8 elements: 4-11
+  for (int i = 4; i < 12; ++i) {
+    EXPECT_EQ(buffer.popFront(), i);
+  }
 }
 
-TEST_F(IntBuffer8, FillEmptyFillEmpty) {
-    // First fill
-    fillBuffer();
-    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
+TEST(EdgeCasesTest, OverfillByLargeAmount) {
+  CircularBuffer<int, 8> buffer;
 
-    // Empty
-    for (int i = 0; i < 8; ++i) {
-        buffer.popFront();
-    }
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
+  // Append 100 elements (92 more than capacity)
+  for (int i = 0; i < 100; ++i) {
+    buffer.append(i);
+  }
 
-    // Second fill
-    fillBuffer();
-    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
+  EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
 
-    // Empty again
-    for (int i = 0; i < 8; ++i) {
-        buffer.popFront();
-    }
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
+  // Should contain last 8 elements: 92-99
+  for (int i = 92; i < 100; ++i) {
+    EXPECT_EQ(buffer.popFront(), i);
+  }
 }
 
-TEST_F(IntBuffer8, PartialFillPopPartialFill) {
-    // Add 5 elements
-    for (int i = 0; i < 5; ++i) {
-        buffer.append(i);
-    }
+TEST(EdgeCasesTest, WraparoundAfterPopAndAppend) {
+  CircularBuffer<int, 8> buffer;
 
-    // Remove 3 elements
-    for (int i = 0; i < 3; ++i) {
-        buffer.popFront();
-    }
+  // Fill buffer with 0-7
+  for (int i = 0; i < 8; ++i) {
+    buffer.append(i);
+  }
 
-    EXPECT_EQ(buffer.size(), 2);
+  // Pop 4 elements (0,1,2,3), leaving 4,5,6,7
+  for (int i = 0; i < 4; ++i) {
+    EXPECT_EQ(buffer.popFront(), i);
+  }
 
-    // Add 6 more elements (total should be 8 = full)
-    for (int i = 100; i < 106; ++i) {
-        buffer.append(i);
-    }
+  // Append 6 more elements (100-105)
+  // Buffer has 4 elements, adding 6 gives 10 total, overflows by 2
+  for (int i = 100; i < 106; ++i) {
+    buffer.append(i);
+  }
 
-    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
+  EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
 
-    // Verify order: 3, 4, 100, 101, 102, 103, 104, 105
-    EXPECT_EQ(buffer.popFront(), 3);
-    EXPECT_EQ(buffer.popFront(), 4);
-    EXPECT_EQ(buffer.popFront(), 100);
-    EXPECT_EQ(buffer.popFront(), 101);
-    EXPECT_EQ(buffer.popFront(), 102);
-    EXPECT_EQ(buffer.popFront(), 103);
-    EXPECT_EQ(buffer.popFront(), 104);
-    EXPECT_EQ(buffer.popFront(), 105);
+  // Should contain: 6,7,100,101,102,103,104,105 (last 8 of the 10)
+  std::vector<int> expected = {6, 7, 100, 101, 102, 103, 104, 105};
+  for (int val : expected) {
+    EXPECT_EQ(buffer.popFront(), val);
+  }
 }
 
-TEST_F(IntBuffer8, MultiplePopFromEmpty) {
-    EXPECT_EQ(buffer.popFront(), int{});
-    EXPECT_EQ(buffer.popFront(), int{});
-    EXPECT_EQ(buffer.popFront(), int{});
+TEST(EdgeCasesTest, CompleteWraparoundCycle) {
+  CircularBuffer<int, 8> buffer;
 
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
-}
+  // Fill, empty, refill to test wraparound
+  for (int i = 0; i < 8; ++i) {
+    buffer.append(i);
+  }
 
-TEST_F(IntBuffer8, OverfillByMany) {
-    // Add way more than capacity
-    for (int i = 0; i < 100; ++i) {
-        buffer.append(i);
-    }
+  for (int i = 0; i < 8; ++i) {
+    buffer.popFront();
+  }
 
-    // Should still be full with last 8 elements
-    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
+  for (int i = 100; i < 108; ++i) {
+    buffer.append(i);
+  }
 
-    // Should contain 92-99
-    for (int i = 92; i < 100; ++i) {
-        EXPECT_EQ(buffer.popFront(), i);
-    }
-}
+  for (int i = 100; i < 108; ++i) {
+    EXPECT_EQ(buffer.popFront(), i);
+  }
 
-// ============================================================================
-// Wraparound Behavior Tests
-// ============================================================================
-
-TEST_F(IntBuffer8, HeadWraparound) {
-    // Fill buffer completely
-    fillBuffer();
-
-    // Pop half
-    for (int i = 0; i < 4; ++i) {
-        buffer.popFront();
-    }
-
-    // Add more than remaining space (forces head wrap)
-    for (int i = 100; i < 108; ++i) {
-        buffer.append(i);
-    }
-
-    // Should be full
-    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
-
-    // Should contain last 8: 100, 101, 102, 103, 104, 105, 106, 107
-    for (int i = 100; i < 108; ++i) {
-        EXPECT_EQ(buffer.popFront(), i);
-    }
-}
-
-TEST_F(IntBuffer8, TailWraparound) {
-    // Fill to capacity
-    fillBuffer();
-
-    // Pop all
-    for (int i = 0; i < 8; ++i) {
-        buffer.popFront();
-    }
-
-    // Fill again (head has wrapped, now tail will catch up)
-    for (int i = 100; i < 108; ++i) {
-        buffer.append(i);
-    }
-
-    // Pop all (tail should wrap)
-    for (int i = 100; i < 108; ++i) {
-        EXPECT_EQ(buffer.popFront(), i);
-    }
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
+  EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 // ============================================================================
-// Parametric Tests for Different Buffer Sizes
+// Different Buffer Sizes Tests
 // ============================================================================
 
-class CircularBufferSizeTest : public ::testing::TestWithParam<std::size_t> {
-protected:
-    // Helper to test a buffer of given size
-    template<std::size_t SIZE>
-    void testBufferSize() {
-        CircularBuffer<int, SIZE> buffer;
+TEST(DifferentSizesTest, Size16Buffer) {
+  CircularBuffer<int, 16> buffer;
 
-        // Fill completely
-        for (std::size_t i = 0; i < SIZE; ++i) {
-            buffer.append(static_cast<int>(i));
-        }
+  for (int i = 0; i < 16; ++i) {
+    buffer.append(i);
+  }
 
-        EXPECT_TRUE(buffer.full());
-        EXPECT_EQ(buffer.size(), SIZE);
+  EXPECT_THAT(buffer, BufferHasExpectedState(16, true, true, false));
 
-        // Pop all
-        for (std::size_t i = 0; i < SIZE; ++i) {
-            EXPECT_EQ(buffer.popFront(), static_cast<int>(i));
-        }
+  for (int i = 0; i < 16; ++i) {
+    EXPECT_EQ(buffer.popFront(), i);
+  }
 
-        EXPECT_TRUE(buffer.empty());
-        EXPECT_EQ(buffer.size(), 0);
-    }
-};
-
-TEST_F(IntBuffer16, FillAndEmptySize16) {
-    for (int i = 0; i < 16; ++i) {
-        buffer.append(i);
-    }
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(16, true, true, false));
-
-    for (int i = 0; i < 16; ++i) {
-        EXPECT_EQ(buffer.popFront(), i);
-    }
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
+  EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
-TEST_F(UInt8Buffer32, FillAndEmptySize32) {
-    for (uint8_t i = 0; i < 32; ++i) {
-        buffer.append(i);
-    }
+TEST(DifferentSizesTest, Size32Buffer) {
+  CircularBuffer<int, 32> buffer;
 
-    EXPECT_THAT(buffer, BufferHasExpectedState(32, true, true, false));
+  for (int i = 0; i < 32; ++i) {
+    buffer.append(i);
+  }
 
-    for (uint8_t i = 0; i < 32; ++i) {
-        EXPECT_EQ(buffer.popFront(), i);
-    }
+  EXPECT_THAT(buffer, BufferHasExpectedState(32, true, true, false));
 
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
+  for (int i = 0; i < 32; ++i) {
+    EXPECT_EQ(buffer.popFront(), i);
+  }
+
+  EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 // ============================================================================
 // Different Data Types Tests
 // ============================================================================
 
-struct CustomStruct {
-    int id;
-    char name;
+TEST(DifferentTypesTest, CharBuffer) {
+  CircularBuffer<char, 8> buffer;
 
-    bool operator==(const CustomStruct& other) const {
-        return id == other.id && name == other.name;
-    }
+  buffer.append('H');
+  buffer.append('e');
+  buffer.append('l');
+  buffer.append('l');
+  buffer.append('o');
+
+  EXPECT_THAT(buffer, BufferHasExpectedState(5, true, false, false));
+
+  EXPECT_EQ(buffer.popFront(), 'H');
+  EXPECT_EQ(buffer.popFront(), 'e');
+  EXPECT_EQ(buffer.popFront(), 'l');
+  EXPECT_EQ(buffer.popFront(), 'l');
+  EXPECT_EQ(buffer.popFront(), 'o');
+
+  EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
+}
+
+TEST(DifferentTypesTest, UInt8Buffer) {
+  CircularBuffer<uint8_t, 8> buffer;
+
+  for (uint8_t i = 0; i < 8; ++i) {
+    buffer.append(i);
+  }
+
+  EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
+
+  for (uint8_t i = 0; i < 8; ++i) {
+    EXPECT_EQ(buffer.popFront(), i);
+  }
+
+  EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
+}
+
+struct CustomStruct {
+  int id;
+  char name;
+
+  bool operator==(const CustomStruct &other) const {
+    return id == other.id && name == other.name;
+  }
 };
 
-using CustomStructBuffer4 = CircularBufferFixture<CustomStruct, 4>;
+TEST(DifferentTypesTest, CustomStructBuffer) {
+  CircularBuffer<CustomStruct, 4> buffer;
 
-TEST_F(CustomStructBuffer4, AppendAndPopCustomStruct) {
-    CustomStruct s1{1, 'A'};
-    CustomStruct s2{2, 'B'};
-    CustomStruct s3{3, 'C'};
+  buffer.append({1, 'A'});
+  buffer.append({2, 'B'});
+  buffer.append({3, 'C'});
 
-    buffer.append(s1);
-    buffer.append(s2);
-    buffer.append(s3);
+  EXPECT_THAT(buffer, BufferHasExpectedState(3, true, false, false));
 
-    EXPECT_THAT(buffer, BufferHasExpectedState(3, true, false, false));
+  EXPECT_EQ(buffer.popFront(), (CustomStruct{1, 'A'}));
+  EXPECT_EQ(buffer.popFront(), (CustomStruct{2, 'B'}));
+  EXPECT_EQ(buffer.popFront(), (CustomStruct{3, 'C'}));
 
-    EXPECT_EQ(buffer.popFront(), s1);
-    EXPECT_EQ(buffer.popFront(), s2);
-    EXPECT_EQ(buffer.popFront(), s3);
-}
-
-TEST_F(CustomStructBuffer4, CustomStruct_Wraparound) {
-    // Fill buffer
-    for (int i = 0; i < 4; ++i) {
-        buffer.append(CustomStruct{i, static_cast<char>('A' + i)});
-    }
-
-    // Overwrite first 2
-    buffer.append(CustomStruct{100, 'X'});
-    buffer.append(CustomStruct{101, 'Y'});
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(4, true, true, false));
-
-    EXPECT_EQ(buffer.popFront(), (CustomStruct{2, 'C'}));
-    EXPECT_EQ(buffer.popFront(), (CustomStruct{3, 'D'}));
-    EXPECT_EQ(buffer.popFront(), (CustomStruct{100, 'X'}));
-    EXPECT_EQ(buffer.popFront(), (CustomStruct{101, 'Y'}));
-}
-
-// ============================================================================
-// Combined Operations Tests
-// ============================================================================
-
-TEST_F(IntBuffer8, MixedOperations) {
-    // Append some
-    buffer.append(1);
-    buffer.append(2);
-
-    // Pop one
-    EXPECT_EQ(buffer.popFront(), 1);
-
-    // Append more
-    buffer.append(3);
-    buffer.append(4);
-
-    // Clear
-    buffer.clear();
-
-    // Start fresh
-    buffer.append(10);
-    EXPECT_EQ(buffer.size(), 1);
-    EXPECT_EQ(buffer.popFront(), 10);
-}
-
-TEST_F(IntBuffer8, AppendSpanThenSingleAppends) {
-    std::array<int, 3> data{1, 2, 3};
-    nonstd::span<const int> span(data.data(), data.size());
-
-    buffer.append(span);
-    buffer.append(4);
-    buffer.append(5);
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(5, true, false, false));
-
-    for (int i = 1; i <= 5; ++i) {
-        EXPECT_EQ(buffer.popFront(), i);
-    }
-}
-
-TEST_F(IntBuffer8, MultipleSpanAppends) {
-    std::array<int, 2> data1{1, 2};
-    std::array<int, 3> data2{3, 4, 5};
-    std::array<int, 2> data3{6, 7};
-
-    nonstd::span<const int> span1(data1.data(), data1.size());
-    nonstd::span<const int> span2(data2.data(), data2.size());
-    nonstd::span<const int> span3(data3.data(), data3.size());
-
-    buffer.append(span1);
-    buffer.append(span2);
-    buffer.append(span3);
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(7, true, false, false));
-
-    for (int i = 1; i <= 7; ++i) {
-        EXPECT_EQ(buffer.popFront(), i);
-    }
-}
-
-// ============================================================================
-// FIFO Order Verification Tests
-// ============================================================================
-
-TEST_F(IntBuffer8, VerifyFIFOOrder_NoWraparound) {
-    for (int i = 0; i < 5; ++i) {
-        buffer.append(i * 10);
-    }
-
-    for (int i = 0; i < 5; ++i) {
-        EXPECT_EQ(buffer.popFront(), i * 10);
-    }
-}
-
-TEST_F(IntBuffer8, VerifyFIFOOrder_WithWraparound) {
-    // Fill buffer
-    for (int i = 0; i < 8; ++i) {
-        buffer.append(i);
-    }
-
-    // Remove 5 elements
-    for (int i = 0; i < 5; ++i) {
-        buffer.popFront();
-    }
-
-    // Add 5 more (causes wraparound)
-    for (int i = 100; i < 105; ++i) {
-        buffer.append(i);
-    }
-
-    // Should have: 5, 6, 7, 100, 101, 102, 103, 104
-    EXPECT_EQ(buffer.popFront(), 5);
-    EXPECT_EQ(buffer.popFront(), 6);
-    EXPECT_EQ(buffer.popFront(), 7);
-    EXPECT_EQ(buffer.popFront(), 100);
-    EXPECT_EQ(buffer.popFront(), 101);
-    EXPECT_EQ(buffer.popFront(), 102);
-    EXPECT_EQ(buffer.popFront(), 103);
-    EXPECT_EQ(buffer.popFront(), 104);
-}
-
-TEST_F(IntBuffer8, VerifyFIFOOrder_MultipleWraparounds) {
-    // Simulate many wrap-arounds
-    for (int cycle = 0; cycle < 5; ++cycle) {
-        fillBuffer();
-        for (int i = 0; i < 8; ++i) {
-            EXPECT_EQ(buffer.popFront(), i);
-        }
-    }
-
-    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
+  EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 } // namespace
