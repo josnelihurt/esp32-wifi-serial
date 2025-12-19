@@ -9,3 +9,4 @@
 .crush.json
 compile_commands.json
 .ignore
+.opencode/
