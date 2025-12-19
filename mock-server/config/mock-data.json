@@ -1,0 +1,19 @@
+{
+  "ssid": "MyWiFiNetwork",
+  "password": "mypassword123",
+  "deviceName": "esp32c3-dev",
+  "mqttBroker": "192.168.1.100",
+  "mqttPort": 1883,
+  "mqttUser": "mqtt_user",
+  "mqttPassword": "mqtt_pass",
+  "baudRateTty1": 115200,
+  "webUser": "admin",
+  "webPassword": "admin123",
+  "ipAddress": "192.168.1.150",
+  "topicTty0Rx": "wifi_serial/esp32c3-dev/ttyS0/rx",
+  "topicTty0Tx": "wifi_serial/esp32c3-dev/ttyS0/tx",
+  "topicTty1Rx": "wifi_serial/esp32c3-dev/ttyS1/rx",
+  "topicTty1Tx": "wifi_serial/esp32c3-dev/ttyS1/tx",
+  "serial0Buffer": [],
+  "serial1Buffer": []
+}

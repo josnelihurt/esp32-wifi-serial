@@ -25,6 +25,10 @@ FORMAT_FILES := $(shell find $(SRC_DIR) \
 help:
 	@echo "ESP32 WiFi Serial Bridge - Available Commands:"
 	@echo ""
+	@echo "  Local Web Development:"
+	@echo "    make dev-web         - Start mock server for frontend development"
+	@echo "    make dev-setup       - Install mock server dependencies"
+	@echo ""
 	@echo "  Build & Upload via USB:"
 	@echo "    make build           - Build firmware"
 	@echo "    make build-fs        - Build filesystem binary (.bin file)"
@@ -47,6 +51,7 @@ help:
 	@echo "    make clean           - Clean build files"
 	@echo ""
 	@echo "  Examples:"
+	@echo "    make dev-web                          # Start local dev server"
 	@echo "    make upload-fs-ota IP=192.168.1.100   # Update frontend only"
 	@echo "    make upload-ota IP=192.168.1.100      # Update full firmware"
 	@echo ""
@@ -140,3 +145,24 @@ clean-coverage:
 view-coverage: coverage
 	@echo "Opening coverage report in browser..."
 	@./open_coverage.sh
+
+# Local web development with mock server
+.PHONY: dev-setup
+dev-setup:
+	@echo "Installing mock server dependencies..."
+	@cd mock-server && npm install
+	@echo "Mock server dependencies installed!"
+	@echo "Run 'make dev-web' to start the development server"
+
+.PHONY: dev-web
+dev-web:
+	@echo "Starting mock development server..."
+	@echo "Visit http://localhost:3000 in your browser"
+	@echo "Default credentials: admin / admin123"
+	@echo ""
+	@cd mock-server && npm run dev
+
+.PHONY: dev-web-open
+dev-web-open:
+	@echo "Starting mock development server and opening browser..."
+	@cd mock-server && npm run dev:open
