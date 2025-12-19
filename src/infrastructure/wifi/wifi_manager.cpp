@@ -33,7 +33,7 @@ bool WiFiManager::connect() {
   delay(100);
 
   WiFi.mode(WIFI_STA);
-  WiFi.setAutoReconnect(false);
+  WiFi.setAutoReconnect(true);
 
   Log.infoln("%s: Attempting to connect to SSID: '%s'", __PRETTY_FUNCTION__,
              preferencesStorage.ssid.c_str());
@@ -42,7 +42,7 @@ bool WiFiManager::connect() {
              preferencesStorage.password.c_str());
 
   // Wait for connection to initialize before checking status
-  delay(1000);
+  delay(2000);
 
   int attempts = 0;
   while (WiFi.status() != WL_CONNECTED && attempts < 30) {
@@ -62,10 +62,10 @@ bool WiFiManager::connect() {
       default: statusStr = "UNKNOWN"; break;
     }
 
-    Log.infoln("%s: connecting to '%s' (password_len: %u), attempts: %d of "
+    Log.infoln("%s: connecting to '%s' password: '********', attempts: %d of "
                 "30, status: %d (%s)",
                 __PRETTY_FUNCTION__, preferencesStorage.ssid.c_str(),
-                preferencesStorage.password.length(), attempts, status, statusStr);
+                attempts, status, statusStr);
 
     // If we see NO_SSID_AVAIL, the network isn't visible - bail out early
     if (status == WL_NO_SSID_AVAIL && attempts > 5) {

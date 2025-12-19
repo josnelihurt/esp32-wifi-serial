@@ -14,8 +14,9 @@
         <div class="tab active" onclick="switchTab(0)">Configuration</div>
         <div class="tab" onclick="switchTab(1)">ttyS0 (USB)</div>
         <div class="tab" onclick="switchTab(2)">ttyS1 (UART)</div>
-        <div class="tab" onclick="switchTab(3)">OTA Update</div>
-        <div class="tab" onclick="switchTab(4)">About</div>
+        <div class="tab" onclick="switchTab(3)">OTA Firmware Update</div>
+        <div class="tab" onclick="switchTab(4)">OTA Filesystem Update</div>
+        <div class="tab" onclick="switchTab(5)">About</div>
     </div>
     <div id="tab-config" class="tab-content active">
         <h3>Configuration</h3>
@@ -147,8 +148,12 @@
         </div>
     </div>
 
-    <div id="tab-ota" class="tab-content">
-        <div id="ota-content">Loading OTA information...</div>
+    <div id="tab-ota-firmware" class="tab-content">
+        <div id="ota-content">Loading OTA firmware information...</div>
+    </div>
+
+    <div id="tab-ota-fs" class="tab-content">
+        <div id="ota-content-fs">Loading OTA filesystem information...</div>
     </div>
 
     <div id="tab-about" class="tab-content">

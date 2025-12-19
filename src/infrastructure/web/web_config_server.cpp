@@ -8,11 +8,20 @@
 #include <LittleFS.h>
 #include <Preferences.h>
 #include <WiFi.h>
+#include <mbedtls/sha256.h>
 namespace jrb::wifi_serial {
+  #define DISABLE_DEFAULT_OTA_PASSWORD 1
 
 WebConfigServer::WebConfigServer(PreferencesStorage &storage)
     : preferencesStorage(storage), serial0Log(), serial1Log(), tty0(tty0),
-      tty1(tty1), server(nullptr), apMode(false) {
+      tty1(tty1), server(nullptr), apMode(false), otaInProgress(false),
+      otaExpectedSize(0), otaReceivedSize(0), otaExpectedHash(""),
+      otaCalculatedHash(""), otaRequirePassword(false) {
+#ifndef DISABLE_DEFAULT_OTA_PASSWORD
+  otaRequirePassword = true;
+#else
+  otaRequirePassword = false;
+#endif
   Log.traceln(__PRETTY_FUNCTION__);
 }
 
@@ -85,7 +94,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
     request->send(LittleFS, "/favicon.svg", "image/svg+xml");
   });
 
-  // Serve OTA HTML with template processor
+  // Serve OTA Firmware HTML with template processor
   server->on("/ota.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if (!request->authenticate(preferencesStorage.webUser.c_str(),
                                preferencesStorage.webPassword.c_str())) {
@@ -93,6 +102,17 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
     }
     Log.traceln("%s: Handling /ota.html request", __PRETTY_FUNCTION__);
     request->send(LittleFS, "/ota.html", "text/html", false,
+                  [this](const String &var) { return this->processor(var); });
+  });
+
+  // Serve OTA Filesystem HTML with template processor
+  server->on("/ota-fs.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                               preferencesStorage.webPassword.c_str())) {
+      return request->requestAuthentication();
+    }
+    Log.traceln("%s: Handling /ota-fs.html request", __PRETTY_FUNCTION__);
+    request->send(LittleFS, "/ota-fs.html", "text/html", false,
                   [this](const String &var) { return this->processor(var); });
   });
 
@@ -270,6 +290,9 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
     request->send(200, "text/plain", "OK");
   });
 
+  // Setup OTA endpoints
+  setupOTAEndpoints();
+
   server->begin();
   Log.infoln("Async web server started");
 }
@@ -352,6 +375,274 @@ String WebConfigServer::escapeHTML(const String &str) {
   escaped.replace("\"", "&quot;");
   escaped.replace("'", "&#39;");
   return escaped;
+}
+
+// OTA Web Implementation
+void WebConfigServer::setupOTAEndpoints() {
+  Log.infoln("Setting up OTA endpoints");
+
+  // Handle OTA status request
+  server->on("/ota/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                               preferencesStorage.webPassword.c_str())) {
+      return request->requestAuthentication();
+    }
+
+    String status =
+        "{\"otaInProgress\":" + String(otaInProgress ? "true" : "false") +
+        ",\"receivedSize\":" + String(otaReceivedSize) +
+        ",\"expectedSize\":" + String(otaExpectedSize) + "}";
+    request->send(200, "application/json", status);
+  });
+
+  // Handle firmware upload
+  server->on(
+      "/ota/firmware/upload", HTTP_POST,
+      [this](AsyncWebServerRequest *request) {
+        // Final response handler - called after upload completes
+        if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                                   preferencesStorage.webPassword.c_str())) {
+          return request->requestAuthentication();
+        }
+
+        if (Update.hasError()) {
+          otaInProgress = false;
+          request->send(500, "text/plain", "Firmware update failed");
+        } else {
+          Log.infoln("Firmware update successful, restarting...");
+          request->send(200, "text/plain", "Firmware updated successfully");
+          delay(1000);
+          ESP.restart();
+        }
+      },
+      [this](AsyncWebServerRequest *request, String filename, size_t index,
+             uint8_t *data, size_t len, bool final) {
+        // File upload handler - called for each chunk
+        if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                                   preferencesStorage.webPassword.c_str())) {
+          return;
+        }
+
+#ifndef DISABLE_DEFAULT_OTA_PASSWORD
+        // Require password verification
+        if (index == 0 && otaRequirePassword &&
+            preferencesStorage.webPassword.length() == 0) {
+          Log.errorln("OTA: Password not configured");
+          return;
+        }
+#endif
+
+        // First chunk - initialize update
+        if (index == 0) {
+          Log.infoln("Starting firmware OTA update: %s", filename.c_str());
+
+          // Validate filename
+          if (!filename.endsWith(".bin")) {
+            Log.errorln("OTA: Invalid firmware file extension");
+            return;
+          }
+
+          // Get expected hash from request body parameter if available
+          if (request->hasParam("hash", true)) {
+            otaExpectedHash = request->getParam("hash", true)->value();
+            Log.infoln("OTA: Expected hash: %s", otaExpectedHash.c_str());
+          } else {
+            otaExpectedHash = "";
+          }
+
+          // Initialize SHA256 context
+          mbedtls_sha256_init(&sha256Ctx);
+          mbedtls_sha256_starts(&sha256Ctx, 0);
+
+          // Begin update
+          if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH)) {
+            Update.printError(Serial);
+            Log.errorln("OTA: Update.begin() failed");
+            return;
+          }
+
+          otaInProgress = true;
+          otaReceivedSize = 0;
+          otaExpectedSize = request->contentLength();
+          Log.infoln("OTA: Expected size: %d bytes", otaExpectedSize);
+        }
+
+        // Write chunk
+        if (len) {
+          if (Update.write(data, len) != len) {
+            Update.printError(Serial);
+            Log.errorln("OTA: Update.write() failed");
+            return;
+          }
+
+          // Update hash
+          mbedtls_sha256_update(&sha256Ctx, data, len);
+          otaReceivedSize += len;
+        }
+
+        // Final chunk - complete update
+        if (final) {
+          Log.infoln("OTA: Received %d bytes", otaReceivedSize);
+
+          // Finalize hash
+          unsigned char hash[32];
+          mbedtls_sha256_finish(&sha256Ctx, hash);
+          mbedtls_sha256_free(&sha256Ctx);
+
+          // Convert hash to hex string
+          char hashStr[65];
+          for (int i = 0; i < 32; i++) {
+            sprintf(&hashStr[i * 2], "%02x", hash[i]);
+          }
+          otaCalculatedHash = String(hashStr);
+
+          Log.infoln("OTA: Calculated hash: %s", otaCalculatedHash.c_str());
+
+          // Verify hash if provided
+          if (otaExpectedHash.length() > 0 &&
+              otaCalculatedHash != otaExpectedHash) {
+            Log.errorln("OTA: Hash verification failed!");
+            Log.errorln("  Expected: %s", otaExpectedHash.c_str());
+            Log.errorln("  Calculated: %s", otaCalculatedHash.c_str());
+            Update.abort();
+            otaInProgress = false;
+            return;
+          }
+
+          // Complete update
+          if (!Update.end(true)) {
+            Update.printError(Serial);
+            Log.errorln("OTA: Update.end() failed");
+            otaInProgress = false;
+            return;
+          }
+
+          otaInProgress = false;
+          Log.infoln("OTA: Firmware update completed successfully");
+        }
+      });
+
+  // Handle filesystem upload
+  server->on(
+      "/ota/filesystem/upload", HTTP_POST,
+      [this](AsyncWebServerRequest *request) {
+        // Final response handler
+        if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                                   preferencesStorage.webPassword.c_str())) {
+          return request->requestAuthentication();
+        }
+
+        if (Update.hasError()) {
+          otaInProgress = false;
+          request->send(500, "text/plain", "Filesystem update failed");
+        } else {
+          Log.infoln("Filesystem update successful, restarting...");
+          request->send(200, "text/plain", "Filesystem updated successfully");
+          delay(1000);
+          ESP.restart();
+        }
+      },
+      [this](AsyncWebServerRequest *request, String filename, size_t index,
+             uint8_t *data, size_t len, bool final) {
+        // File upload handler
+        if (!request->authenticate(preferencesStorage.webUser.c_str(),
+                                   preferencesStorage.webPassword.c_str())) {
+          return;
+        }
+
+#ifndef DISABLE_DEFAULT_OTA_PASSWORD
+        // Require password verification
+        if (index == 0 && otaRequirePassword &&
+            preferencesStorage.webPassword.length() == 0) {
+          Log.errorln("OTA: Password not configured");
+          return;
+        }
+#endif
+
+        // First chunk - initialize update
+        if (index == 0) {
+          Log.infoln("Starting filesystem OTA update: %s", filename.c_str());
+
+          // Get expected hash from request body parameter if available
+          if (request->hasParam("hash", true)) {
+            otaExpectedHash = request->getParam("hash", true)->value();
+            Log.infoln("OTA: Expected hash: %s", otaExpectedHash.c_str());
+          } else {
+            otaExpectedHash = "";
+          }
+
+          // Initialize SHA256 context
+          mbedtls_sha256_init(&sha256Ctx);
+          mbedtls_sha256_starts(&sha256Ctx, 0);
+
+          // Begin filesystem update
+          // Use U_SPIFFS for LittleFS partition update
+          if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_SPIFFS)) {
+            Update.printError(Serial);
+            Log.errorln("OTA: Filesystem Update.begin() failed");
+            return;
+          }
+
+          otaInProgress = true;
+          otaReceivedSize = 0;
+          otaExpectedSize = request->contentLength();
+          Log.infoln("OTA: Expected size: %d bytes", otaExpectedSize);
+        }
+
+        // Write chunk
+        if (len) {
+          if (Update.write(data, len) != len) {
+            Update.printError(Serial);
+            Log.errorln("OTA: Filesystem Update.write() failed");
+            return;
+          }
+
+          // Update hash
+          mbedtls_sha256_update(&sha256Ctx, data, len);
+          otaReceivedSize += len;
+        }
+
+        // Final chunk - complete update
+        if (final) {
+          Log.infoln("OTA: Received %d bytes", otaReceivedSize);
+
+          // Finalize hash
+          unsigned char hash[32];
+          mbedtls_sha256_finish(&sha256Ctx, hash);
+          mbedtls_sha256_free(&sha256Ctx);
+
+          // Convert hash to hex string
+          char hashStr[65];
+          for (int i = 0; i < 32; i++) {
+            sprintf(&hashStr[i * 2], "%02x", hash[i]);
+          }
+          otaCalculatedHash = String(hashStr);
+
+          Log.infoln("OTA: Calculated hash: %s", otaCalculatedHash.c_str());
+
+          // Verify hash if provided
+          if (otaExpectedHash.length() > 0 &&
+              otaCalculatedHash != otaExpectedHash) {
+            Log.errorln("OTA: Hash verification failed!");
+            Log.errorln("  Expected: %s", otaExpectedHash.c_str());
+            Log.errorln("  Calculated: %s", otaCalculatedHash.c_str());
+            Update.abort();
+            otaInProgress = false;
+            return;
+          }
+
+          // Complete update
+          if (!Update.end(true)) {
+            Update.printError(Serial);
+            Log.errorln("OTA: Filesystem Update.end() failed");
+            otaInProgress = false;
+            return;
+          }
+
+          otaInProgress = false;
+          Log.infoln("OTA: Filesystem update completed successfully");
+        }
+      });
 }
 
 } // namespace jrb::wifi_serial

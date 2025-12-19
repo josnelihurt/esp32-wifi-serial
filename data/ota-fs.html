@@ -1,0 +1,17 @@
+<h3>OTA (Over-The-Air) Filesystem Update</h3>
+
+<div class="ota-info">
+    <p><strong>Device:</strong> %DEVICE_NAME%</p>
+    <p><strong>IP:</strong> %IP_ADDRESS%</p>
+</div>
+
+<h4>Upload Filesystem</h4>
+<input type="file" id="filesystem-file" accept=".bin" style="display:none;" onchange="handleAutoUpload(event, 'filesystem')">
+<button onclick="document.getElementById('filesystem-file').click()" class="ota-btn ota-btn-filesystem">
+    Select & Upload Filesystem (littlefs.bin)
+</button>
+<div id="filesystem-progress" class="progress-container">
+    <div class="progress-bar" id="filesystem-progress-bar"></div>
+    <div class="progress-text" id="filesystem-progress-text">0%</div>
+</div>
+<div id="filesystem-status" class="status-message"></div>

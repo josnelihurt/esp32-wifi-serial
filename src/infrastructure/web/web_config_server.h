@@ -6,6 +6,9 @@
 #include <ESPAsyncWebServer.h>
 #include <functional>
 #include <nonstd/span.hpp>
+#include <Update.h>
+#include <LittleFS.h>
+#include <mbedtls/sha256.h>
 
 namespace jrb::wifi_serial {
 
@@ -16,6 +19,11 @@ public:
   // cost abstaction applying policy based design, but it was getting messy. So
   // back to old school.
   using SerialWriteCallback = void (*)(const nonstd::span<const uint8_t> &);
+
+  // OTA Web constants
+  static constexpr size_t OTA_CHUNK_SIZE = 16 * 1024; // 16KB chunks
+  static constexpr size_t MAX_FIRMWARE_SIZE = 2 * 1024 * 1024; // 2MB max
+  static constexpr size_t MAX_FILESYSTEM_SIZE = 512 * 1024; // 512KB max
 
   WebConfigServer(PreferencesStorage &storage);
   ~WebConfigServer();
@@ -45,8 +53,20 @@ private:
   bool apMode;
   IPAddress apIP;
 
+  // OTA Web state
+  bool otaInProgress;
+  size_t otaExpectedSize;
+  size_t otaReceivedSize;
+  String otaExpectedHash;
+  String otaCalculatedHash;
+  bool otaRequirePassword;
+  mbedtls_sha256_context sha256Ctx;
+
   String processor(const String &var);
   String escapeHTML(const String &str);
+
+  // OTA Web methods
+  void setupOTAEndpoints();
 };
 
 } // namespace jrb::wifi_serial
