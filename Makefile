@@ -36,10 +36,15 @@ help:
 	@echo "    make upload-ota IP=<ip>     - Upload firmware via OTA"
 	@echo "    make upload-fs-ota IP=<ip>  - Upload frontend files via OTA (faster)"
 	@echo ""
+	@echo "  Testing & Coverage:"
+	@echo "    make test            - Run googletest tests (native)"
+	@echo "    make coverage        - Run tests + generate HTML coverage report"
+	@echo "    make view-coverage   - Generate coverage + open in browser"
+	@echo "    make clean-coverage  - Clean coverage files"
+	@echo ""
 	@echo "  Monitoring & Debugging:"
 	@echo "    make monitor         - Monitor serial output"
 	@echo "    make clean           - Clean build files"
-	@echo "    make test            - Run googletest tests (native)"
 	@echo ""
 	@echo "  Examples:"
 	@echo "    make upload-fs-ota IP=192.168.1.100   # Update frontend only"
@@ -113,3 +118,25 @@ size:
 test:
 	@echo "Running googletest tests (native environment)..."
 	$(PIO) test -e native
+
+.PHONY: coverage
+coverage: test
+	@echo "Generating coverage report..."
+	@lcov --capture --directory .pio/build/native --output-file coverage.info --ignore-errors gcov,gcov,mismatch >/dev/null 2>&1
+	@lcov --extract coverage.info '*/src/*' --output-file coverage.production.info >/dev/null 2>&1
+	@lcov --remove coverage.production.info '*/googletest/*' '*/span-lite/*' --output-file coverage.filtered.info >/dev/null 2>&1 || true
+	@genhtml coverage.filtered.info --output-directory coverage_report --demangle-cpp >/dev/null 2>&1
+	@echo "Coverage report generated in: coverage_report/index.html"
+	@echo "Coverage summary:"
+	@lcov --summary coverage.filtered.info | grep -E "lines|functions"
+
+.PHONY: clean-coverage
+clean-coverage:
+	@echo "Cleaning coverage files..."
+	@rm -f coverage.info coverage.filtered.info
+	@rm -rf coverage_report
+
+.PHONY: view-coverage
+view-coverage: coverage
+	@echo "Opening coverage report in browser..."
+	@./open_coverage.sh
