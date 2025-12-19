@@ -27,6 +27,7 @@ help:
 	@echo ""
 	@echo "  Build & Upload via USB:"
 	@echo "    make build           - Build firmware"
+	@echo "    make build-fs        - Build filesystem binary (.bin file)"
 	@echo "    make upload          - Upload firmware via USB cable"
 	@echo "    make upload-fs       - Upload filesystem (HTML/CSS/JS) via USB"
 	@echo "    make upload-all      - Upload firmware + filesystem via USB"
@@ -50,6 +51,14 @@ help:
 build:
 	@echo "Building firmware..."
 	$(PIO) run
+
+.PHONY: build-fs
+build-fs:
+	@echo "Building filesystem binary..."
+	$(PIO) run --target buildfs
+	@echo ""
+	@echo "Filesystem binary created at:"
+	@find .pio/build -name "littlefs.bin" -o -name "spiffs.bin" 2>/dev/null || echo "  Check .pio/build/esp32-c3/ directory"
 
 .PHONY: upload
 upload:
