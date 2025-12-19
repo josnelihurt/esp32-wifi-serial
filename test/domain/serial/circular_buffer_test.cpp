@@ -1,9 +1,62 @@
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include "domain/serial/circular_buffer.hpp"
 #include <nonstd/span.hpp>
 
 namespace jrb::wifi_serial {
 namespace {
+// Matcher to verify that a CircularBuffer has the expected state
+struct BufferState {
+    std::size_t expectedSize;
+    bool expectedHasData;
+    bool expectedFull;
+    bool expectedEmpty;
+};
+
+// Creates a human-readable description of buffer state for error messages
+inline std::ostream& operator<<(std::ostream& os, const BufferState& state) {
+    os << "Buffer{size=" << state.expectedSize 
+       << ", hasData=" << (state.expectedHasData ? "true" : "false")
+       << ", full=" << (state.expectedFull ? "true" : "false")
+       << ", empty=" << (state.expectedEmpty ? "true" : "false")
+       << "}";
+    return os;
+}
+
+// Matcher to verify buffer state with detailed error reporting
+MATCHER_P4(BufferHasExpectedState, expectedSize, expectedHasData, expectedFull, expectedEmpty, 
+          "Circular buffer should have specific state") {
+    const auto& buffer = arg;
+    
+    bool success = true;
+    
+    // Check each field with specific error reporting
+    if (buffer.size() != expectedSize) {
+        *result_listener << " where size expected " << expectedSize 
+                         << " but is " << buffer.size();
+        success = false;
+    }
+    
+    if (buffer.hasData() != expectedHasData) {
+        *result_listener << " where hasData expected " << expectedHasData 
+                         << " but is " << buffer.hasData();
+        success = false;
+    }
+    
+    if (buffer.full() != expectedFull) {
+        *result_listener << " where full expected " << expectedFull 
+                         << " but is " << buffer.full();
+        success = false;
+    }
+    
+    if (buffer.empty() != expectedEmpty) {
+        *result_listener << " where empty expected " << expectedEmpty 
+                         << " but is " << buffer.empty();
+        success = false;
+    }
+    
+    return success;
+}
 
 // Test fixture for basic CircularBuffer tests
 template <typename T, std::size_t SIZE>
@@ -26,14 +79,6 @@ protected:
         }
     }
 
-    // Helper to verify buffer state
-    void verifyBufferState(std::size_t expectedSize, bool expectedHasData,
-                          bool expectedFull, bool expectedEmpty) {
-        EXPECT_EQ(buffer.size(), expectedSize);
-        EXPECT_EQ(buffer.hasData(), expectedHasData);
-        EXPECT_EQ(buffer.full(), expectedFull);
-        EXPECT_EQ(buffer.empty(), expectedEmpty);
-    }
 };
 
 // Type alias for common test cases
@@ -47,15 +92,15 @@ using UInt8Buffer32 = CircularBufferFixture<uint8_t, 32>;
 // ============================================================================
 
 TEST_F(IntBuffer8, InitialStateIsEmpty) {
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));;
 }
 
 TEST_F(CharBuffer8, InitialStateIsEmpty) {
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));;
 }
 
 TEST_F(UInt8Buffer32, InitialStateIsEmpty) {
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));;
 }
 
 // ============================================================================
@@ -65,14 +110,14 @@ TEST_F(UInt8Buffer32, InitialStateIsEmpty) {
 TEST_F(IntBuffer8, AppendSingleElement) {
     buffer.append(42);
 
-    verifyBufferState(1, true, false, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(1, true, false, false));;
     EXPECT_EQ(buffer.popFront(), 42);
 }
 
 TEST_F(CharBuffer8, AppendSingleCharacter) {
     buffer.append('A');
 
-    verifyBufferState(1, true, false, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(1, true, false, false));;
     EXPECT_EQ(buffer.popFront(), 'A');
 }
 
@@ -81,7 +126,7 @@ TEST_F(IntBuffer8, AppendMultipleElementsNotFull) {
     buffer.append(2);
     buffer.append(3);
 
-    verifyBufferState(3, true, false, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(3, true, false, false));;
 
     EXPECT_EQ(buffer.popFront(), 1);
     EXPECT_EQ(buffer.popFront(), 2);
@@ -94,7 +139,7 @@ TEST_F(IntBuffer8, AppendUntilFull) {
         EXPECT_EQ(buffer.size(), static_cast<std::size_t>(i + 1));
     }
 
-    verifyBufferState(8, true, true, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));;
 }
 
 TEST_F(IntBuffer8, AppendWhenFull_OverwritesOldestData) {
@@ -105,7 +150,7 @@ TEST_F(IntBuffer8, AppendWhenFull_OverwritesOldestData) {
     buffer.append(100);
 
     // Buffer should still be full
-    verifyBufferState(8, true, true, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));;
 
     // First element should be 1 (0 was overwritten)
     EXPECT_EQ(buffer.popFront(), 1);
@@ -121,7 +166,7 @@ TEST_F(IntBuffer8, AppendWhenFull_OverwritesMultipleOldest) {
     buffer.append(102);
 
     // Buffer should still be full
-    verifyBufferState(8, true, true, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));;
 
     // First elements should be 3, 4, 5, 6, 7, 100, 101, 102
     EXPECT_EQ(buffer.popFront(), 3);
@@ -144,7 +189,7 @@ TEST_F(IntBuffer8, AppendSpan_EmptySpan) {
 
     buffer.append(span);
 
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 TEST_F(IntBuffer8, AppendSpan_SingleElement) {
@@ -153,7 +198,7 @@ TEST_F(IntBuffer8, AppendSpan_SingleElement) {
 
     buffer.append(span);
 
-    verifyBufferState(1, true, false, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(1, true, false, false));
     EXPECT_EQ(buffer.popFront(), 42);
 }
 
@@ -163,7 +208,7 @@ TEST_F(IntBuffer8, AppendSpan_MultipleElements) {
 
     buffer.append(span);
 
-    verifyBufferState(4, true, false, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(4, true, false, false));
 
     EXPECT_EQ(buffer.popFront(), 10);
     EXPECT_EQ(buffer.popFront(), 20);
@@ -177,7 +222,7 @@ TEST_F(IntBuffer8, AppendSpan_ExactlyFillsBuffer) {
 
     buffer.append(span);
 
-    verifyBufferState(8, true, true, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
 
     for (int i = 0; i < 8; ++i) {
         EXPECT_EQ(buffer.popFront(), i);
@@ -190,7 +235,7 @@ TEST_F(IntBuffer8, AppendSpan_LargerThanBuffer_OverwritesOldest) {
 
     buffer.append(span);
 
-    verifyBufferState(8, true, true, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
 
     // Should contain last 8 elements: 4, 5, 6, 7, 8, 9, 10, 11
     for (int i = 4; i < 12; ++i) {
@@ -204,7 +249,7 @@ TEST_F(CharBuffer8, AppendSpan_Characters) {
 
     buffer.append(span);
 
-    verifyBufferState(4, true, false, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(4, true, false, false));
 
     EXPECT_EQ(buffer.popFront(), 'A');
     EXPECT_EQ(buffer.popFront(), 'B');
@@ -220,14 +265,14 @@ TEST_F(IntBuffer8, PopFront_FromEmptyBuffer_ReturnsDefault) {
     int value = buffer.popFront();
 
     EXPECT_EQ(value, int{});
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 TEST_F(CharBuffer8, PopFront_FromEmptyBuffer_ReturnsDefault) {
     char value = buffer.popFront();
 
     EXPECT_EQ(value, char{});
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 TEST_F(IntBuffer8, PopFront_SingleElement) {
@@ -236,7 +281,7 @@ TEST_F(IntBuffer8, PopFront_SingleElement) {
     int value = buffer.popFront();
 
     EXPECT_EQ(value, 99);
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 TEST_F(IntBuffer8, PopFront_MultipleElements) {
@@ -245,13 +290,13 @@ TEST_F(IntBuffer8, PopFront_MultipleElements) {
     buffer.append(30);
 
     EXPECT_EQ(buffer.popFront(), 10);
-    verifyBufferState(2, true, false, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(2, true, false, false));
 
     EXPECT_EQ(buffer.popFront(), 20);
-    verifyBufferState(1, true, false, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(1, true, false, false));
 
     EXPECT_EQ(buffer.popFront(), 30);
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 TEST_F(IntBuffer8, PopFront_AllElements_HasDataBecomesFalse) {
@@ -268,7 +313,7 @@ TEST_F(IntBuffer8, PopFront_AllElements_HasDataBecomesFalse) {
         }
     }
 
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 TEST_F(IntBuffer8, PopFront_AfterWraparound) {
@@ -303,7 +348,7 @@ TEST_F(IntBuffer8, PopFront_AfterWraparound) {
 TEST_F(IntBuffer8, Clear_EmptyBuffer) {
     buffer.clear();
 
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 TEST_F(IntBuffer8, Clear_PartiallyFilledBuffer) {
@@ -313,7 +358,7 @@ TEST_F(IntBuffer8, Clear_PartiallyFilledBuffer) {
 
     buffer.clear();
 
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 TEST_F(IntBuffer8, Clear_FullBuffer) {
@@ -321,7 +366,7 @@ TEST_F(IntBuffer8, Clear_FullBuffer) {
 
     buffer.clear();
 
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 TEST_F(IntBuffer8, Clear_ThenReuse) {
@@ -332,7 +377,7 @@ TEST_F(IntBuffer8, Clear_ThenReuse) {
     buffer.append(10);
     buffer.append(20);
 
-    verifyBufferState(2, true, false, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(2, true, false, false));
 
     EXPECT_EQ(buffer.popFront(), 10);
     EXPECT_EQ(buffer.popFront(), 20);
@@ -417,30 +462,30 @@ TEST_F(IntBuffer8, AlternatingAppendAndPop) {
     for (int i = 0; i < 20; ++i) {
         buffer.append(i);
         EXPECT_EQ(buffer.popFront(), i);
-        verifyBufferState(0, false, false, true);
+        EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
     }
 }
 
 TEST_F(IntBuffer8, FillEmptyFillEmpty) {
     // First fill
     fillBuffer();
-    verifyBufferState(8, true, true, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
 
     // Empty
     for (int i = 0; i < 8; ++i) {
         buffer.popFront();
     }
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 
     // Second fill
     fillBuffer();
-    verifyBufferState(8, true, true, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
 
     // Empty again
     for (int i = 0; i < 8; ++i) {
         buffer.popFront();
     }
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 TEST_F(IntBuffer8, PartialFillPopPartialFill) {
@@ -461,7 +506,7 @@ TEST_F(IntBuffer8, PartialFillPopPartialFill) {
         buffer.append(i);
     }
 
-    verifyBufferState(8, true, true, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
 
     // Verify order: 3, 4, 100, 101, 102, 103, 104, 105
     EXPECT_EQ(buffer.popFront(), 3);
@@ -479,7 +524,7 @@ TEST_F(IntBuffer8, MultiplePopFromEmpty) {
     EXPECT_EQ(buffer.popFront(), int{});
     EXPECT_EQ(buffer.popFront(), int{});
 
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 TEST_F(IntBuffer8, OverfillByMany) {
@@ -489,7 +534,7 @@ TEST_F(IntBuffer8, OverfillByMany) {
     }
 
     // Should still be full with last 8 elements
-    verifyBufferState(8, true, true, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
 
     // Should contain 92-99
     for (int i = 92; i < 100; ++i) {
@@ -516,7 +561,7 @@ TEST_F(IntBuffer8, HeadWraparound) {
     }
 
     // Should be full
-    verifyBufferState(8, true, true, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(8, true, true, false));
 
     // Should contain last 8: 100, 101, 102, 103, 104, 105, 106, 107
     for (int i = 100; i < 108; ++i) {
@@ -543,7 +588,7 @@ TEST_F(IntBuffer8, TailWraparound) {
         EXPECT_EQ(buffer.popFront(), i);
     }
 
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 // ============================================================================
@@ -580,13 +625,13 @@ TEST_F(IntBuffer16, FillAndEmptySize16) {
         buffer.append(i);
     }
 
-    verifyBufferState(16, true, true, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(16, true, true, false));
 
     for (int i = 0; i < 16; ++i) {
         EXPECT_EQ(buffer.popFront(), i);
     }
 
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 TEST_F(UInt8Buffer32, FillAndEmptySize32) {
@@ -594,13 +639,13 @@ TEST_F(UInt8Buffer32, FillAndEmptySize32) {
         buffer.append(i);
     }
 
-    verifyBufferState(32, true, true, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(32, true, true, false));
 
     for (uint8_t i = 0; i < 32; ++i) {
         EXPECT_EQ(buffer.popFront(), i);
     }
 
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 // ============================================================================
@@ -627,7 +672,7 @@ TEST_F(CustomStructBuffer4, AppendAndPopCustomStruct) {
     buffer.append(s2);
     buffer.append(s3);
 
-    verifyBufferState(3, true, false, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(3, true, false, false));
 
     EXPECT_EQ(buffer.popFront(), s1);
     EXPECT_EQ(buffer.popFront(), s2);
@@ -644,7 +689,7 @@ TEST_F(CustomStructBuffer4, CustomStruct_Wraparound) {
     buffer.append(CustomStruct{100, 'X'});
     buffer.append(CustomStruct{101, 'Y'});
 
-    verifyBufferState(4, true, true, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(4, true, true, false));
 
     EXPECT_EQ(buffer.popFront(), (CustomStruct{2, 'C'}));
     EXPECT_EQ(buffer.popFront(), (CustomStruct{3, 'D'}));
@@ -685,7 +730,7 @@ TEST_F(IntBuffer8, AppendSpanThenSingleAppends) {
     buffer.append(4);
     buffer.append(5);
 
-    verifyBufferState(5, true, false, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(5, true, false, false));
 
     for (int i = 1; i <= 5; ++i) {
         EXPECT_EQ(buffer.popFront(), i);
@@ -705,7 +750,7 @@ TEST_F(IntBuffer8, MultipleSpanAppends) {
     buffer.append(span2);
     buffer.append(span3);
 
-    verifyBufferState(7, true, false, false);
+    EXPECT_THAT(buffer, BufferHasExpectedState(7, true, false, false));
 
     for (int i = 1; i <= 7; ++i) {
         EXPECT_EQ(buffer.popFront(), i);
@@ -762,7 +807,7 @@ TEST_F(IntBuffer8, VerifyFIFOOrder_MultipleWraparounds) {
         }
     }
 
-    verifyBufferState(0, false, false, true);
+    EXPECT_THAT(buffer, BufferHasExpectedState(0, false, false, true));
 }
 
 } // namespace
