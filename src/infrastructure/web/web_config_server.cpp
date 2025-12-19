@@ -10,7 +10,6 @@
 #include <WiFi.h>
 #include <mbedtls/sha256.h>
 namespace jrb::wifi_serial {
-  #define DISABLE_DEFAULT_OTA_PASSWORD 1
 
 WebConfigServer::WebConfigServer(PreferencesStorage &storage)
     : preferencesStorage(storage), serial0Log(), serial1Log(), tty0(tty0),
