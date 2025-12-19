@@ -62,7 +62,7 @@ bool WiFiManager::connect() {
       default: statusStr = "UNKNOWN"; break;
     }
 
-    Log.traceln("%s: connecting to '%s' (password_len: %u), attempts: %d of "
+    Log.infoln("%s: connecting to '%s' (password_len: %u), attempts: %d of "
                 "30, status: %d (%s)",
                 __PRETTY_FUNCTION__, preferencesStorage.ssid.c_str(),
                 preferencesStorage.password.length(), attempts, status, statusStr);
