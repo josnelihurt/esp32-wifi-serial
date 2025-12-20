@@ -1,0 +1,26 @@
+# ESP32-C3 Custom Partition Table (4MB Flash)
+# Name,   Type, SubType, Offset,   Size,     Flags
+# ---------------------------------------------------
+# NVS partition for storing WiFi credentials and preferences
+nvs,      data, nvs,     0x9000,   0x5000,
+# OTA data partition for tracking active app
+otadata,  data, ota,     0xe000,   0x2000,
+# App partition 0 - Primary application (1.875 MB)
+app0,     app,  ota_0,   0x10000,  0x1E0000,
+# App partition 1 - OTA update target (1.875 MB)
+app1,     app,  ota_1,   0x1F0000, 0x1E0000,
+# LittleFS partition for web assets (192 KB)
+spiffs,   data, spiffs,  0x3D0000, 0x30000,
+
+# Partition Layout Summary:
+# ========================
+# NVS:        20 KB   (0x5000)    - Preferences storage
+# OTA Data:    8 KB   (0x2000)    - OTA status tracking
+# App0:     1.875 MB  (0x1E0000)  - Main firmware (was 1.25MB)
+# App1:     1.875 MB  (0x1E0000)  - OTA update space
+# LittleFS:  192 KB   (0x30000)   - Web files (HTML/JS/CSS)
+# ========================
+# Total:    3.969 MB  (4MB flash)
+#
+# Current firmware: ~1.45 MB
+# Headroom: ~430 KB (29% margin for growth)
