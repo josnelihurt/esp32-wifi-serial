@@ -11,7 +11,7 @@
 #include <mbedtls/sha256.h>
 namespace jrb::wifi_serial {
 
-WebConfigServer::WebConfigServer(PreferencesStorage &storage)
+WebConfigServer::WebConfigServer(PreferencesStorageDefault &storage)
     : preferencesStorage(storage), serial0Log(), serial1Log(), tty0(tty0),
       tty1(tty1), server(nullptr), apMode(false), otaInProgress(false),
       otaExpectedSize(0), otaReceivedSize(0), otaExpectedHash(""),
@@ -30,11 +30,12 @@ WebConfigServer::~WebConfigServer() {
   }
 }
 
-void WebConfigServer::setWiFiConfig(const String &ssid, const String &password,
-                                    const String &deviceName,
-                                    const String &mqttBroker, int mqttPort,
-                                    const String &mqttUser,
-                                    const String &mqttPassword) {}
+void WebConfigServer::setWiFiConfig(const std::string &ssid,
+                                    const std::string &password,
+                                    const std::string &deviceName,
+                                    const std::string &mqttBroker, int mqttPort,
+                                    const std::string &mqttUser,
+                                    const std::string &mqttPassword) {}
 
 void WebConfigServer::setAPMode(bool apMode) {
   Log.infoln(__PRETTY_FUNCTION__, "apMode: %s", apMode ? "true" : "false");
@@ -148,19 +149,20 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
 
     // Process WiFi settings
     if (request->hasParam("ssid", true)) {
-      preferencesStorage.ssid = request->getParam("ssid", true)->value();
+      preferencesStorage.ssid =
+          request->getParam("ssid", true)->value().c_str();
     }
     if (request->hasParam("password", true)) {
       String newPassword = request->getParam("password", true)->value();
       if (newPassword.length() > 0 && newPassword != "********") {
-        preferencesStorage.password = newPassword;
+        preferencesStorage.password = newPassword.c_str();
       }
     }
 
     // Process device name and MQTT topics
     if (request->hasParam("device", true)) {
       preferencesStorage.deviceName =
-          request->getParam("device", true)->value();
+          request->getParam("device", true)->value().c_str();
       preferencesStorage.topicTty0Rx =
           "wifi_serial/" + preferencesStorage.deviceName + "/ttyS0/rx";
       preferencesStorage.topicTty0Tx =
@@ -174,30 +176,32 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
     // Process MQTT settings
     if (request->hasParam("broker", true)) {
       preferencesStorage.mqttBroker =
-          request->getParam("broker", true)->value();
+          request->getParam("broker", true)->value().c_str();
     }
     if (request->hasParam("port", true)) {
       preferencesStorage.mqttPort =
           request->getParam("port", true)->value().toInt();
     }
     if (request->hasParam("user", true)) {
-      preferencesStorage.mqttUser = request->getParam("user", true)->value();
+      preferencesStorage.mqttUser =
+          request->getParam("user", true)->value().c_str();
     }
     if (request->hasParam("mqttpass", true)) {
       String newMqttPassword = request->getParam("mqttpass", true)->value();
       if (newMqttPassword.length() > 0 && newMqttPassword != "********") {
-        preferencesStorage.mqttPassword = newMqttPassword;
+        preferencesStorage.mqttPassword = newMqttPassword.c_str();
       }
     }
 
     // Process Web User settings
     if (request->hasParam("web_user", true)) {
-      preferencesStorage.webUser = request->getParam("web_user", true)->value();
+      preferencesStorage.webUser =
+          request->getParam("web_user", true)->value().c_str();
     }
     if (request->hasParam("web_password", true)) {
       String newWebPassword = request->getParam("web_password", true)->value();
       if (newWebPassword.length() > 0 && newWebPassword != "********") {
-        preferencesStorage.webPassword = newWebPassword;
+        preferencesStorage.webPassword = newWebPassword.c_str();
       }
     }
 
@@ -300,7 +304,7 @@ String WebConfigServer::processor(const String &var) {
   // This function is called for each %VARIABLE% in the HTML template
 
   if (var == "SSID") {
-    return escapeHTML(preferencesStorage.ssid);
+    return String(escapeHTML(preferencesStorage.ssid).c_str());
   }
   if (var == "PASSWORD_DISPLAY") {
     return preferencesStorage.password.length() > 0 ? "********" : "";
@@ -309,19 +313,20 @@ String WebConfigServer::processor(const String &var) {
     return preferencesStorage.password.length() > 0 ? "1" : "0";
   }
   if (var == "DEVICE_NAME") {
-    return escapeHTML(preferencesStorage.deviceName.length() > 0
-                          ? preferencesStorage.deviceName
-                          : "esp32c3");
+    return String(escapeHTML(preferencesStorage.deviceName.length() > 0
+                                 ? preferencesStorage.deviceName
+                                 : "esp32c3")
+                      .c_str());
   }
   if (var == "MQTT_BROKER") {
-    return escapeHTML(preferencesStorage.mqttBroker);
+    return String(escapeHTML(preferencesStorage.mqttBroker).c_str());
   }
   if (var == "MQTT_PORT") {
     return String(preferencesStorage.mqttPort > 0 ? preferencesStorage.mqttPort
                                                   : 1883);
   }
   if (var == "MQTT_USER") {
-    return escapeHTML(preferencesStorage.mqttUser);
+    return String(escapeHTML(preferencesStorage.mqttUser).c_str());
   }
   if (var == "MQTT_PASSWORD_DISPLAY") {
     return preferencesStorage.mqttPassword.length() > 0 ? "********" : "";
@@ -330,16 +335,16 @@ String WebConfigServer::processor(const String &var) {
     return preferencesStorage.mqttPassword.length() > 0 ? "1" : "0";
   }
   if (var == "TOPIC_TTY0_RX") {
-    return escapeHTML(preferencesStorage.topicTty0Rx);
+    return String(escapeHTML(preferencesStorage.topicTty0Rx).c_str());
   }
   if (var == "TOPIC_TTY0_TX") {
-    return escapeHTML(preferencesStorage.topicTty0Tx);
+    return String(escapeHTML(preferencesStorage.topicTty0Tx).c_str());
   }
   if (var == "TOPIC_TTY1_RX") {
-    return escapeHTML(preferencesStorage.topicTty1Rx);
+    return String(escapeHTML(preferencesStorage.topicTty1Rx).c_str());
   }
   if (var == "TOPIC_TTY1_TX") {
-    return escapeHTML(preferencesStorage.topicTty1Tx);
+    return String(escapeHTML(preferencesStorage.topicTty1Tx).c_str());
   }
   if (var == "BAUD_RATE_TTY1") {
     return String(preferencesStorage.baudRateTty1);
@@ -354,7 +359,7 @@ String WebConfigServer::processor(const String &var) {
   }
 
   if (var == "WEB_USER") {
-    return escapeHTML(preferencesStorage.webUser);
+    return String(escapeHTML(preferencesStorage.webUser).c_str());
   }
   if (var == "WEB_PASSWORD_DISPLAY") {
     return preferencesStorage.webPassword.length() > 0 ? "********" : "";
@@ -366,13 +371,34 @@ String WebConfigServer::processor(const String &var) {
   return String(); // Return empty string for unknown variables
 }
 
-String WebConfigServer::escapeHTML(const String &str) {
-  String escaped = str;
-  escaped.replace("&", "&amp;");
-  escaped.replace("<", "&lt;");
-  escaped.replace(">", "&gt;");
-  escaped.replace("\"", "&quot;");
-  escaped.replace("'", "&#39;");
+std::string WebConfigServer::escapeHTML(const std::string &str) {
+  std::string escaped = str;
+  size_t pos = 0;
+  // Replace & first to avoid double-escaping
+  while ((pos = escaped.find("&", pos)) != std::string::npos) {
+    escaped.replace(pos, 1, "&amp;");
+    pos += 5;
+  }
+  pos = 0;
+  while ((pos = escaped.find("<", pos)) != std::string::npos) {
+    escaped.replace(pos, 1, "&lt;");
+    pos += 4;
+  }
+  pos = 0;
+  while ((pos = escaped.find(">", pos)) != std::string::npos) {
+    escaped.replace(pos, 1, "&gt;");
+    pos += 4;
+  }
+  pos = 0;
+  while ((pos = escaped.find("\"", pos)) != std::string::npos) {
+    escaped.replace(pos, 1, "&quot;");
+    pos += 6;
+  }
+  pos = 0;
+  while ((pos = escaped.find("'", pos)) != std::string::npos) {
+    escaped.replace(pos, 1, "&#39;");
+    pos += 5;
+  }
   return escaped;
 }
 

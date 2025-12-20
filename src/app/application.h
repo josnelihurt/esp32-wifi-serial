@@ -70,7 +70,7 @@ private:
   unsigned long lastMqttReconnectAttempt{0};
 
   // Stack objects (order matters - dependencies flow down)
-  PreferencesStorage preferencesStorage;
+  PreferencesStorageDefault preferencesStorage;
   WiFiManager wifiManager;
   WiFiClient wifiClient;
   MqttClient mqttClient;

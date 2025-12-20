@@ -1,21 +1,22 @@
 #pragma once
 
+#include "domain/config/preferences_storage_policy.h"
 #include <Arduino.h>
 #include <WiFi.h>
+#include <string>
 
 namespace jrb::wifi_serial {
 
-class PreferencesStorage;
 class SystemInfo final {
 private:
-  const PreferencesStorage &preferencesStorage;
+  const PreferencesStorageDefault &preferencesStorage;
   bool &otaEnabled;
 
 public:
-  SystemInfo(const PreferencesStorage &storage, bool &ota);
+  SystemInfo(const PreferencesStorageDefault &storage, bool &ota);
 
-  String getSpecialCharacterSettings() const;
-  String getWelcomeString() const;
+  std::string getSpecialCharacterSettings() const;
+  std::string getWelcomeString() const;
   void logSystemInformation() const;
 };
 

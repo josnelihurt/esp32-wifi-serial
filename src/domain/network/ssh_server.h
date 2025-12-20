@@ -1,5 +1,6 @@
 #pragma once
 
+#include "domain/config/preferences_storage_policy.h"
 #include "domain/config/special_character_handler.h"
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
@@ -10,7 +11,6 @@
 
 namespace jrb::wifi_serial {
 
-class PreferencesStorage;
 class SystemInfo;
 
 /**
@@ -29,7 +29,7 @@ public:
   using SerialWriteCallback = void (*)(const nonstd::span<const uint8_t> &);
 
 private:
-  PreferencesStorage &preferencesStorage;
+  PreferencesStorageDefault &preferencesStorage;
   SystemInfo &systemInfo;
   void *sshBind; // Opaque pointer to libssh bind
   void *hostKey; // Opaque pointer to ssh_key (must outlive sshBind)
@@ -57,7 +57,7 @@ private:
   static constexpr uint32_t SSH_SESSION_TIMEOUT_MS = 3600000; // 1 hour
 
 public:
-  SSHServer(PreferencesStorage &storage, SystemInfo &sysInfo,
+  SSHServer(PreferencesStorageDefault &storage, SystemInfo &sysInfo,
             SpecialCharacterHandler &specialCharacterHandler);
   ~SSHServer();
 
@@ -103,7 +103,7 @@ private:
   void handleSSHSession(void *session);
   bool authenticateUser(const char *user, const char *password);
   void sendWelcomeMessage(void *channel);
-  String handleSpecialCharacter(char c);
+  std::string handleSpecialCharacter(char c);
   bool authenticateSession(void *session);
   bool waitForChannelSession(void *session, void **channel);
   bool waitForShellRequest(void *session, void *channel);

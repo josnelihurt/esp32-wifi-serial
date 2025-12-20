@@ -1,6 +1,6 @@
 
 #include "preferences_storage_policy_esp32.h"
-#include "preferences_storage.h"
+#include "../preferences_storage.cpp" // Include implementation for template instantiation
 
 namespace jrb::wifi_serial {
 

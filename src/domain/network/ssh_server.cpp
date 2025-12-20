@@ -10,7 +10,7 @@
 
 namespace jrb::wifi_serial {
 
-SSHServer::SSHServer(PreferencesStorage &storage, SystemInfo &sysInfo,
+SSHServer::SSHServer(PreferencesStorageDefault &storage, SystemInfo &sysInfo,
                      SpecialCharacterHandler &specialCharacterHandler)
     : preferencesStorage(storage), systemInfo(sysInfo), sshBind(nullptr),
       hostKey(nullptr), running(false), sshTaskHandle(nullptr),
@@ -75,8 +75,8 @@ bool SSHServer::authenticateUser(const char *user, const char *password) {
   if (!user || !password)
     return false;
 
-  bool userMatch = preferencesStorage.webUser.equals(user);
-  bool passMatch = preferencesStorage.webPassword.equals(password);
+  bool userMatch = (preferencesStorage.webUser == user);
+  bool passMatch = (preferencesStorage.webPassword == password);
   bool success = userMatch && passMatch;
 
   Log.infoln("SSH auth attempt - user: %s, result: %s", user,
@@ -121,7 +121,7 @@ void SSHServer::sendWelcomeMessage(void *channel) {
   ssh_channel_write(chan, sysInfoBuf, strlen(sysInfoBuf));
 }
 
-String SSHServer::handleSpecialCharacter(char c) {
+std::string SSHServer::handleSpecialCharacter(char c) {
   if (c == CMD_PREFIX) {
     specialCharacterMode = true;
     return
@@ -142,7 +142,7 @@ String SSHServer::handleSpecialCharacter(char c) {
   case CMD_RESET:
     return "RESET";
   default:
-    return "Unknown special character: " + String(c);
+    return std::string("Unknown special character: ") + c;
   }
 }
 
@@ -285,9 +285,19 @@ void SSHServer::handleSSHSession(void *session) {
     int nbytes = ssh_channel_read_nonblocking(channel, sshToSerialBuffer,
                                               sizeof(sshToSerialBuffer), 0);
     if (nbytes > 0 && serialWrite) {
-      String specialCharacterResponse =
+      std::string specialCharacterResponse =
           handleSpecialCharacter(sshToSerialBuffer[0]);
-      specialCharacterResponse.replace("\n", "\r\n");
+      // Replace \n with \r\n for SSH
+      size_t pos = 0;
+      while ((pos = specialCharacterResponse.find("\n", pos)) !=
+             std::string::npos) {
+        if (pos == 0 || specialCharacterResponse[pos - 1] != '\r') {
+          specialCharacterResponse.replace(pos, 1, "\r\n");
+          pos += 2;
+        } else {
+          pos++;
+        }
+      }
       if (specialCharacterResponse == "TERMINATE") {
         const char *msg = "See you later alligator!...\r\n";
         ssh_channel_write(channel, msg, strlen(msg));
@@ -302,7 +312,7 @@ void SSHServer::handleSSHSession(void *session) {
         ESP.restart();
         return;
       }
-      if (!specialCharacterResponse.isEmpty()) {
+      if (!specialCharacterResponse.empty()) {
         ssh_channel_write(channel, specialCharacterResponse.c_str(),
                           specialCharacterResponse.length());
         continue;

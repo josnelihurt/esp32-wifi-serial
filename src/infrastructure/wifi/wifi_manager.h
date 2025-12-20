@@ -1,14 +1,14 @@
 #pragma once
 
+#include "domain/config/preferences_storage_policy.h"
 #include <Preferences.h>
 #include <WiFi.h>
 
 namespace jrb::wifi_serial {
-class PreferencesStorage;
 
 class WiFiManager final {
 public:
-  WiFiManager(PreferencesStorage &preferencesStorage);
+  WiFiManager(PreferencesStorageDefault &preferencesStorage);
   ~WiFiManager();
 
   void setup();
@@ -19,7 +19,7 @@ public:
   IPAddress getAPIP() const { return apIP; }
 
 private:
-  PreferencesStorage &preferencesStorage;
+  PreferencesStorageDefault &preferencesStorage;
   bool apMode;
   IPAddress apIP;
 

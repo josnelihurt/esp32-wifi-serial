@@ -4,7 +4,7 @@
 namespace jrb::wifi_serial {
 
 SpecialCharacterHandler::SpecialCharacterHandler(
-    SystemInfo &systemInfo, PreferencesStorage &preferencesStorage)
+    SystemInfo &systemInfo, PreferencesStorageDefault &preferencesStorage)
     : systemInfo(systemInfo), preferencesStorage(preferencesStorage),
       specialCharacterMode(false) {}
 

@@ -4,7 +4,7 @@
 #include <ArduinoLog.h>
 namespace jrb::wifi_serial {
 
-WiFiManager::WiFiManager(PreferencesStorage &preferencesStorage)
+WiFiManager::WiFiManager(PreferencesStorageDefault &preferencesStorage)
     : preferencesStorage{preferencesStorage}, apMode{false} {
   Log.traceln(__PRETTY_FUNCTION__);
 }
@@ -50,26 +50,43 @@ bool WiFiManager::connect() {
     attempts++;
 
     wl_status_t status = WiFi.status();
-    const char* statusStr;
-    switch(status) {
-      case WL_IDLE_STATUS: statusStr = "IDLE"; break;
-      case WL_NO_SSID_AVAIL: statusStr = "NO_SSID_AVAIL"; break;
-      case WL_SCAN_COMPLETED: statusStr = "SCAN_COMPLETED"; break;
-      case WL_CONNECTED: statusStr = "CONNECTED"; break;
-      case WL_CONNECT_FAILED: statusStr = "CONNECT_FAILED"; break;
-      case WL_CONNECTION_LOST: statusStr = "CONNECTION_LOST"; break;
-      case WL_DISCONNECTED: statusStr = "DISCONNECTED"; break;
-      default: statusStr = "UNKNOWN"; break;
+    const char *statusStr;
+    switch (status) {
+    case WL_IDLE_STATUS:
+      statusStr = "IDLE";
+      break;
+    case WL_NO_SSID_AVAIL:
+      statusStr = "NO_SSID_AVAIL";
+      break;
+    case WL_SCAN_COMPLETED:
+      statusStr = "SCAN_COMPLETED";
+      break;
+    case WL_CONNECTED:
+      statusStr = "CONNECTED";
+      break;
+    case WL_CONNECT_FAILED:
+      statusStr = "CONNECT_FAILED";
+      break;
+    case WL_CONNECTION_LOST:
+      statusStr = "CONNECTION_LOST";
+      break;
+    case WL_DISCONNECTED:
+      statusStr = "DISCONNECTED";
+      break;
+    default:
+      statusStr = "UNKNOWN";
+      break;
     }
 
     Log.infoln("%s: connecting to '%s' password: '********', attempts: %d of "
-                "30, status: %d (%s)",
-                __PRETTY_FUNCTION__, preferencesStorage.ssid.c_str(),
-                attempts, status, statusStr);
+               "30, status: %d (%s)",
+               __PRETTY_FUNCTION__, preferencesStorage.ssid.c_str(), attempts,
+               status, statusStr);
 
     // If we see NO_SSID_AVAIL, the network isn't visible - bail out early
     if (status == WL_NO_SSID_AVAIL && attempts > 5) {
-      Log.errorln("%s: SSID '%s' not found. Is it a 2.4GHz network? ESP32-C3 doesn't support 5GHz",
+      Log.errorln("%s: SSID '%s' not found. Is it a 2.4GHz network? ESP32-C3 "
+                  "doesn't support 5GHz",
                   __PRETTY_FUNCTION__, preferencesStorage.ssid.c_str());
       break;
     }

@@ -1,4 +1,5 @@
 #include "ota_manager.h"
+#include "domain/config/preferences_storage.h"
 #include <ArduinoLog.h>
 
 namespace jrb::wifi_serial {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "config.h"
+#include "domain/config/preferences_storage_policy.h"
 #include "domain/messaging/buffered_stream.hpp"
 #include "domain/messaging/mqtt_flush_policy.h"
 #include <Arduino.h>
@@ -9,15 +10,15 @@
 #include <functional>
 #include <memory>
 #include <nonstd/span.hpp>
+#include <string>
 #include <vector>
 
 namespace jrb::wifi_serial {
 
-class PreferencesStorage;
-
 class MqttClient final {
 public:
-  MqttClient(WiFiClient &wifiClient, PreferencesStorage &preferencesStorage);
+  MqttClient(WiFiClient &wifiClient,
+             PreferencesStorageDefault &preferencesStorage);
   ~MqttClient();
 
   // Registers callbacks for Rx topics.
@@ -30,7 +31,7 @@ public:
   bool reconnect();
   void loop();
 
-  bool publishInfo(const String &data);
+  bool publishInfo(const std::string &data);
 
   // Connection state query.
   bool isConnected() const { return connected; }
@@ -43,11 +44,11 @@ public:
 
 private:
   std::unique_ptr<PubSubClient> mqttClient;
-  PreferencesStorage &preferencesStorage;
+  PreferencesStorageDefault &preferencesStorage;
   WiFiClient *wifiClient;
-  String topicTty0Rx, topicTty0Tx;
-  String topicTty1Rx, topicTty1Tx;
-  String topicInfo;
+  std::string topicTty0Rx, topicTty0Tx;
+  std::string topicTty1Rx, topicTty1Tx;
+  std::string topicInfo;
   bool connected;
   unsigned long lastReconnectAttempt;
 
@@ -66,10 +67,10 @@ private:
   void subscribeToConfiguredTopics();
   void handleConnectionStateChange(bool wasConnected);
   void flushBuffersIfNeeded();
-  void flushBuffer(std::vector<char> &buffer, const String &topic,
+  void flushBuffer(std::vector<char> &buffer, const std::string &topic,
                    unsigned long &lastFlushMillis, const char *bufferName);
-  void setTopics(const String &tty0Rx, const String &tty0Tx,
-                 const String &tty1Rx, const String &tty1Tx);
+  void setTopics(const std::string &tty0Rx, const std::string &tty0Tx,
+                 const std::string &tty1Rx, const std::string &tty1Tx);
   void mqttCallback(char *topic, byte *payload, unsigned int length);
 };
 

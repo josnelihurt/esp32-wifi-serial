@@ -66,5 +66,4 @@ public:
   }
 };
 
-
 } // namespace jrb::wifi_serial

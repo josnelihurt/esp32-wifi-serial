@@ -1,10 +1,10 @@
 #pragma once
 
+#include "circular_buffer.hpp"
+#include "config.h"
 #include <Arduino.h>
 #include <ArduinoLog.h>
-#include "circular_buffer.hpp"
 namespace jrb::wifi_serial {
-
 
 template <size_t SIZE>
 class ByteCircularBuffer : public CircularBuffer<uint8_t, SIZE> {

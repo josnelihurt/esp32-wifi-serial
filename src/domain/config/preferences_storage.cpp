@@ -101,16 +101,16 @@ void PreferencesStorage<StoragePolicy>::generateDefaultTopics() {
 // ============================================================================
 
 template <typename StoragePolicy>
-std::string PreferencesStorage<StoragePolicy>::serialize(
-    const std::string &ipAddress, const std::string &macAddress,
-    const std::string &ssid) const {
+std::string
+PreferencesStorage<StoragePolicy>::serialize(const std::string &ipAddress,
+                                             const std::string &macAddress,
+                                             const std::string &ssid) const {
 
   // Delegate to the policy's JSON serialization implementation
-  return storage.serializeJson(deviceName, mqttBroker, mqttPort, mqttUser,
-                               mqttPassword, topicTty0Rx, topicTty0Tx,
-                               topicTty1Rx, topicTty1Tx, ipAddress, macAddress,
-                               ssid, password, webUser, webPassword,
-                               debugEnabled, tty02tty1Bridge);
+  return storage.serializeJson(
+      deviceName, mqttBroker, mqttPort, mqttUser, mqttPassword, topicTty0Rx,
+      topicTty0Tx, topicTty1Rx, topicTty1Tx, ipAddress, macAddress, ssid,
+      password, webUser, webPassword, debugEnabled, tty02tty1Bridge);
 }
 
 template <typename StoragePolicy>

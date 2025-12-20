@@ -17,8 +17,7 @@ namespace jrb::wifi_serial {
  * - Compile-time polymorphism
  * - Platform-independent header using only standard C++ types
  */
-template <typename StoragePolicy>
-class PreferencesStorage final {
+template <typename StoragePolicy> class PreferencesStorage final {
 private:
   StoragePolicy storage; // Stack-based storage backend
 

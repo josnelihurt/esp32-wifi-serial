@@ -163,12 +163,12 @@ void Application::publishInfoIfNeeded() {
     static constexpr unsigned long INFO_PUBLISH_INTERVAL_MS = 30000;
 
     if (millis() - lastInfoPublish >= INFO_PUBLISH_INTERVAL_MS) {
-      String macAddress = WiFi.macAddress();
-      String ipAddress = WiFi.status() == WL_CONNECTED
-                             ? WiFi.localIP().toString()
-                             : "Not connected";
-      String ssid =
-          WiFi.status() == WL_CONNECTED ? WiFi.SSID() : "Not configured";
+      std::string macAddress = WiFi.macAddress().c_str();
+      std::string ipAddress = WiFi.status() == WL_CONNECTED
+                                  ? WiFi.localIP().toString().c_str()
+                                  : "Not connected";
+      std::string ssid = WiFi.status() == WL_CONNECTED ? WiFi.SSID().c_str()
+                                                       : "Not configured";
       mqttClient.publishInfo(
           preferencesStorage.serialize(ipAddress, macAddress, ssid));
       lastInfoPublish = millis();

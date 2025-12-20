@@ -3,6 +3,8 @@
 #include "domain/config/preferences_storage.h"
 #include <ArduinoLog.h>
 #include <cstring>
+#include <iomanip>
+#include <sstream>
 #include <string_view>
 
 namespace jrb::wifi_serial {
@@ -23,7 +25,7 @@ constexpr uint8_t MQTT_LOOP_ITERATIONS = 3;
 static MqttClient *g_mqttInstance{};
 
 MqttClient::MqttClient(WiFiClient &wifiClient,
-                       PreferencesStorage &preferencesStorage)
+                       PreferencesStorageDefault &preferencesStorage)
     : mqttClient{std::make_unique<PubSubClient>(wifiClient)},
       wifiClient{&wifiClient}, preferencesStorage{preferencesStorage},
       connected{false}, lastReconnectAttempt{0}, onTty0Callback{nullptr},
@@ -50,18 +52,24 @@ MqttClient::~MqttClient() {
   // mqttClient is automatically cleaned up by unique_ptr
 }
 
-void MqttClient::setTopics(const String &tty0Rx, const String &tty0Tx,
-                           const String &tty1Rx, const String &tty1Tx) {
+void MqttClient::setTopics(const std::string &tty0Rx, const std::string &tty0Tx,
+                           const std::string &tty1Rx,
+                           const std::string &tty1Tx) {
   topicTty0Rx = tty0Rx;
   topicTty0Tx = tty0Tx;
   topicTty1Rx = tty1Rx;
   topicTty1Tx = tty1Tx;
   // Generate info topic from tty0Rx topic (replace /ttyS0/rx with /info)
   topicInfo = tty0Rx;
-  topicInfo.replace("/ttyS0/rx", "/info");
-  if (topicInfo.endsWith("/rx")) {
-    int lastSlash = topicInfo.lastIndexOf('/');
-    topicInfo = topicInfo.substring(0, lastSlash) + "/info";
+  size_t pos = topicInfo.find("/ttyS0/rx");
+  if (pos != std::string::npos) {
+    topicInfo.replace(pos, 9, "/info");
+  } else if (topicInfo.size() >= 3 &&
+             topicInfo.substr(topicInfo.size() - 3) == "/rx") {
+    size_t lastSlash = topicInfo.rfind('/');
+    if (lastSlash != std::string::npos) {
+      topicInfo = topicInfo.substr(0, lastSlash) + "/info";
+    }
   }
   Log.infoln("MQTT info topic set to: %s", topicInfo.c_str());
 }
@@ -77,8 +85,10 @@ bool MqttClient::connect(const char *broker, int port, const char *user,
                          const char *password) {
   mqttClient->setServer(broker, port);
 
-  String clientId = "ESP32-C3-" + preferencesStorage.deviceName + "-" +
-                    String(random(0xffff), HEX);
+  std::ostringstream oss;
+  oss << "ESP32-C3-" << preferencesStorage.deviceName << "-" << std::hex
+      << random(0xffff);
+  std::string clientId = oss.str();
 
   Log.infoln("MQTT connecting to %s:%d (ClientID: %s)", broker, port,
              clientId.c_str());
@@ -203,7 +213,7 @@ void MqttClient::loop() {
   flushBuffersIfNeeded();
 }
 
-bool MqttClient::publishInfo(const String &data) {
+bool MqttClient::publishInfo(const std::string &data) {
   if (!mqttClient) {
     Log.errorln("MQTT publishInfo failed: mqttClient is null");
     return false;
@@ -250,8 +260,7 @@ void MqttClient::appendToTty1Buffer(const nonstd::span<const uint8_t> &data) {
 void MqttClient::mqttCallback(char *topic, byte *payload, unsigned int length) {
   if (length >= MQTT_CALLBACK_BUFFER_SIZE)
     return;
-  String topicStr(topic); // This can be expensive, I would like to use a
-                          // string_view instead.
+  std::string_view topicStr(topic); // More efficient than String
 
   nonstd::span<const uint8_t> payloadSpan(payload, length);
   if (topicStr == topicTty0Rx) {

@@ -142,8 +142,38 @@
 // Compile-Time Debug Control
 // ============================================================================
 
+// DISABLE_LOGGING: Completely remove ALL logging (maximum flash savings)
+// Define DISABLE_LOGGING in platformio.ini build_flags to disable all logs
+#ifdef DISABLE_LOGGING
+#undef LOG_VERBOSE
+#undef LOG_DEBUG
+#undef LOG_INFO
+#undef LOG_WARN
+#undef LOG_ERROR
+#undef LOG_FATAL
+#undef LOG_VERBOSE_RAW
+#undef LOG_DEBUG_RAW
+#undef LOG_INFO_RAW
+#undef LOG_WARN_RAW
+#undef LOG_ERROR_RAW
+#undef LOG_FATAL_RAW
+#define LOG_VERBOSE(...) ((void)0)
+#define LOG_DEBUG(...) ((void)0)
+#define LOG_INFO(...) ((void)0)
+#define LOG_WARN(...) ((void)0)
+#define LOG_ERROR(...) ((void)0)
+#define LOG_FATAL(...) ((void)0)
+#define LOG_VERBOSE_RAW(...) ((void)0)
+#define LOG_DEBUG_RAW(...) ((void)0)
+#define LOG_INFO_RAW(...) ((void)0)
+#define LOG_WARN_RAW(...) ((void)0)
+#define LOG_ERROR_RAW(...) ((void)0)
+#define LOG_FATAL_RAW(...) ((void)0)
+#endif
+
 // In release builds, completely remove debug and verbose logs
 #ifdef NDEBUG
+#ifndef DISABLE_LOGGING // Only apply if DISABLE_LOGGING isn't already set
 #undef LOG_VERBOSE
 #undef LOG_DEBUG
 #undef LOG_VERBOSE_RAW
@@ -153,21 +183,29 @@
 #define LOG_VERBOSE_RAW(...) ((void)0)
 #define LOG_DEBUG_RAW(...) ((void)0)
 #endif
+#endif
 
 // ============================================================================
 // Convenience Macros
 // ============================================================================
 
 // Log with function name and line number (useful for debugging)
-#define LOG_TRACE()                                                            \
-  LOG_DEBUG("%s:%d - %s()", __FILE__, __LINE__, __func__)
+#ifndef DISABLE_LOGGING
+#define LOG_TRACE() LOG_DEBUG("%s:%d - %s()", __FILE__, __LINE__, __func__)
+#else
+#define LOG_TRACE() ((void)0)
+#endif
 
 // Conditional logging
+#ifndef DISABLE_LOGGING
 #define LOG_IF(condition, level, ...)                                          \
   do {                                                                         \
     if (condition) {                                                           \
       LOG_##level(__VA_ARGS__);                                                \
     }                                                                          \
   } while (0)
+#else
+#define LOG_IF(condition, level, ...) ((void)0)
+#endif
 
 // Example: LOG_IF(count > 100, WARN, "Count exceeded threshold: %d", count)

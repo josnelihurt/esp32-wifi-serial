@@ -81,21 +81,16 @@ public:
   /**
    * @brief Serializes configuration data to JSON string using ArduinoJson.
    */
-  std::string serializeJson(const std::string &deviceName,
-                            const std::string &mqttBroker, int32_t mqttPort,
-                            const std::string &mqttUser,
-                            const std::string &mqttPassword,
-                            const std::string &topicTty0Rx,
-                            const std::string &topicTty0Tx,
-                            const std::string &topicTty1Rx,
-                            const std::string &topicTty1Tx,
-                            const std::string &ipAddress,
-                            const std::string &macAddress,
-                            const std::string &ssid,
-                            const std::string &password,
-                            const std::string &webUser,
-                            const std::string &webPassword, bool debugEnabled,
-                            bool tty02tty1Bridge) const {
+  std::string
+  serializeJson(const std::string &deviceName, const std::string &mqttBroker,
+                int32_t mqttPort, const std::string &mqttUser,
+                const std::string &mqttPassword, const std::string &topicTty0Rx,
+                const std::string &topicTty0Tx, const std::string &topicTty1Rx,
+                const std::string &topicTty1Tx, const std::string &ipAddress,
+                const std::string &macAddress, const std::string &ssid,
+                const std::string &password, const std::string &webUser,
+                const std::string &webPassword, bool debugEnabled,
+                bool tty02tty1Bridge) const {
     String output;
     StaticJsonDocument<1024> obj;
     obj["deviceName"] = deviceName.c_str();
@@ -114,8 +109,7 @@ public:
     obj["mqtt"] = (mqttBroker.length() > 0 ? "connected" : "disconnected");
     obj["password"] = password.length() > 0 ? "********" : "NO_PASSWORD";
     obj["webUser"] = webUser.c_str();
-    obj["webPassword"] =
-        webPassword.length() > 0 ? "********" : "NO_PASSWORD";
+    obj["webPassword"] = webPassword.length() > 0 ? "********" : "NO_PASSWORD";
     obj["debugEnabled"] = debugEnabled;
     obj["tty02tty1Bridge"] = tty02tty1Bridge;
     serializeJsonPretty(obj, output);

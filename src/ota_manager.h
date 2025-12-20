@@ -1,17 +1,17 @@
 #pragma once
 
-#include "domain/config/preferences_storage.h"
+#include "domain/config/preferences_storage_policy.h"
 #include <ArduinoOTA.h>
 
 namespace jrb::wifi_serial {
 
 class OTAManager final {
 private:
-  PreferencesStorage &preferencesStorage;
+  PreferencesStorageDefault &preferencesStorage;
   bool &otaEnabled;
 
 public:
-  OTAManager(PreferencesStorage &storage, bool &ota)
+  OTAManager(PreferencesStorageDefault &storage, bool &ota)
       : preferencesStorage(storage), otaEnabled(ota) {}
 
   void setup();
