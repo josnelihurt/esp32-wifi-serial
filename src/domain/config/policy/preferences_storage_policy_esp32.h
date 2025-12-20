@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <Preferences.h>
 #include <string>
 
@@ -76,6 +77,50 @@ public:
    * @brief Clears all stored preferences in the current namespace.
    */
   void clear() { prefs.clear(); }
+
+  /**
+   * @brief Serializes configuration data to JSON string using ArduinoJson.
+   */
+  std::string serializeJson(const std::string &deviceName,
+                            const std::string &mqttBroker, int32_t mqttPort,
+                            const std::string &mqttUser,
+                            const std::string &mqttPassword,
+                            const std::string &topicTty0Rx,
+                            const std::string &topicTty0Tx,
+                            const std::string &topicTty1Rx,
+                            const std::string &topicTty1Tx,
+                            const std::string &ipAddress,
+                            const std::string &macAddress,
+                            const std::string &ssid,
+                            const std::string &password,
+                            const std::string &webUser,
+                            const std::string &webPassword, bool debugEnabled,
+                            bool tty02tty1Bridge) const {
+    String output;
+    StaticJsonDocument<1024> obj;
+    obj["deviceName"] = deviceName.c_str();
+    obj["mqttBroker"] = mqttBroker.c_str();
+    obj["mqttPort"] = mqttPort;
+    obj["mqttUser"] = mqttUser.c_str();
+    obj["mqttPassword"] =
+        mqttPassword.length() > 0 ? "********" : "NO_PASSWORD";
+    obj["topicTty0Rx"] = topicTty0Rx.c_str();
+    obj["topicTty0Tx"] = topicTty0Tx.c_str();
+    obj["topicTty1Rx"] = topicTty1Rx.c_str();
+    obj["topicTty1Tx"] = topicTty1Tx.c_str();
+    obj["ipAddress"] = ipAddress.c_str();
+    obj["macAddress"] = macAddress.c_str();
+    obj["ssid"] = ssid.c_str();
+    obj["mqtt"] = (mqttBroker.length() > 0 ? "connected" : "disconnected");
+    obj["password"] = password.length() > 0 ? "********" : "NO_PASSWORD";
+    obj["webUser"] = webUser.c_str();
+    obj["webPassword"] =
+        webPassword.length() > 0 ? "********" : "NO_PASSWORD";
+    obj["debugEnabled"] = debugEnabled;
+    obj["tty02tty1Bridge"] = tty02tty1Bridge;
+    serializeJsonPretty(obj, output);
+    return std::string(output.c_str());
+  }
 };
 
 } // namespace jrb::wifi_serial

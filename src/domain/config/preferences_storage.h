@@ -92,11 +92,7 @@ class TestStoragePolicy;
 using PreferencesStorageESP32 = PreferencesStorage<ESP32StoragePolicy>;
 using PreferencesStorageTest = PreferencesStorage<TestStoragePolicy>;
 
-// For backwards compatibility in production code
-#ifdef ESP_PLATFORM
-using PreferencesStorageDefault = PreferencesStorageESP32;
-#else
-using PreferencesStorageDefault = PreferencesStorageTest;
-#endif
+// PreferencesStorageDefault is defined in preferences_storage_policy.h
+// based on ESP_PLATFORM
 
 } // namespace jrb::wifi_serial

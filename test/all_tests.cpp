@@ -6,6 +6,7 @@
 #include "app/broadcaster_test.cpp"
 
 // Domain module tests - Config
+#include "domain/config/preferences_storage_policy_test.cpp" // Must come first - defines static storage
 #include "domain/config/preferences_storage_test.cpp"
 #include "domain/config/special_character_handler_test.cpp"
 

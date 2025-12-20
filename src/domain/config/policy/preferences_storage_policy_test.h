@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <map>
+#include <sstream>
 #include <string>
 #include <variant>
 
@@ -127,6 +128,53 @@ public:
    * @brief Resets the storage to empty state (test helper).
    */
   void reset() { storage.clear(); }
+
+  /**
+   * @brief Serializes configuration data to JSON string using std::ostringstream.
+   */
+  std::string serializeJson(const std::string &deviceName,
+                            const std::string &mqttBroker, int32_t mqttPort,
+                            const std::string &mqttUser,
+                            const std::string &mqttPassword,
+                            const std::string &topicTty0Rx,
+                            const std::string &topicTty0Tx,
+                            const std::string &topicTty1Rx,
+                            const std::string &topicTty1Tx,
+                            const std::string &ipAddress,
+                            const std::string &macAddress,
+                            const std::string &ssid,
+                            const std::string &password,
+                            const std::string &webUser,
+                            const std::string &webPassword, bool debugEnabled,
+                            bool tty02tty1Bridge) const {
+    std::ostringstream oss;
+    oss << "{\n"
+        << "  \"deviceName\": \"" << deviceName << "\",\n"
+        << "  \"mqttBroker\": \"" << mqttBroker << "\",\n"
+        << "  \"mqttPort\": " << mqttPort << ",\n"
+        << "  \"mqttUser\": \"" << mqttUser << "\",\n"
+        << "  \"mqttPassword\": \""
+        << (mqttPassword.empty() ? "NO_PASSWORD" : "********") << "\",\n"
+        << "  \"topicTty0Rx\": \"" << topicTty0Rx << "\",\n"
+        << "  \"topicTty0Tx\": \"" << topicTty0Tx << "\",\n"
+        << "  \"topicTty1Rx\": \"" << topicTty1Rx << "\",\n"
+        << "  \"topicTty1Tx\": \"" << topicTty1Tx << "\",\n"
+        << "  \"ipAddress\": \"" << ipAddress << "\",\n"
+        << "  \"macAddress\": \"" << macAddress << "\",\n"
+        << "  \"ssid\": \"" << ssid << "\",\n"
+        << "  \"mqtt\": \""
+        << (mqttBroker.empty() ? "disconnected" : "connected") << "\",\n"
+        << "  \"password\": \"" << (password.empty() ? "NO_PASSWORD" : "********")
+        << "\",\n"
+        << "  \"webUser\": \"" << webUser << "\",\n"
+        << "  \"webPassword\": \""
+        << (webPassword.empty() ? "NO_PASSWORD" : "********") << "\",\n"
+        << "  \"debugEnabled\": " << (debugEnabled ? "true" : "false") << ",\n"
+        << "  \"tty02tty1Bridge\": " << (tty02tty1Bridge ? "true" : "false")
+        << "\n"
+        << "}";
+    return oss.str();
+  }
 };
 
 } // namespace jrb::wifi_serial

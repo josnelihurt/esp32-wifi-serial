@@ -1,23 +1,9 @@
 #include "preferences_storage.h"
 #include "config.h"
-
-// Include appropriate policy based on platform
-#ifdef ESP_PLATFORM
-#include "preferences_storage_policy_esp32.h"
-#include <ArduinoJson.h>
-#include <ArduinoLog.h>
-#else
-#include "preferences_storage_policy_test.h"
-#include <sstream>
-#endif
+#include "infrastructure/logging/logger.h"
+#include "preferences_storage_policy.h"
 
 namespace jrb::wifi_serial {
-
-// Define static storage for TestStoragePolicy
-#ifndef ESP_PLATFORM
-std::map<std::string, std::variant<std::string, int32_t>>
-    TestStoragePolicy::storage;
-#endif
 
 // ============================================================================
 // Constructor
@@ -39,9 +25,7 @@ PreferencesStorage<StoragePolicy>::PreferencesStorage()
 
 template <typename StoragePolicy>
 void PreferencesStorage<StoragePolicy>::load() {
-#ifdef ESP_PLATFORM
-  Log.infoln("Loading preferences");
-#endif
+  LOG_INFO("Loading preferences");
 
   storage.begin("esp32bridge", true);
 
@@ -67,10 +51,8 @@ void PreferencesStorage<StoragePolicy>::load() {
 
 template <typename StoragePolicy>
 void PreferencesStorage<StoragePolicy>::generateDefaultTopics() {
-#ifdef ESP_PLATFORM
-  Log.infoln("Generating default topics with device name: %s",
-             deviceName.c_str());
-#endif
+  LOG_INFO("Generating default topics with device name: %s",
+           deviceName.c_str());
 
   char baseTopic0[64], baseTopic1[64];
   snprintf(baseTopic0, sizeof(baseTopic0), DEFAULT_TOPIC_TTY0,
@@ -123,61 +105,12 @@ std::string PreferencesStorage<StoragePolicy>::serialize(
     const std::string &ipAddress, const std::string &macAddress,
     const std::string &ssid) const {
 
-#ifdef ESP_PLATFORM
-  // Use ArduinoJson for ESP32
-  String output;
-  StaticJsonDocument<1024> obj;
-  obj["deviceName"] = deviceName.c_str();
-  obj["mqttBroker"] = mqttBroker.c_str();
-  obj["mqttPort"] = mqttPort;
-  obj["mqttUser"] = mqttUser.c_str();
-  obj["mqttPassword"] =
-      mqttPassword.length() > 0 ? "********" : "NO_PASSWORD";
-  obj["topicTty0Rx"] = topicTty0Rx.c_str();
-  obj["topicTty0Tx"] = topicTty0Tx.c_str();
-  obj["topicTty1Rx"] = topicTty1Rx.c_str();
-  obj["topicTty1Tx"] = topicTty1Tx.c_str();
-  obj["ipAddress"] = ipAddress.c_str();
-  obj["macAddress"] = macAddress.c_str();
-  obj["ssid"] = ssid.c_str();
-  obj["mqtt"] = (mqttBroker.length() > 0 ? "connected" : "disconnected");
-  obj["password"] = password.length() > 0 ? "********" : "NO_PASSWORD";
-  obj["webUser"] = webUser.c_str();
-  obj["webPassword"] = webPassword.length() > 0 ? "********" : "NO_PASSWORD";
-  obj["debugEnabled"] = debugEnabled;
-  obj["tty02tty1Bridge"] = tty02tty1Bridge;
-  serializeJsonPretty(obj, output);
-  return std::string(output.c_str());
-#else
-  // Simple JSON serialization for testing (no ArduinoJson dependency)
-  std::ostringstream oss;
-  oss << "{\n"
-      << "  \"deviceName\": \"" << deviceName << "\",\n"
-      << "  \"mqttBroker\": \"" << mqttBroker << "\",\n"
-      << "  \"mqttPort\": " << mqttPort << ",\n"
-      << "  \"mqttUser\": \"" << mqttUser << "\",\n"
-      << "  \"mqttPassword\": \""
-      << (mqttPassword.empty() ? "NO_PASSWORD" : "********") << "\",\n"
-      << "  \"topicTty0Rx\": \"" << topicTty0Rx << "\",\n"
-      << "  \"topicTty0Tx\": \"" << topicTty0Tx << "\",\n"
-      << "  \"topicTty1Rx\": \"" << topicTty1Rx << "\",\n"
-      << "  \"topicTty1Tx\": \"" << topicTty1Tx << "\",\n"
-      << "  \"ipAddress\": \"" << ipAddress << "\",\n"
-      << "  \"macAddress\": \"" << macAddress << "\",\n"
-      << "  \"ssid\": \"" << ssid << "\",\n"
-      << "  \"mqtt\": \"" << (mqttBroker.empty() ? "disconnected" : "connected")
-      << "\",\n"
-      << "  \"password\": \"" << (password.empty() ? "NO_PASSWORD" : "********")
-      << "\",\n"
-      << "  \"webUser\": \"" << webUser << "\",\n"
-      << "  \"webPassword\": \""
-      << (webPassword.empty() ? "NO_PASSWORD" : "********") << "\",\n"
-      << "  \"debugEnabled\": " << (debugEnabled ? "true" : "false") << ",\n"
-      << "  \"tty02tty1Bridge\": " << (tty02tty1Bridge ? "true" : "false")
-      << "\n"
-      << "}";
-  return oss.str();
-#endif
+  // Delegate to the policy's JSON serialization implementation
+  return storage.serializeJson(deviceName, mqttBroker, mqttPort, mqttUser,
+                               mqttPassword, topicTty0Rx, topicTty0Tx,
+                               topicTty1Rx, topicTty1Tx, ipAddress, macAddress,
+                               ssid, password, webUser, webPassword,
+                               debugEnabled, tty02tty1Bridge);
 }
 
 template <typename StoragePolicy>
@@ -225,17 +158,5 @@ void PreferencesStorage<StoragePolicy>::clear() {
   debugEnabled = false;
   tty02tty1Bridge = false;
 }
-
-// ============================================================================
-// Explicit Template Instantiation
-// ============================================================================
-
-#ifdef ESP_PLATFORM
-// Instantiate for ESP32 platform
-template class PreferencesStorage<ESP32StoragePolicy>;
-#else
-// Instantiate for test platform
-template class PreferencesStorage<TestStoragePolicy>;
-#endif
 
 } // namespace jrb::wifi_serial
