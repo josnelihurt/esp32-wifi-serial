@@ -170,6 +170,13 @@ button:hover {
     display: flex;
     margin-top: 10px;
     flex-shrink: 0;
+    align-items: center;
+    gap: 10px;
+}
+
+.input-group table {
+    margin: 0;
+    border-collapse: collapse;
 }
 
 label {
@@ -197,6 +204,21 @@ form {
 
 .reset-btn:hover {
     background: #d32f2f;
+}
+
+.button-container {
+    display: flex;
+    margin-top: 20px;
+    gap: 10px;
+}
+
+.button-container .reset-btn {
+    margin-top: 0;
+    flex: 1;
+}
+
+.button-container button[type="submit"] {
+    flex: 1;
 }
 
 .clear-btn {

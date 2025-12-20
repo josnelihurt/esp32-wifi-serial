@@ -9,6 +9,8 @@ let localEcho0 = false;
 let localEcho1 = false;
 let passwordMode0 = false;
 let passwordMode1 = false;
+let autoNewline0 = false;
+let autoNewline1 = false;
 
 function switchTab(index) {
     document.querySelectorAll('.tab').forEach((t, i) => {
@@ -122,8 +124,14 @@ function pollSerial(port) {
 
 function sendCommand(port) {
     const i = document.getElementById('input' + port);
-    const c = i.value;
+    let c = i.value;
     if (!c) return;
+
+    // Check if auto newline is enabled and add \r\n
+    const autoNewline = (port === 0) ? autoNewline0 : autoNewline1;
+    if (autoNewline && !c.endsWith('\r\n')) {
+        c += '\r\n';
+    }
 
     // Local echo
     const localEcho = (port === 0) ? localEcho0 : localEcho1;
@@ -291,6 +299,39 @@ function togglePassword(port) {
 
     input.focus();
     input.setSelectionRange(input.value.length, input.value.length);
+}
+
+function toggleAutoNewline(port) {
+    const btn = document.getElementById('autoNewlineBtn' + port);
+
+    if (!btn) {
+        console.error('Auto Newline button not found for port:', port);
+        return;
+    }
+
+    if (port === 0) {
+        autoNewline0 = !autoNewline0;
+
+        // Update button appearance
+        if (autoNewline0) {
+            btn.classList.add('active');
+            btn.textContent = 'Auto NL ON';
+        } else {
+            btn.classList.remove('active');
+            btn.textContent = 'Auto NL';
+        }
+    } else if (port === 1) {
+        autoNewline1 = !autoNewline1;
+
+        // Update button appearance
+        if (autoNewline1) {
+            btn.classList.add('active');
+            btn.textContent = 'Auto NL ON';
+        } else {
+            btn.classList.remove('active');
+            btn.textContent = 'Auto NL';
+        }
+    }
 }
 
 function toggleLocalEcho(port) {

@@ -83,11 +83,13 @@
                 placeholder="Leave empty to keep current">
             <input type="hidden" id="mqtt_password_has_value" value="%MQTT_PASSWORD_HAS_VALUE%">
 
+            <div class="button-container">
+            <button class="reset-btn" 
+                onclick="if(confirm('Are you sure you want to reset the device? This will restart the ESP32.')){fetch('/reset',{method:'POST'}).then(()=>{alert('Device resetting...');});}">Reset
+                Device</button>
             <button type="submit">Save Configuration</button>
+        </div>
         </form>
-        <button class="reset-btn"
-            onclick="if(confirm('Are you sure you want to reset the device? This will restart the ESP32.')){fetch('/reset',{method:'POST'}).then(()=>{alert('Device resetting...');});}">Reset
-            Device</button>
     </div>
 
     <div id="tab-serial0" class="tab-content">
@@ -114,6 +116,7 @@
             <table class="input-group">
                 <td><button class="toggle-btn" id="localEchoBtn0" onclick="toggleLocalEcho(0)">Local Echo</button></td>
                 <td><button class="toggle-btn" id="passwordBtn0" onclick="togglePassword(0)">Password</button></td>
+                <td><button class="toggle-btn" id="autoNewlineBtn0" onclick="toggleAutoNewline(0)">Auto NL</button></td>
                 <td><button class="send-btn" onclick="sendCommand(0)">Send</button></td>
             </table>
         </div>
@@ -143,6 +146,7 @@
             <table class="input-group">
                 <td><button class="toggle-btn" id="localEchoBtn1" onclick="toggleLocalEcho(1)">Local Echo</button></td>
                 <td><button class="toggle-btn" id="passwordBtn1" onclick="togglePassword(1)">Password</button></td>
+                <td><button class="toggle-btn" id="autoNewlineBtn1" onclick="toggleAutoNewline(1)">Auto NL</button></td>
                 <td><button class="send-btn" onclick="sendCommand(1)">Send</button></td>
             </table>
         </div>
