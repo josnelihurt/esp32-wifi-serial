@@ -1,8 +1,8 @@
 #include "ssh_server.h"
 #include "domain/config/preferences_storage.h"
+#include "infrastructure/logging/logger.h"
 #include "libssh_esp32.h"
 #include "system_info.h"
-#include "infrastructure/logging/logger.h"
 #include <WiFi.h>
 #include <libssh/libssh.h>
 #include <libssh/server.h>
@@ -24,7 +24,7 @@ SSHServer::SSHServer(PreferencesStorageDefault &storage, SystemInfo &sysInfo,
     Log.errorln("SSH: Failed to create serialToSSH queue");
   } else {
     LOG_INFO("SSH: Queue created successfully (size=%d, item_size=%d)",
-               SSH_QUEUE_SIZE, SSH_QUEUE_ITEM_SIZE);
+             SSH_QUEUE_SIZE, SSH_QUEUE_ITEM_SIZE);
   }
 }
 
@@ -79,7 +79,7 @@ bool SSHServer::authenticateUser(const char *user, const char *password) {
   bool success = userMatch && passMatch;
 
   LOG_INFO("SSH auth attempt - user: %s, result: %s", user,
-             success ? "SUCCESS" : "FAILED");
+           success ? "SUCCESS" : "FAILED");
   return success;
 }
 
@@ -410,8 +410,8 @@ void SSHServer::setup() {
   running = true;
   LOG_INFO("SSH Server: Started successfully on port 22");
   LOG_INFO("SSH Server: Connect with: ssh %s@%s",
-             preferencesStorage.webUser.c_str(),
-             WiFi.localIP().toString().c_str());
+           preferencesStorage.webUser.c_str(),
+           WiFi.localIP().toString().c_str());
 
   LOG_INFO("%s: Starting SSH task", __PRETTY_FUNCTION__);
   xTaskCreate(sshTask, "SSH_Server",

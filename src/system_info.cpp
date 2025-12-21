@@ -1,6 +1,6 @@
 #include "system_info.h"
-#include "infrastructure/logging/logger.h"
 #include "domain/config/preferences_storage.h"
+#include "infrastructure/logging/logger.h"
 #include "infrastructure/types.hpp"
 #include <Arduino.h>
 #include <WiFi.h>

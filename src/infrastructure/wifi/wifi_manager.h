@@ -2,7 +2,6 @@
 
 #include "domain/config/preferences_storage_policy.h"
 
-
 namespace jrb::wifi_serial {
 
 class WiFiManager final {

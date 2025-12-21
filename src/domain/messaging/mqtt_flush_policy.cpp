@@ -1,6 +1,9 @@
 #include "mqtt_flush_policy.h"
 #include "infrastructure/logging/logger.h"
 
+#include <Arduino.h>
+#include <PubSubClient.h>
+
 namespace jrb::wifi_serial {
 
 MqttFlushPolicy::MqttFlushPolicy(PubSubClient &mqttClient,

@@ -38,7 +38,7 @@ bool WiFiManager::connect() {
   WiFi.setAutoReconnect(true);
 
   LOG_INFO("%s: Attempting to connect to SSID: '%s'", __PRETTY_FUNCTION__,
-             preferencesStorage.ssid.c_str());
+           preferencesStorage.ssid.c_str());
 
   WiFi.begin(preferencesStorage.ssid.c_str(),
              preferencesStorage.password.c_str());
@@ -81,9 +81,9 @@ bool WiFiManager::connect() {
     }
 
     LOG_INFO("%s: connecting to '%s' password: '********', attempts: %d of "
-               "30, status: %d (%s)",
-               __PRETTY_FUNCTION__, preferencesStorage.ssid.c_str(), attempts,
-               status, statusStr);
+             "30, status: %d (%s)",
+             __PRETTY_FUNCTION__, preferencesStorage.ssid.c_str(), attempts,
+             status, statusStr);
 
     // If we see NO_SSID_AVAIL, the network isn't visible - bail out early
     if (status == WL_NO_SSID_AVAIL && attempts > 5) {
@@ -102,9 +102,9 @@ bool WiFiManager::connect() {
 
   apMode = false;
   LOG_INFO("%s: %s", __PRETTY_FUNCTION__,
-             R"(WiFi connected!
+           R"(WiFi connected!
 IP address: %s)",
-             WiFi.localIP().toString().c_str());
+           WiFi.localIP().toString().c_str());
 
   return true;
 }
@@ -123,10 +123,10 @@ void WiFiManager::setupAP() {
 
   apIP = WiFi.softAPIP();
   LOG_INFO("%s: %s", __PRETTY_FUNCTION__,
-             R"(AP Mode
+           R"(AP Mode
 AP Name: %s
 AP IP address: %s)",
-             apName.c_str(), apIP.toString().c_str());
+           apName.c_str(), apIP.toString().c_str());
 }
 
 } // namespace jrb::wifi_serial

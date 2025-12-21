@@ -15,12 +15,11 @@
 #include "infrastructure/wifi/wifi_manager.h"
 #include "ota_manager.h"
 #include "system_info.h"
-#include <Arduino.h>
-#include <HardwareSerial.h>
 #include <WiFiClient.h>
 #include <functional>
 #include <vector>
 
+class HardwareSerial;
 namespace jrb::wifi_serial {
 
 /**

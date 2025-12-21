@@ -1,8 +1,9 @@
 #include "application.h"
+#include "infrastructure/logging/logger.h"
 #include "infrastructure/mqttt/mqtt_client.h"
 #include <Arduino.h>
-#include "infrastructure/logging/logger.h"
 #include <ArduinoOTA.h>
+#include <HardwareSerial.h>
 #include <WiFi.h>
 
 namespace jrb::wifi_serial {
@@ -50,9 +51,9 @@ void Application::setupSerial1() {
     baudRate = DEFAULT_BAUD_RATE_TTY1;
   }
   LOG_INFO("%s: Initializing serial1 with baud rate: %d, RX: %d, TX: %d, "
-             "config: 0x%x",
-             __PRETTY_FUNCTION__, baudRate, SERIAL1_RX_PIN, SERIAL1_TX_PIN,
-             SERIAL_8N1);
+           "config: 0x%x",
+           __PRETTY_FUNCTION__, baudRate, SERIAL1_RX_PIN, SERIAL1_TX_PIN,
+           SERIAL_8N1);
   serial1 = new HardwareSerial(1);
   serial1->begin(baudRate, SERIAL_8N1, SERIAL1_RX_PIN, SERIAL1_TX_PIN);
 }

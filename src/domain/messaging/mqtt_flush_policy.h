@@ -1,9 +1,8 @@
 #pragma once
 
 #include "infrastructure/types.hpp"
-#include <Arduino.h>
-#include <PubSubClient.h>
 
+class PubSubClient;
 namespace jrb::wifi_serial {
 
 class MqttFlushPolicy {

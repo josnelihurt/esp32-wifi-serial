@@ -21,7 +21,7 @@ public:
 
 private:
   SSHServer &sshServer;
-  std::vector<uint8_t> buffer;
+  std::vector<uint8_t> buffer;                  // TODO: replace this!
   static constexpr size_t FLUSH_THRESHOLD = 64; // Flush every 64 bytes
 
   void flushIfNeeded();

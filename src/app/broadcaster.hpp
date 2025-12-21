@@ -1,7 +1,6 @@
 #pragma once
 #include "config.h"
 #include "infrastructure/types.hpp"
-#include <Arduino.h>
 #include <tuple>
 #include <utility>
 

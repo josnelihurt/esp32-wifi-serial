@@ -5,13 +5,13 @@
 #include "domain/messaging/buffered_stream.hpp"
 #include "domain/messaging/mqtt_flush_policy.h"
 #include "infrastructure/types.hpp"
-#include <Arduino.h>
-#include <PubSubClient.h>
-#include <WiFi.h>
 #include <functional>
 #include <memory>
 
 #include <vector>
+
+class PubSubClient;
+class WiFiClient;
 
 namespace jrb::wifi_serial {
 
@@ -56,8 +56,8 @@ private:
   void (*onTty1Callback)(const types::span<const uint8_t> &);
 
   // Pending buffers for cross-task data transfer (web task → main loop)
-  std::vector<uint8_t> tty0PendingBuffer;
-  std::vector<uint8_t> tty1PendingBuffer;
+  std::vector<uint8_t> tty0PendingBuffer; // TODO: replace this!
+  std::vector<uint8_t> tty1PendingBuffer; // TODO: replace this!
 
   BufferedStream<MqttFlushPolicy> tty0Stream;
   unsigned long tty0LastFlushMillis;

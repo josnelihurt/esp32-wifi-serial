@@ -1,6 +1,6 @@
 #include "app/application.h"
-#include <Arduino.h>
 #include "infrastructure/logging/logger.h"
+#include <Arduino.h>
 #include <driver/uart.h>
 #include <hal/uart_ll.h>
 

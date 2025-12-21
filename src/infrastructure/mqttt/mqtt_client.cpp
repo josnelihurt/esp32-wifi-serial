@@ -1,8 +1,11 @@
 #include "mqtt_client.h"
 #include "config.h"
 #include "domain/config/preferences_storage.h"
-#include "infrastructure/types.hpp"
 #include "infrastructure/logging/logger.h"
+#include "infrastructure/types.hpp"
+#include <Arduino.h>
+#include <PubSubClient.h>
+#include <WiFi.h>
 #include <cstring>
 #include <iomanip>
 #include <sstream>
@@ -93,7 +96,7 @@ bool MqttClient::connect(const char *broker, int port, const char *user,
   types::string clientId = oss.str();
 
   LOG_INFO("MQTT connecting to %s:%d (ClientID: %s)", broker, port,
-             clientId.c_str());
+           clientId.c_str());
 
   bool result = false;
   if (user && password) {

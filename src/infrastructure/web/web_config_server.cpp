@@ -2,9 +2,9 @@
 #include "config.h"
 #include "domain/config/preferences_storage.h"
 #include "domain/serial/serial_log.hpp"
+#include "infrastructure/logging/logger.h"
 #include "infrastructure/types.hpp"
 #include <Arduino.h>
-#include "infrastructure/logging/logger.h"
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
 #include <Preferences.h>
