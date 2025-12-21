@@ -57,7 +57,7 @@ void SSHServer::sendToSSHClients(const types::span<const uint8_t> &data) {
                         ? data.size()
                         : SSH_QUEUE_PAYLOAD_SIZE;
   if (copySize < data.size()) {
-    Log.warningln("SSH: Truncating %d bytes to %d", (int)data.size(),
+    LOG_WARN("SSH: Truncating %d bytes to %d", (int)data.size(),
                   (int)copySize);
   }
 
@@ -66,7 +66,7 @@ void SSHServer::sendToSSHClients(const types::span<const uint8_t> &data) {
   memcpy(queueItem + 1, data.data(), copySize);
 
   if (xQueueSend(serialToSSHQueue, queueItem, 0) != pdTRUE) {
-    Log.warningln("SSH: Queue full, dropping %d bytes", (int)data.size());
+    LOG_WARN("SSH: Queue full, dropping %d bytes", (int)data.size());
   }
 }
 
@@ -177,7 +177,7 @@ bool SSHServer::authenticateSession(void *session) {
     ssh_message_free(message);
   }
 
-  Log.warningln("SSH: Authentication timeout after %d ms", SSH_AUTH_TIMEOUT_MS);
+  LOG_WARN("SSH: Authentication timeout after %d ms", SSH_AUTH_TIMEOUT_MS);
   return false;
 }
 
@@ -203,7 +203,7 @@ bool SSHServer::waitForChannelSession(void *session, void **channel) {
     ssh_message_free(message);
   }
 
-  Log.warningln("SSH: Channel session timeout after %d ms",
+  LOG_WARN("SSH: Channel session timeout after %d ms",
                 SSH_CHANNEL_TIMEOUT_MS);
   return false;
 }
@@ -234,7 +234,7 @@ bool SSHServer::waitForShellRequest(void *session, void *channel) {
     ssh_message_free(message);
   }
 
-  Log.warningln("SSH: Shell request timeout after %d ms", SSH_SHELL_TIMEOUT_MS);
+  LOG_WARN("SSH: Shell request timeout after %d ms", SSH_SHELL_TIMEOUT_MS);
   return false;
 }
 
@@ -244,7 +244,7 @@ void SSHServer::handleSSHSession(void *session) {
   specialCharacterMode = false;
 
   if (!authenticateSession(session)) {
-    Log.warningln("SSH: Authentication failed");
+    LOG_WARN("SSH: Authentication failed");
     return;
   }
 
@@ -275,7 +275,7 @@ void SSHServer::handleSSHSession(void *session) {
 
   while (ssh_channel_is_open(channel) && !ssh_channel_is_eof(channel)) {
     if (millis() - sessionStartTime > 3600000) { // 1 hour timeout
-      Log.warningln("SSH: Session timeout after 1 hour");
+      LOG_WARN("SSH: Session timeout after 1 hour");
       ssh_channel_write(
           channel, "\r\nSSH session timeout (1 hour). Disconnecting...\r\n",
           52);
@@ -316,7 +316,7 @@ void SSHServer::handleSSHSession(void *session) {
                           specialCharacterResponse.length());
         continue;
       }
-      Log.verboseln("$ssh->ttyS1$: %d bytes", nbytes);
+      LOG_VERBOSE("$ssh->ttyS1$: %d bytes", nbytes);
       ssh_channel_write(channel, sshToSerialBuffer,
                         nbytes); // echo back to SSH client
       serialWrite(types::span<const uint8_t>(sshToSerialBuffer,
@@ -328,7 +328,7 @@ void SSHServer::handleSSHSession(void *session) {
                       pdMS_TO_TICKS(SSH_QUEUE_TIMEOUT_MS)) == pdTRUE) {
       size_t actualSize = serialToSSHBuffer[0];
       if (actualSize > 0 && actualSize <= SSH_QUEUE_PAYLOAD_SIZE) {
-        Log.verboseln("$ttyS1->ssh$: %d bytes", actualSize);
+        LOG_VERBOSE("$ttyS1->ssh$: %d bytes", actualSize);
         ssh_channel_write(channel, serialToSSHBuffer + 1, actualSize);
       }
     }

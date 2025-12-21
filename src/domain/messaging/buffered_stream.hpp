@@ -33,7 +33,7 @@ public:
     head = (head + 1) & (MQTT_BUFFER_SIZE - 1);
 
     if (full()) {
-      Log.warningln("MQTT buffer overflow");
+      LOG_WARN("MQTT buffer overflow");
       tail = (tail + 1) & (MQTT_BUFFER_SIZE - 1);
     } else {
       size++;

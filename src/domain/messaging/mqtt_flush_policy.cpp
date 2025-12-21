@@ -23,7 +23,7 @@ void MqttFlushPolicy::flush(const types::span<const uint8_t> &buffer,
     return;
   }
 
-  Log.verboseln("MQTT publishing %d bytes to topic: %s", buffer.size(),
+  LOG_VERBOSE("MQTT publishing %d bytes to topic: %s", buffer.size(),
                 topic.c_str());
   bool result = mqttClient.publish(topic.c_str(), buffer.data(), buffer.size());
   if (!result) {

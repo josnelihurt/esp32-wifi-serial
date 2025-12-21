@@ -97,7 +97,7 @@ void Application::setup() {
         // Handle web to serial and mqtt
         if (s_instance->preferencesStorage.debugEnabled) {
           String dataString(data.data(), data.size());
-          Log.info("$web->ttyS0$%s", dataString.c_str());
+          LOG_INFO_RAW("$web->ttyS0$%s", dataString.c_str());
         }
         s_instance->mqttClient.appendToTty0Buffer(data);
       },
@@ -105,7 +105,7 @@ void Application::setup() {
         // Handle web to serial and mqtt
         if (s_instance->preferencesStorage.debugEnabled) {
           String dataString(data.data(), data.size());
-          Log.info("$web->ttyS1$%s", dataString.c_str());
+          LOG_INFO_RAW("$web->ttyS1$%s", dataString.c_str());
         }
         s_instance->mqttClient.appendToTty1Buffer(data);
         if (s_instance->serial1) {

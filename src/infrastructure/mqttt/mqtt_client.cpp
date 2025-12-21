@@ -160,7 +160,7 @@ void MqttClient::subscribeToConfiguredTopics() {
 
 void MqttClient::handleConnectionStateChange(bool wasConnected) {
   if (wasConnected && !connected) {
-    Log.warningln("MQTT connection lost!");
+    LOG_WARN("MQTT connection lost!");
     return;
   }
 
@@ -172,13 +172,13 @@ void MqttClient::handleConnectionStateChange(bool wasConnected) {
 
 void MqttClient::flushBuffersIfNeeded() {
   if ((millis() - tty0LastFlushMillis >= MQTT_PUBLISH_INTERVAL_MS)) {
-    Log.verboseln("Flushing tty0 buffer due to interval");
+    LOG_VERBOSE("Flushing tty0 buffer due to interval");
     tty0LastFlushMillis = millis();
     tty0Stream.flush();
   }
 
   if ((millis() - tty1LastFlushMillis >= MQTT_PUBLISH_INTERVAL_MS)) {
-    Log.verboseln("Flushing tty1 buffer due to interval");
+    LOG_VERBOSE("Flushing tty1 buffer due to interval");
     tty1LastFlushMillis = millis();
     tty1Stream.flush();
   }
@@ -231,7 +231,7 @@ bool MqttClient::publishInfo(const types::string &data) {
 
   connected = mqttClient->connected();
   if (!connected) {
-    Log.warningln("MQTT publishInfo failed: not connected");
+    LOG_WARN("MQTT publishInfo failed: not connected");
     return false;
   }
 
