@@ -7,9 +7,9 @@
 
 namespace jrb::wifi_serial {
 
-template <typename FlushPolicy> class BufferedStream final {
+template <typename FlushPolicy, size_t SIZE> class BufferedStream final {
 private:
-  std::array<uint8_t, MQTT_BUFFER_SIZE> buffer;
+  std::array<uint8_t, SIZE> buffer;
   size_t head{0};
   size_t tail{0};
   size_t size{0};
@@ -19,7 +19,7 @@ private:
 public:
   explicit BufferedStream(FlushPolicy &&flusher_, const char *name_)
       : flusher(flusher_), name(name_) {
-    static_assert((MQTT_BUFFER_SIZE & (MQTT_BUFFER_SIZE - 1)) == 0,
+    static_assert((SIZE & (SIZE - 1)) == 0,
                   "MQTT_BUFFER_SIZE must be power of two");
   }
 
@@ -30,11 +30,11 @@ public:
     }
 
     buffer[head] = byte;
-    head = (head + 1) & (MQTT_BUFFER_SIZE - 1);
+    head = (head + 1) & (SIZE - 1);
 
     if (full()) {
       LOG_WARN("MQTT buffer overflow");
-      tail = (tail + 1) & (MQTT_BUFFER_SIZE - 1);
+      tail = (tail + 1) & (SIZE - 1);
     } else {
       size++;
     }
@@ -63,14 +63,13 @@ public:
     if (empty())
       return;
 
-    // Construye un span de los datos
     if (head > tail || full()) {
       // Contiguous segment
       types::span<const uint8_t> span(&buffer[tail], size);
       flusher.flush(span, name);
     } else {
       // Wrapped segment: send two chunks
-      types::span<const uint8_t> span1(&buffer[tail], MQTT_BUFFER_SIZE - tail);
+      types::span<const uint8_t> span1(&buffer[tail], SIZE - tail);
       flusher.flush(span1, name);
       if (head > 0) {
         types::span<const uint8_t> span2(&buffer[0], head);
@@ -82,12 +81,12 @@ public:
     size = 0;
   }
 
-  bool full() const { return size == MQTT_BUFFER_SIZE; }
+  bool full() const { return size == SIZE; }
   bool empty() const { return size == 0; }
 
 private:
   bool needsFlushForOverflow(size_t dataSize) const {
-    return (size + dataSize) > MQTT_BUFFER_SIZE;
+    return (size + dataSize) > SIZE;
   }
 };
 

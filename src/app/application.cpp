@@ -16,10 +16,10 @@ Application::Application()
       mqttClient(wifiClient, preferencesStorage),
       systemInfo(preferencesStorage, otaEnabled),
       sshServer(preferencesStorage, systemInfo, specialCharacterHandler),
-      sshSubscriber(sshServer), webServer(preferencesStorage),
+      webServer(preferencesStorage),
       tty0Broadcaster(webServer.getTty0Stream(), mqttClient.getTty0Stream()),
       tty1Broadcaster(webServer.getTty1Stream(), mqttClient.getTty1Stream(),
-                      sshSubscriber),
+                      sshServer.getStream()),
       otaManager(preferencesStorage, otaEnabled),
       specialCharacterHandler(systemInfo, preferencesStorage) {
   // Set static instance for MQTT callbacks

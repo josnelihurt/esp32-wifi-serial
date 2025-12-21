@@ -15,7 +15,8 @@ SSHServer::SSHServer(PreferencesStorageDefault &storage, SystemInfo &sysInfo,
       hostKey(nullptr), running(false), sshTaskHandle(nullptr),
       serialWrite(nullptr), serialToSSHQueue(nullptr), activeSSHSession(false),
       specialCharacterMode(false),
-      specialCharacterHandler(specialCharacterHandler) {
+      specialCharacterHandler(specialCharacterHandler),
+      sshLog(SshFlushPolicy(*this, "ssh"), "ssh") {
   LOG_DEBUG(__PRETTY_FUNCTION__);
 
   // Create FreeRTOS queue for thread-safe serial→SSH data transfer

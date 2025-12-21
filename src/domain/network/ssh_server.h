@@ -7,6 +7,7 @@
 #include <freertos/queue.h>
 #include <freertos/task.h>
 #include <functional>
+#include "ssh_buffer.h"
 
 namespace jrb::wifi_serial {
 
@@ -54,6 +55,7 @@ private:
   static constexpr uint32_t SSH_CHANNEL_TIMEOUT_MS = 10000;
   static constexpr uint32_t SSH_SHELL_TIMEOUT_MS = 10000;
   static constexpr uint32_t SSH_SESSION_TIMEOUT_MS = 3600000; // 1 hour
+  SshLog sshLog;
 
 public:
   SSHServer(PreferencesStorageDefault &storage, SystemInfo &sysInfo,
@@ -95,6 +97,8 @@ public:
    * @return true if server is active and accepting connections
    */
   bool isRunning() const;
+
+  SshLog &getStream() { return sshLog; }
 
 private:
   static void sshTask(void *parameter);

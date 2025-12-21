@@ -4,10 +4,9 @@
 #include "config.h"
 #include "domain/config/preferences_storage.h"
 #include "domain/config/special_character_handler.h"
-#include "domain/messaging/buffered_stream.hpp"
-#include "domain/messaging/mqtt_flush_policy.h"
+#include "domain/messaging/mqtt_buffer.h"
 #include "domain/network/ssh_server.h"
-#include "domain/network/ssh_subscriber.h"
+#include "domain/network/ssh_buffer.h"
 #include "domain/serial/serial_log.hpp"
 #include "infrastructure/hardware/button_handler.h"
 #include "infrastructure/mqttt/mqtt_client.h"
@@ -75,12 +74,11 @@ private:
   MqttClient mqttClient;
   SystemInfo systemInfo;
   SSHServer sshServer;
-  SSHSubscriber sshSubscriber;
   SpecialCharacterHandler specialCharacterHandler;
 
   WebConfigServer webServer;
-  Broadcaster<SerialLog, BufferedStream<MqttFlushPolicy>> tty0Broadcaster;
-  Broadcaster<SerialLog, BufferedStream<MqttFlushPolicy>, SSHSubscriber>
+  Broadcaster<SerialLog, MqttLog> tty0Broadcaster;
+  Broadcaster<SerialLog, MqttLog, SshLog>
       tty1Broadcaster;
 
   // Serial hardware (heap-allocated to control initialization timing)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "circular_buffer.hpp"
+#include "infrastructure/memory/circular_buffer.hpp"
 #include "config.h"
 #include <algorithm>
 namespace jrb::wifi_serial {

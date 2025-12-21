@@ -2,8 +2,7 @@
 
 #include "config.h"
 #include "domain/config/preferences_storage_policy.h"
-#include "domain/messaging/buffered_stream.hpp"
-#include "domain/messaging/mqtt_flush_policy.h"
+#include "domain/messaging/mqtt_buffer.h"
 #include "infrastructure/types.hpp"
 #include <functional>
 #include <memory>
@@ -39,8 +38,8 @@ public:
 
   void appendToTty0Buffer(const types::span<const uint8_t> &data);
   void appendToTty1Buffer(const types::span<const uint8_t> &data);
-  BufferedStream<MqttFlushPolicy> &getTty0Stream() { return tty0Stream; }
-  BufferedStream<MqttFlushPolicy> &getTty1Stream() { return tty1Stream; }
+  MqttLog &getTty0Stream() { return tty0Stream; }
+  MqttLog &getTty1Stream() { return tty1Stream; }
 
 private:
   std::unique_ptr<PubSubClient> mqttClient;
@@ -59,9 +58,9 @@ private:
   std::vector<uint8_t> tty0PendingBuffer; // TODO: replace this!
   std::vector<uint8_t> tty1PendingBuffer; // TODO: replace this!
 
-  BufferedStream<MqttFlushPolicy> tty0Stream;
+  MqttLog tty0Stream;
   unsigned long tty0LastFlushMillis;
-  BufferedStream<MqttFlushPolicy> tty1Stream;
+  MqttLog tty1Stream;
   unsigned long tty1LastFlushMillis;
 
   void subscribeToConfiguredTopics();

@@ -1,4 +1,4 @@
-#include "domain/serial/circular_buffer.hpp"
+#include "infrastructure/memory/circular_buffer.hpp"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
