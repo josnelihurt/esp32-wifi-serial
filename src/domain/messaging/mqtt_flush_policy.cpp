@@ -1,5 +1,5 @@
 #include "mqtt_flush_policy.h"
-#include <ArduinoLog.h>
+#include "infrastructure/logging/logger.h"
 
 namespace jrb::wifi_serial {
 

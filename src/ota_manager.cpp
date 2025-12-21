@@ -1,6 +1,6 @@
 #include "ota_manager.h"
 #include "domain/config/preferences_storage.h"
-#include <ArduinoLog.h>
+#include "infrastructure/logging/logger.h"
 #include <ArduinoOTA.h>
 
 namespace jrb::wifi_serial {
@@ -19,10 +19,10 @@ void OTAManager::setup() {
     } else {
       type = "filesystem";
     }
-    Log.infoln("OTA: Start updating %s", type.c_str());
+    LOG_INFO("OTA: Start updating %s", type.c_str());
   });
 
-  ArduinoOTA.onEnd([]() { Log.infoln("OTA: Update complete"); });
+  ArduinoOTA.onEnd([]() { LOG_INFO("OTA: Update complete"); });
 
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     Log.traceln("OTA: Progress: %u%%", (progress / (total / 100)));

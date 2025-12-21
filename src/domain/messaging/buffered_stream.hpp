@@ -1,7 +1,7 @@
 #pragma once
 
 #include "config.h"
-#include <ArduinoLog.h>
+#include "infrastructure/logging/logger.h"
 #include <array>
 #include <cstdint>
 

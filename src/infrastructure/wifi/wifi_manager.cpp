@@ -1,7 +1,7 @@
 #include "wifi_manager.h"
 #include "config.h"
 #include "domain/config/preferences_storage.h"
-#include <ArduinoLog.h>
+#include "infrastructure/logging/logger.h"
 #include <Preferences.h>
 #include <WiFi.h>
 namespace jrb::wifi_serial {
@@ -37,7 +37,7 @@ bool WiFiManager::connect() {
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
 
-  Log.infoln("%s: Attempting to connect to SSID: '%s'", __PRETTY_FUNCTION__,
+  LOG_INFO("%s: Attempting to connect to SSID: '%s'", __PRETTY_FUNCTION__,
              preferencesStorage.ssid.c_str());
 
   WiFi.begin(preferencesStorage.ssid.c_str(),
@@ -80,7 +80,7 @@ bool WiFiManager::connect() {
       break;
     }
 
-    Log.infoln("%s: connecting to '%s' password: '********', attempts: %d of "
+    LOG_INFO("%s: connecting to '%s' password: '********', attempts: %d of "
                "30, status: %d (%s)",
                __PRETTY_FUNCTION__, preferencesStorage.ssid.c_str(), attempts,
                status, statusStr);
@@ -101,7 +101,7 @@ bool WiFiManager::connect() {
   }
 
   apMode = false;
-  Log.infoln("%s: %s", __PRETTY_FUNCTION__,
+  LOG_INFO("%s: %s", __PRETTY_FUNCTION__,
              R"(WiFi connected!
 IP address: %s)",
              WiFi.localIP().toString().c_str());
@@ -122,7 +122,7 @@ void WiFiManager::setupAP() {
   WiFi.softAP(apName.c_str(), nullptr);
 
   apIP = WiFi.softAPIP();
-  Log.infoln("%s: %s", __PRETTY_FUNCTION__,
+  LOG_INFO("%s: %s", __PRETTY_FUNCTION__,
              R"(AP Mode
 AP Name: %s
 AP IP address: %s)",

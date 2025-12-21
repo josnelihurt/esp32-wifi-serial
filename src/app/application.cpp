@@ -1,7 +1,7 @@
 #include "application.h"
 #include "infrastructure/mqttt/mqtt_client.h"
 #include <Arduino.h>
-#include <ArduinoLog.h>
+#include "infrastructure/logging/logger.h"
 #include <ArduinoOTA.h>
 #include <WiFi.h>
 
@@ -32,7 +32,7 @@ Application::Application()
   sshServer.setSerialWriteCallback([](const types::span<const uint8_t> &data) {
     if (s_instance->preferencesStorage.debugEnabled) {
       String dataString((const char *)data.data(), data.size());
-      Log.infoln("$ssh->ttyS1$%s", dataString.c_str());
+      LOG_INFO("$ssh->ttyS1$%s", dataString.c_str());
     }
     if (s_instance->serial1) {
       s_instance->serial1->write(data.data(), data.size());
@@ -49,7 +49,7 @@ void Application::setupSerial1() {
                 __PRETTY_FUNCTION__, baudRate);
     baudRate = DEFAULT_BAUD_RATE_TTY1;
   }
-  Log.infoln("%s: Initializing serial1 with baud rate: %d, RX: %d, TX: %d, "
+  LOG_INFO("%s: Initializing serial1 with baud rate: %d, RX: %d, TX: %d, "
              "config: 0x%x",
              __PRETTY_FUNCTION__, baudRate, SERIAL1_RX_PIN, SERIAL1_TX_PIN,
              SERIAL_8N1);
@@ -73,7 +73,7 @@ void Application::setup() {
       [](const types::span<const uint8_t> &data) {
         if (s_instance->preferencesStorage.debugEnabled) {
           String dataString(data.data(), data.size());
-          Log.infoln("$mqtt->ttyS1$%s", dataString.c_str());
+          LOG_INFO("$mqtt->ttyS1$%s", dataString.c_str());
         }
         if (s_instance->serial1) {
           s_instance->serial1->write(data.data(), data.size());
@@ -118,12 +118,12 @@ void Application::setup() {
 
   lastInfoPublish = millis();
   systemInfo.logSystemInformation();
-  Log.infoln("Setup complete!");
+  LOG_INFO("Setup complete!");
 }
 
 void Application::loop() {
   if (buttonHandler.checkTriplePress()) {
-    Log.infoln(
+    LOG_INFO(
         "Triple press detected! Resetting configuration and restarting...");
     preferencesStorage.clear();
     ESP.restart();

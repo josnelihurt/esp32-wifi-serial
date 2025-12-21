@@ -2,7 +2,7 @@
 #include "domain/config/preferences_storage.h"
 #include "libssh_esp32.h"
 #include "system_info.h"
-#include <ArduinoLog.h>
+#include "infrastructure/logging/logger.h"
 #include <WiFi.h>
 #include <libssh/libssh.h>
 #include <libssh/server.h>
@@ -23,7 +23,7 @@ SSHServer::SSHServer(PreferencesStorageDefault &storage, SystemInfo &sysInfo,
   if (!serialToSSHQueue) {
     Log.errorln("SSH: Failed to create serialToSSH queue");
   } else {
-    Log.infoln("SSH: Queue created successfully (size=%d, item_size=%d)",
+    LOG_INFO("SSH: Queue created successfully (size=%d, item_size=%d)",
                SSH_QUEUE_SIZE, SSH_QUEUE_ITEM_SIZE);
   }
 }
@@ -78,7 +78,7 @@ bool SSHServer::authenticateUser(const char *user, const char *password) {
   bool passMatch = (preferencesStorage.webPassword == password);
   bool success = userMatch && passMatch;
 
-  Log.infoln("SSH auth attempt - user: %s, result: %s", user,
+  LOG_INFO("SSH auth attempt - user: %s, result: %s", user,
              success ? "SUCCESS" : "FAILED");
   return success;
 }
@@ -248,7 +248,7 @@ void SSHServer::handleSSHSession(void *session) {
     return;
   }
 
-  Log.infoln("SSH: User authenticated successfully");
+  LOG_INFO("SSH: User authenticated successfully");
 
   ssh_channel channel = nullptr;
   if (!waitForChannelSession(session, (void **)&channel)) {
@@ -256,7 +256,7 @@ void SSHServer::handleSSHSession(void *session) {
     return;
   }
 
-  Log.infoln("SSH: Channel opened");
+  LOG_INFO("SSH: Channel opened");
 
   if (!waitForShellRequest(session, channel)) {
     Log.errorln("SSH: No shell requested");
@@ -265,7 +265,7 @@ void SSHServer::handleSSHSession(void *session) {
     return;
   }
 
-  Log.infoln("SSH: Shell session started");
+  LOG_INFO("SSH: Shell session started");
   activeSSHSession = true;
   sendWelcomeMessage(channel);
 
@@ -334,14 +334,14 @@ void SSHServer::handleSSHSession(void *session) {
     }
   }
 
-  Log.infoln("SSH: Session ended");
+  LOG_INFO("SSH: Session ended");
   ssh_channel_close(channel);
   ssh_channel_free(channel);
   activeSSHSession = false;
 }
 
 void SSHServer::setup() {
-  Log.infoln("%s: please wait this may take a while...", __PRETTY_FUNCTION__);
+  LOG_INFO("%s: please wait this may take a while...", __PRETTY_FUNCTION__);
 
   if (WiFi.status() != WL_CONNECTED) {
     Log.errorln("%s: WiFi not connected, cannot setup SSH server",
@@ -349,17 +349,17 @@ void SSHServer::setup() {
     return;
   }
 
-  Log.infoln("%s: Initializing libssh for ESP32", __PRETTY_FUNCTION__);
+  LOG_INFO("%s: Initializing libssh for ESP32", __PRETTY_FUNCTION__);
   libssh_begin();
 
-  Log.infoln("%s: Initializing libssh", __PRETTY_FUNCTION__);
+  LOG_INFO("%s: Initializing libssh", __PRETTY_FUNCTION__);
   int rc = ssh_init();
   if (rc != SSH_OK) {
     Log.errorln("%s: Failed to initialize libssh: %d", __PRETTY_FUNCTION__, rc);
     return;
   }
 
-  Log.infoln("%s: Creating SSH bind (server listener)", __PRETTY_FUNCTION__);
+  LOG_INFO("%s: Creating SSH bind (server listener)", __PRETTY_FUNCTION__);
   sshBind = ssh_bind_new();
   if (!sshBind) {
     Log.errorln("%s: Failed to create SSH bind", __PRETTY_FUNCTION__);
@@ -367,10 +367,10 @@ void SSHServer::setup() {
     return;
   }
 
-  Log.infoln("%s: Configuring SSH bind options", __PRETTY_FUNCTION__);
+  LOG_INFO("%s: Configuring SSH bind options", __PRETTY_FUNCTION__);
   ssh_bind_options_set((ssh_bind)sshBind, SSH_BIND_OPTIONS_BINDPORT_STR, "22");
 
-  Log.infoln("%s: Generating RSA host key", __PRETTY_FUNCTION__);
+  LOG_INFO("%s: Generating RSA host key", __PRETTY_FUNCTION__);
   ssh_key tempHostkey = nullptr;
   rc = ssh_pki_generate(SSH_KEYTYPE_RSA, SSH_RSA_KEY_BITS, &tempHostkey);
   if (rc != SSH_OK || !tempHostkey) {
@@ -381,7 +381,7 @@ void SSHServer::setup() {
     return;
   }
 
-  Log.infoln("%s: Setting host key for SSH bind", __PRETTY_FUNCTION__);
+  LOG_INFO("%s: Setting host key for SSH bind", __PRETTY_FUNCTION__);
   rc = ssh_bind_options_set((ssh_bind)sshBind, SSH_BIND_OPTIONS_IMPORT_KEY,
                             tempHostkey);
   if (rc != SSH_OK) {
@@ -395,9 +395,9 @@ void SSHServer::setup() {
 
   // Store hostkey for later cleanup - DO NOT free here as sshBind references it
   hostKey = tempHostkey;
-  Log.infoln("SSH Server: RSA host key generated successfully");
+  LOG_INFO("SSH Server: RSA host key generated successfully");
 
-  Log.infoln("%s: Starting listening", __PRETTY_FUNCTION__);
+  LOG_INFO("%s: Starting listening", __PRETTY_FUNCTION__);
   if (ssh_bind_listen((ssh_bind)sshBind) < 0) {
     Log.errorln("SSH Server: Failed to listen on port 22: %s",
                 ssh_get_error((ssh_bind)sshBind));
@@ -408,12 +408,12 @@ void SSHServer::setup() {
   }
 
   running = true;
-  Log.infoln("SSH Server: Started successfully on port 22");
-  Log.infoln("SSH Server: Connect with: ssh %s@%s",
+  LOG_INFO("SSH Server: Started successfully on port 22");
+  LOG_INFO("SSH Server: Connect with: ssh %s@%s",
              preferencesStorage.webUser.c_str(),
              WiFi.localIP().toString().c_str());
 
-  Log.infoln("%s: Starting SSH task", __PRETTY_FUNCTION__);
+  LOG_INFO("%s: Starting SSH task", __PRETTY_FUNCTION__);
   xTaskCreate(sshTask, "SSH_Server",
               SSH_TASK_STACK_SIZE, // Stack size
               this,
@@ -421,7 +421,7 @@ void SSHServer::setup() {
               &sshTaskHandle);
 
   if (sshTaskHandle) {
-    Log.infoln("%s: Task created successfully", __PRETTY_FUNCTION__);
+    LOG_INFO("%s: Task created successfully", __PRETTY_FUNCTION__);
   } else {
     Log.errorln("%s: Failed to create task", __PRETTY_FUNCTION__);
     running = false;
@@ -442,7 +442,7 @@ void SSHServer::sshTask(void *parameter) {
 }
 
 void SSHServer::runSSHTask() {
-  Log.infoln("%s: Started", __PRETTY_FUNCTION__);
+  LOG_INFO("%s: Started", __PRETTY_FUNCTION__);
 
   while (running) {
     ssh_session newSession = ssh_new();
@@ -458,7 +458,7 @@ void SSHServer::runSSHTask() {
       continue;
     }
 
-    Log.infoln("SSH Task: New connection accepted");
+    LOG_INFO("SSH Task: New connection accepted");
 
     if (ssh_handle_key_exchange(newSession) != SSH_OK) {
       Log.errorln("SSH Task: Key exchange failed: %s",
@@ -468,13 +468,13 @@ void SSHServer::runSSHTask() {
       continue;
     }
 
-    Log.infoln("SSH Task: Key exchange successful");
+    LOG_INFO("SSH Task: Key exchange successful");
     handleSSHSession(newSession);
     ssh_disconnect(newSession);
     ssh_free(newSession);
   }
 
-  Log.infoln("SSH Task: Stopped");
+  LOG_INFO("SSH Task: Stopped");
   vTaskDelete(nullptr);
 }
 

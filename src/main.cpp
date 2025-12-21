@@ -1,6 +1,6 @@
 #include "app/application.h"
 #include <Arduino.h>
-#include <ArduinoLog.h>
+#include "infrastructure/logging/logger.h"
 #include <driver/uart.h>
 #include <hal/uart_ll.h>
 
@@ -36,9 +36,9 @@ void setupHardware() {
 void setup() {
   setupHardware();
   Log.begin(LOG_LEVEL_INFO, &Serial);
-  Log.infoln(__PRETTY_FUNCTION__);
+  LOG_INFO(__PRETTY_FUNCTION__);
   jrb::wifi_serial::app = new jrb::wifi_serial::Application();
-  Log.infoln(
+  LOG_INFO(
       R"(
 ================================================
 Starting application...

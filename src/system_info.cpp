@@ -1,5 +1,5 @@
 #include "system_info.h"
-#include "ArduinoLog.h"
+#include "infrastructure/logging/logger.h"
 #include "domain/config/preferences_storage.h"
 #include "infrastructure/types.hpp"
 #include <Arduino.h>
@@ -54,6 +54,6 @@ types::string SystemInfo::getWelcomeString() const {
 void SystemInfo::logSystemInformation() const {
   Log.traceln(__func__);
   types::string info = getWelcomeString();
-  Log.infoln("%s", info.c_str());
+  LOG_INFO("%s", info.c_str());
 }
 } // namespace jrb::wifi_serial

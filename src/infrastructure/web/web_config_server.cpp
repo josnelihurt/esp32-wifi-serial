@@ -4,7 +4,7 @@
 #include "domain/serial/serial_log.hpp"
 #include "infrastructure/types.hpp"
 #include <Arduino.h>
-#include <ArduinoLog.h>
+#include "infrastructure/logging/logger.h"
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
 #include <Preferences.h>
@@ -87,12 +87,12 @@ void WebConfigServer::setWiFiConfig(const types::string &ssid,
                                     const types::string &mqttPassword) {}
 
 void WebConfigServer::setAPMode(bool apMode) {
-  Log.infoln(__PRETTY_FUNCTION__, "apMode: %s", apMode ? "true" : "false");
+  LOG_INFO(__PRETTY_FUNCTION__, "apMode: %s", apMode ? "true" : "false");
   this->apMode = apMode;
 }
 
 void WebConfigServer::setAPIP(const IPAddress &ip) {
-  Log.infoln(__PRETTY_FUNCTION__, "ip: %s", ip.toString().c_str());
+  LOG_INFO(__PRETTY_FUNCTION__, "ip: %s", ip.toString().c_str());
   this->apIP = ip;
 }
 
@@ -105,7 +105,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
     Log.errorln("LittleFS mount failed");
     return;
   }
-  Log.infoln("LittleFS mounted successfully");
+  LOG_INFO("LittleFS mounted successfully");
 
   // Stop and delete old server if exists
   if (server) {
@@ -113,7 +113,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
     server = nullptr;
   }
 
-  Log.infoln(__PRETTY_FUNCTION__, "Creating async web server");
+  LOG_INFO(__PRETTY_FUNCTION__, "Creating async web server");
   server = new AsyncWebServer(80);
 
   // Serve index.html with template processor
@@ -300,7 +300,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
   setupOTAEndpoints();
 
   server->begin();
-  Log.infoln("Async web server started");
+  LOG_INFO("Async web server started");
 }
 
 String WebConfigServer::processor(const String &var) {
@@ -407,7 +407,7 @@ types::string WebConfigServer::escapeHTML(const types::string &str) {
 
 // OTA Web Implementation
 void WebConfigServer::setupOTAEndpoints() {
-  Log.infoln("Setting up OTA endpoints");
+  LOG_INFO("Setting up OTA endpoints");
 
   // Handle OTA status request
   server->on("/ota/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
@@ -437,7 +437,7 @@ void WebConfigServer::setupOTAEndpoints() {
           otaInProgress = false;
           request->send(500, "text/plain", "Firmware update failed");
         } else {
-          Log.infoln("Firmware update successful, restarting...");
+          LOG_INFO("Firmware update successful, restarting...");
           request->send(200, "text/plain", "Firmware updated successfully");
           delay(1000);
           ESP.restart();
@@ -462,7 +462,7 @@ void WebConfigServer::setupOTAEndpoints() {
 
         // First chunk - initialize update
         if (index == 0) {
-          Log.infoln("Starting firmware OTA update: %s", filename.c_str());
+          LOG_INFO("Starting firmware OTA update: %s", filename.c_str());
 
           // Validate filename
           if (!filename.endsWith(".bin")) {
@@ -473,7 +473,7 @@ void WebConfigServer::setupOTAEndpoints() {
           // Get expected hash from request body parameter if available
           if (request->hasParam("hash", true)) {
             otaExpectedHash = request->getParam("hash", true)->value();
-            Log.infoln("OTA: Expected hash: %s", otaExpectedHash.c_str());
+            LOG_INFO("OTA: Expected hash: %s", otaExpectedHash.c_str());
           } else {
             otaExpectedHash = "";
           }
@@ -492,7 +492,7 @@ void WebConfigServer::setupOTAEndpoints() {
           otaInProgress = true;
           otaReceivedSize = 0;
           otaExpectedSize = request->contentLength();
-          Log.infoln("OTA: Expected size: %d bytes", otaExpectedSize);
+          LOG_INFO("OTA: Expected size: %d bytes", otaExpectedSize);
         }
 
         // Write chunk
@@ -510,7 +510,7 @@ void WebConfigServer::setupOTAEndpoints() {
 
         // Final chunk - complete update
         if (final) {
-          Log.infoln("OTA: Received %d bytes", otaReceivedSize);
+          LOG_INFO("OTA: Received %d bytes", otaReceivedSize);
 
           // Finalize hash
           unsigned char hash[32];
@@ -524,7 +524,7 @@ void WebConfigServer::setupOTAEndpoints() {
           }
           otaCalculatedHash = String(hashStr);
 
-          Log.infoln("OTA: Calculated hash: %s", otaCalculatedHash.c_str());
+          LOG_INFO("OTA: Calculated hash: %s", otaCalculatedHash.c_str());
 
           // Verify hash if provided
           if (otaExpectedHash.length() > 0 &&
@@ -546,7 +546,7 @@ void WebConfigServer::setupOTAEndpoints() {
           }
 
           otaInProgress = false;
-          Log.infoln("OTA: Firmware update completed successfully");
+          LOG_INFO("OTA: Firmware update completed successfully");
         }
       });
 
@@ -564,7 +564,7 @@ void WebConfigServer::setupOTAEndpoints() {
           otaInProgress = false;
           request->send(500, "text/plain", "Filesystem update failed");
         } else {
-          Log.infoln("Filesystem update successful, restarting...");
+          LOG_INFO("Filesystem update successful, restarting...");
           request->send(200, "text/plain", "Filesystem updated successfully");
           delay(1000);
           ESP.restart();
@@ -589,12 +589,12 @@ void WebConfigServer::setupOTAEndpoints() {
 
         // First chunk - initialize update
         if (index == 0) {
-          Log.infoln("Starting filesystem OTA update: %s", filename.c_str());
+          LOG_INFO("Starting filesystem OTA update: %s", filename.c_str());
 
           // Get expected hash from request body parameter if available
           if (request->hasParam("hash", true)) {
             otaExpectedHash = request->getParam("hash", true)->value();
-            Log.infoln("OTA: Expected hash: %s", otaExpectedHash.c_str());
+            LOG_INFO("OTA: Expected hash: %s", otaExpectedHash.c_str());
           } else {
             otaExpectedHash = "";
           }
@@ -614,7 +614,7 @@ void WebConfigServer::setupOTAEndpoints() {
           otaInProgress = true;
           otaReceivedSize = 0;
           otaExpectedSize = request->contentLength();
-          Log.infoln("OTA: Expected size: %d bytes", otaExpectedSize);
+          LOG_INFO("OTA: Expected size: %d bytes", otaExpectedSize);
         }
 
         // Write chunk
@@ -632,7 +632,7 @@ void WebConfigServer::setupOTAEndpoints() {
 
         // Final chunk - complete update
         if (final) {
-          Log.infoln("OTA: Received %d bytes", otaReceivedSize);
+          LOG_INFO("OTA: Received %d bytes", otaReceivedSize);
 
           // Finalize hash
           unsigned char hash[32];
@@ -646,7 +646,7 @@ void WebConfigServer::setupOTAEndpoints() {
           }
           otaCalculatedHash = String(hashStr);
 
-          Log.infoln("OTA: Calculated hash: %s", otaCalculatedHash.c_str());
+          LOG_INFO("OTA: Calculated hash: %s", otaCalculatedHash.c_str());
 
           // Verify hash if provided
           if (otaExpectedHash.length() > 0 &&
@@ -668,7 +668,7 @@ void WebConfigServer::setupOTAEndpoints() {
           }
 
           otaInProgress = false;
-          Log.infoln("OTA: Filesystem update completed successfully");
+          LOG_INFO("OTA: Filesystem update completed successfully");
         }
       });
 }

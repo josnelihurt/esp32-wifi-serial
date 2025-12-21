@@ -2,7 +2,7 @@
 #include "config.h"
 #include "domain/config/preferences_storage.h"
 #include "infrastructure/types.hpp"
-#include <ArduinoLog.h>
+#include "infrastructure/logging/logger.h"
 #include <cstring>
 #include <iomanip>
 #include <sstream>
@@ -73,7 +73,7 @@ void MqttClient::setTopics(const types::string &tty0Rx,
       topicInfo = topicInfo.substr(0, lastSlash) + "/info";
     }
   }
-  Log.infoln("MQTT info topic set to: %s", topicInfo.c_str());
+  LOG_INFO("MQTT info topic set to: %s", topicInfo.c_str());
 }
 
 void MqttClient::setCallbacks(
@@ -92,7 +92,7 @@ bool MqttClient::connect(const char *broker, int port, const char *user,
       << random(0xffff);
   types::string clientId = oss.str();
 
-  Log.infoln("MQTT connecting to %s:%d (ClientID: %s)", broker, port,
+  LOG_INFO("MQTT connecting to %s:%d (ClientID: %s)", broker, port,
              clientId.c_str());
 
   bool result = false;
@@ -108,7 +108,7 @@ bool MqttClient::connect(const char *broker, int port, const char *user,
     return false;
   }
 
-  Log.infoln("MQTT connected successfully!");
+  LOG_INFO("MQTT connected successfully!");
 
   subscribeToConfiguredTopics();
 
@@ -121,10 +121,10 @@ void MqttClient::disconnect() {
     return;
   }
 
-  Log.infoln("MQTT disconnecting...");
+  LOG_INFO("MQTT disconnecting...");
   mqttClient->disconnect();
   connected = false;
-  Log.infoln("MQTT disconnected");
+  LOG_INFO("MQTT disconnected");
 }
 
 // Note: This method updates internal connection state but doesn't perform
@@ -139,7 +139,7 @@ bool MqttClient::reconnect() {
 
 void MqttClient::subscribeToConfiguredTopics() {
   if (topicTty0Tx.length() > 0) {
-    Log.infoln("Subscribing to tty0Rx: %s", topicTty0Rx.c_str());
+    LOG_INFO("Subscribing to tty0Rx: %s", topicTty0Rx.c_str());
     mqttClient->subscribe(topicTty0Rx.c_str(), MQTT_QOS_LEVEL);
     mqttClient->loop();
     delay(MQTT_SUBSCRIPTION_DELAY_MS);
@@ -147,7 +147,7 @@ void MqttClient::subscribeToConfiguredTopics() {
   }
 
   if (topicTty1Tx.length() > 0) {
-    Log.infoln("Subscribing to tty1Rx: %s", topicTty1Rx.c_str());
+    LOG_INFO("Subscribing to tty1Rx: %s", topicTty1Rx.c_str());
     mqttClient->subscribe(topicTty1Rx.c_str(), MQTT_QOS_LEVEL);
     mqttClient->loop();
     delay(MQTT_SUBSCRIPTION_DELAY_MS);
@@ -162,7 +162,7 @@ void MqttClient::handleConnectionStateChange(bool wasConnected) {
   }
 
   if (!wasConnected && connected) {
-    Log.infoln("MQTT reconnected successfully!");
+    LOG_INFO("MQTT reconnected successfully!");
     subscribeToConfiguredTopics();
   }
 }
