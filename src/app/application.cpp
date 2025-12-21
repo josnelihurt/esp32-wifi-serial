@@ -59,7 +59,7 @@ void Application::setupSerial1() {
 }
 
 void Application::setup() {
-  Log.traceln(__PRETTY_FUNCTION__);
+  LOG_DEBUG(__PRETTY_FUNCTION__);
 
   // Network setup (from NetworkSetupTask)
   wifiManager.setup();

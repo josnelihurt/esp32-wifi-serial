@@ -235,7 +235,7 @@ bool MqttClient::publishInfo(const types::string &data) {
     return false;
   }
 
-  Log.traceln("MQTT publishing info to %s (%d bytes)", topicInfo.c_str(),
+  LOG_DEBUG("MQTT publishing info to %s (%d bytes)", topicInfo.c_str(),
               data.length());
 
   bool result = mqttClient->publish(topicInfo.c_str(), (uint8_t *)data.c_str(),
@@ -244,7 +244,7 @@ bool MqttClient::publishInfo(const types::string &data) {
     LOG_ERROR("MQTT publishInfo failed! State: %d", mqttClient->state());
     connected = mqttClient->connected();
   } else {
-    Log.traceln("MQTT info published successfully");
+    LOG_DEBUG("MQTT info published successfully");
   }
 
   return result;

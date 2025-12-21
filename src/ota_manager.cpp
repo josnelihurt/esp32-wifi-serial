@@ -25,7 +25,7 @@ void OTAManager::setup() {
   ArduinoOTA.onEnd([]() { LOG_INFO("OTA: Update complete"); });
 
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    Log.traceln("OTA: Progress: %u%%", (progress / (total / 100)));
+    LOG_DEBUG("OTA: Progress: %u%%", (progress / (total / 100)));
   });
 
   ArduinoOTA.onError([](ota_error_t error) {

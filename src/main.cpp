@@ -29,7 +29,7 @@ void setupHardware() {
   pinMode(BOOT_BUTTON_PIN, INPUT_PULLUP);
   digitalWrite(LED_PIN, HIGH);
   delay(100);
-  Log.traceln(__PRETTY_FUNCTION__);
+  LOG_DEBUG(__PRETTY_FUNCTION__);
 }
 // LOG_LEVEL_VERBOSE
 // LOG_LEVEL_INFO

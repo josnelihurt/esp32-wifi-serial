@@ -52,7 +52,7 @@ types::string SystemInfo::getWelcomeString() const {
 }
 
 void SystemInfo::logSystemInformation() const {
-  Log.traceln(__func__);
+  LOG_DEBUG(__func__);
   types::string info = getWelcomeString();
   LOG_INFO("%s", info.c_str());
 }

@@ -70,7 +70,7 @@ WebConfigServer::WebConfigServer(PreferencesStorageDefault &storage)
 #else
   otaRequirePassword = false;
 #endif
-  Log.traceln(__PRETTY_FUNCTION__);
+  LOG_DEBUG(__PRETTY_FUNCTION__);
 }
 
 WebConfigServer::~WebConfigServer() {
@@ -122,24 +122,24 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
                                preferencesStorage.webPassword.c_str())) {
       return request->requestAuthentication();
     }
-    Log.traceln("%s: Handling / request", __PRETTY_FUNCTION__);
+    LOG_DEBUG("%s: Handling / request", __PRETTY_FUNCTION__);
     request->send(LittleFS, "/index.html", "text/html", false,
                   [this](const String &var) { return this->processor(var); });
   });
 
   // Serve static CSS file (no template processing)
   server->on("/style.css", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    Log.traceln("%s: Handling /style.css request", __PRETTY_FUNCTION__);
+    LOG_DEBUG("%s: Handling /style.css request", __PRETTY_FUNCTION__);
     request->send(LittleFS, "/style.css", "text/css");
   });
 
   // Serve static JavaScript file (no template processing)
   server->on("/script.js", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    Log.traceln("%s: Handling /script.js request", __PRETTY_FUNCTION__);
+    LOG_DEBUG("%s: Handling /script.js request", __PRETTY_FUNCTION__);
     request->send(LittleFS, "/script.js", "application/javascript");
   });
   server->on("/favicon.svg", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    Log.traceln("%s: Handling /favicon.svg request", __PRETTY_FUNCTION__);
+    LOG_DEBUG("%s: Handling /favicon.svg request", __PRETTY_FUNCTION__);
     request->send(LittleFS, "/favicon.svg", "image/svg+xml");
   });
 
@@ -149,7 +149,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
                                preferencesStorage.webPassword.c_str())) {
       return request->requestAuthentication();
     }
-    Log.traceln("%s: Handling /ota.html request", __PRETTY_FUNCTION__);
+    LOG_DEBUG("%s: Handling /ota.html request", __PRETTY_FUNCTION__);
     request->send(LittleFS, "/ota.html", "text/html", false,
                   [this](const String &var) { return this->processor(var); });
   });
@@ -160,7 +160,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
                                preferencesStorage.webPassword.c_str())) {
       return request->requestAuthentication();
     }
-    Log.traceln("%s: Handling /ota-fs.html request", __PRETTY_FUNCTION__);
+    LOG_DEBUG("%s: Handling /ota-fs.html request", __PRETTY_FUNCTION__);
     request->send(LittleFS, "/ota-fs.html", "text/html", false,
                   [this](const String &var) { return this->processor(var); });
   });
@@ -171,7 +171,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
                                preferencesStorage.webPassword.c_str())) {
       return request->requestAuthentication();
     }
-    Log.traceln("%s: Handling /about.html request", __PRETTY_FUNCTION__);
+    LOG_DEBUG("%s: Handling /about.html request", __PRETTY_FUNCTION__);
     request->send(LittleFS, "/about.html", "text/html", false,
                   [this](const String &var) { return this->processor(var); });
   });
@@ -182,7 +182,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
                                preferencesStorage.webPassword.c_str())) {
       return request->requestAuthentication();
     }
-    Log.traceln("%s: Handling /save request", __PRETTY_FUNCTION__);
+    LOG_DEBUG("%s: Handling /save request", __PRETTY_FUNCTION__);
 
     // Process baud rate
     if (request->hasParam("speed0", true)) {
@@ -266,7 +266,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
                                preferencesStorage.webPassword.c_str())) {
       return request->requestAuthentication();
     }
-    Log.traceln("%s: Handling /reset request", __PRETTY_FUNCTION__);
+    LOG_DEBUG("%s: Handling /reset request", __PRETTY_FUNCTION__);
     request->send(200, "text/plain", "Device resetting...");
     delay(500);
     ESP.restart();
@@ -274,25 +274,25 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
 
   // Serial0 polling - simplified for async
   server->on("/serial0/poll", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    Log.traceln("%s: Handling /serial0/poll request", __PRETTY_FUNCTION__);
+    LOG_DEBUG("%s: Handling /serial0/poll request", __PRETTY_FUNCTION__);
     handleSerialPoll(request, serial0Log, preferencesStorage);
   });
 
   // Serial1 polling - simplified for async
   server->on("/serial1/poll", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    Log.traceln("%s: Handling /serial1/poll request", __PRETTY_FUNCTION__);
+    LOG_DEBUG("%s: Handling /serial1/poll request", __PRETTY_FUNCTION__);
     handleSerialPoll(request, serial1Log, preferencesStorage);
   });
 
   // Serial0 send
   server->on("/serial0/send", HTTP_POST, [&](AsyncWebServerRequest *request) {
-    Log.traceln("%s: Handling /serial0/send request", __PRETTY_FUNCTION__);
+    LOG_DEBUG("%s: Handling /serial0/send request", __PRETTY_FUNCTION__);
     handleSerialSend(request, tty0, preferencesStorage);
   });
 
   // Serial1 send
   server->on("/serial1/send", HTTP_POST, [&](AsyncWebServerRequest *request) {
-    Log.traceln("%s: Handling /serial1/send request", __PRETTY_FUNCTION__);
+    LOG_DEBUG("%s: Handling /serial1/send request", __PRETTY_FUNCTION__);
     handleSerialSend(request, tty1, preferencesStorage);
   });
 

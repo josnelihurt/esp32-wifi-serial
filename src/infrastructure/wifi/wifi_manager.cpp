@@ -8,13 +8,13 @@ namespace jrb::wifi_serial {
 
 WiFiManager::WiFiManager(PreferencesStorageDefault &preferencesStorage)
     : preferencesStorage{preferencesStorage}, apMode{false} {
-  Log.traceln(__PRETTY_FUNCTION__);
+  LOG_DEBUG(__PRETTY_FUNCTION__);
 }
 
 WiFiManager::~WiFiManager() {}
 
 void WiFiManager::setup() {
-  Log.traceln(__PRETTY_FUNCTION__);
+  LOG_DEBUG(__PRETTY_FUNCTION__);
 
   if (preferencesStorage.ssid.length() == 0 || !connect()) {
     LOG_ERROR("%s: %s", __PRETTY_FUNCTION__,
@@ -26,7 +26,7 @@ void WiFiManager::setup() {
 void WiFiManager::loop() {}
 
 bool WiFiManager::connect() {
-  Log.traceln(__PRETTY_FUNCTION__);
+  LOG_DEBUG(__PRETTY_FUNCTION__);
   if (preferencesStorage.ssid.length() == 0)
     return false;
 
@@ -110,7 +110,7 @@ IP address: %s)",
 }
 
 void WiFiManager::setupAP() {
-  Log.traceln(__PRETTY_FUNCTION__);
+  LOG_DEBUG(__PRETTY_FUNCTION__);
   apMode = true;
   WiFi.mode(WIFI_AP);
 

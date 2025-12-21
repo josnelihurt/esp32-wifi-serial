@@ -16,7 +16,7 @@ SSHServer::SSHServer(PreferencesStorageDefault &storage, SystemInfo &sysInfo,
       serialWrite(nullptr), serialToSSHQueue(nullptr), activeSSHSession(false),
       specialCharacterMode(false),
       specialCharacterHandler(specialCharacterHandler) {
-  Log.traceln(__PRETTY_FUNCTION__);
+  LOG_DEBUG(__PRETTY_FUNCTION__);
 
   // Create FreeRTOS queue for thread-safe serial→SSH data transfer
   serialToSSHQueue = xQueueCreate(SSH_QUEUE_SIZE, SSH_QUEUE_ITEM_SIZE);
