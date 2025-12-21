@@ -9,8 +9,53 @@
 #include <LittleFS.h>
 #include <Preferences.h>
 #include <WiFi.h>
+#include <algorithm>
+#include <cstring>
 #include <mbedtls/sha256.h>
 namespace jrb::wifi_serial {
+
+namespace {
+void handleSerialPoll(AsyncWebServerRequest *request, SerialLog &log,
+                      const PreferencesStorageDefault &prefs) {
+  if (!request->authenticate(prefs.webUser.c_str(),
+                             prefs.webPassword.c_str())) {
+    request->requestAuthentication();
+    return;
+  }
+
+  if (!log.hasData()) {
+    request->send(http::toInt(http::StatusCode::OK), http::toString(http::mime::TEXT_PLAIN), "");
+    return;
+  }
+
+  char tmp[512];
+  size_t n = log.drainTo(reinterpret_cast<uint8_t *>(tmp), sizeof(tmp) - 1);
+  tmp[n] = '\0';
+
+  request->send(200, "text/plain", tmp);
+}
+
+void handleSerialSend(AsyncWebServerRequest *request,
+                      WebConfigServer::SerialWriteCallback &callback,
+                      const PreferencesStorageDefault &prefs) {
+  if (!request->authenticate(prefs.webUser.c_str(),
+                             prefs.webPassword.c_str())) {
+    return request->requestAuthentication();
+  }
+  if (!request->hasParam("data", true)) {
+    request->send(http::toInt(http::StatusCode::BAD_REQUEST), http::toString(http::mime::TEXT_PLAIN), "Missing data");
+    return;
+  }
+  const String &data = request->getParam("data", true)->value();
+  if (callback) {
+    const types::span<const uint8_t> span(
+        reinterpret_cast<const uint8_t *>(data.c_str()), data.length());
+        callback(span);
+  }
+  request->send(http::toInt(http::StatusCode::OK), http::toString(http::mime::TEXT_PLAIN), "OK");
+}
+
+} // namespace
 
 WebConfigServer::WebConfigServer(PreferencesStorageDefault &storage)
     : preferencesStorage(storage), serial0Log(), serial1Log(), tty0(tty0),
@@ -226,72 +271,26 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
 
   // Serial0 polling - simplified for async
   server->on("/serial0/poll", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    if (!request->authenticate(preferencesStorage.webUser.c_str(),
-                               preferencesStorage.webPassword.c_str())) {
-      return request->requestAuthentication();
-    }
     Log.traceln("%s: Handling /serial0/poll request", __PRETTY_FUNCTION__);
-    if (!serial0Log.hasData()) {
-      request->send(200, "text/plain", "");
-      return;
-    }
-    String newData = serial0Log.toString();
-    request->send(200, "text/plain", newData);
+    handleSerialPoll(request, serial0Log, preferencesStorage);
   });
 
   // Serial1 polling - simplified for async
   server->on("/serial1/poll", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    if (!request->authenticate(preferencesStorage.webUser.c_str(),
-                               preferencesStorage.webPassword.c_str())) {
-      return request->requestAuthentication();
-    }
     Log.traceln("%s: Handling /serial1/poll request", __PRETTY_FUNCTION__);
-    if (!serial1Log.hasData()) {
-      request->send(200, "text/plain", "");
-      return;
-    }
-    String newData = serial1Log.toString();
-    request->send(200, "text/plain", newData);
+    handleSerialPoll(request, serial1Log, preferencesStorage);
   });
 
   // Serial0 send
   server->on("/serial0/send", HTTP_POST, [&](AsyncWebServerRequest *request) {
-    if (!request->authenticate(preferencesStorage.webUser.c_str(),
-                               preferencesStorage.webPassword.c_str())) {
-      return request->requestAuthentication();
-    }
     Log.traceln("%s: Handling /serial0/send request", __PRETTY_FUNCTION__);
-    if (!request->hasParam("data", true)) {
-      request->send(400, "text/plain", "Missing data");
-      return;
-    }
-    const String &data = request->getParam("data", true)->value();
-    if (tty0) {
-      const types::span<const uint8_t> span(
-          reinterpret_cast<const uint8_t *>(data.c_str()), data.length());
-      tty0(span);
-    }
-    request->send(200, "text/plain", "OK");
+    handleSerialSend(request, tty0, preferencesStorage);
   });
 
   // Serial1 send
   server->on("/serial1/send", HTTP_POST, [&](AsyncWebServerRequest *request) {
-    if (!request->authenticate(preferencesStorage.webUser.c_str(),
-                               preferencesStorage.webPassword.c_str())) {
-      return request->requestAuthentication();
-    }
     Log.traceln("%s: Handling /serial1/send request", __PRETTY_FUNCTION__);
-    if (!request->hasParam("data", true)) {
-      request->send(400, "text/plain", "Missing data");
-      return;
-    }
-    const String &data = request->getParam("data", true)->value();
-    if (tty1) {
-      const types::span<const uint8_t> span(
-          reinterpret_cast<const uint8_t *>(data.c_str()), data.length());
-      tty1(span);
-    }
-    request->send(200, "text/plain", "OK");
+    handleSerialSend(request, tty1, preferencesStorage);
   });
 
   // Setup OTA endpoints
