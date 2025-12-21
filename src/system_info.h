@@ -2,8 +2,6 @@
 
 #include "domain/config/preferences_storage_policy.h"
 #include "infrastructure/types.hpp"
-#include <Arduino.h>
-#include <WiFi.h>
 
 namespace jrb::wifi_serial {
 

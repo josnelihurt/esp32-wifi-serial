@@ -2,6 +2,8 @@
 #include "config.h"
 #include "domain/config/preferences_storage.h"
 #include <ArduinoLog.h>
+#include <Preferences.h>
+#include <WiFi.h>
 namespace jrb::wifi_serial {
 
 WiFiManager::WiFiManager(PreferencesStorageDefault &preferencesStorage)

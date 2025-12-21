@@ -1,7 +1,6 @@
 #pragma once
 
 #include "domain/config/preferences_storage_policy.h"
-#include <ArduinoOTA.h>
 
 namespace jrb::wifi_serial {
 

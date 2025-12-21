@@ -2,6 +2,8 @@
 #include "ArduinoLog.h"
 #include "domain/config/preferences_storage.h"
 #include "infrastructure/types.hpp"
+#include <Arduino.h>
+#include <WiFi.h>
 #include <sstream>
 namespace jrb::wifi_serial {
 namespace {

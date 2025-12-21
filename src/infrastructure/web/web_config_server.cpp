@@ -24,7 +24,8 @@ void handleSerialPoll(AsyncWebServerRequest *request, SerialLog &log,
   }
 
   if (!log.hasData()) {
-    request->send(http::toInt(http::StatusCode::OK), http::toString(http::mime::TEXT_PLAIN), "");
+    request->send(http::toInt(http::StatusCode::OK),
+                  http::toString(http::mime::TEXT_PLAIN), "");
     return;
   }
 
@@ -43,16 +44,18 @@ void handleSerialSend(AsyncWebServerRequest *request,
     return request->requestAuthentication();
   }
   if (!request->hasParam("data", true)) {
-    request->send(http::toInt(http::StatusCode::BAD_REQUEST), http::toString(http::mime::TEXT_PLAIN), "Missing data");
+    request->send(http::toInt(http::StatusCode::BAD_REQUEST),
+                  http::toString(http::mime::TEXT_PLAIN), "Missing data");
     return;
   }
   const String &data = request->getParam("data", true)->value();
   if (callback) {
     const types::span<const uint8_t> span(
         reinterpret_cast<const uint8_t *>(data.c_str()), data.length());
-        callback(span);
+    callback(span);
   }
-  request->send(http::toInt(http::StatusCode::OK), http::toString(http::mime::TEXT_PLAIN), "OK");
+  request->send(http::toInt(http::StatusCode::OK),
+                http::toString(http::mime::TEXT_PLAIN), "OK");
 }
 
 } // namespace

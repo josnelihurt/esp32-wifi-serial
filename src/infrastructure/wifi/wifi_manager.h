@@ -1,8 +1,7 @@
 #pragma once
 
 #include "domain/config/preferences_storage_policy.h"
-#include <Preferences.h>
-#include <WiFi.h>
+
 
 namespace jrb::wifi_serial {
 
