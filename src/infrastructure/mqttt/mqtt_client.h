@@ -3,6 +3,7 @@
 #include "config.h"
 #include "domain/config/preferences_storage_policy.h"
 #include "domain/messaging/mqtt_buffer.h"
+#include "infrastructure/memory/circular_buffer.hpp"
 #include "infrastructure/types.hpp"
 #include <functional>
 #include <memory>
@@ -55,8 +56,8 @@ private:
   void (*onTty1Callback)(const types::span<const uint8_t> &);
 
   // Pending buffers for cross-task data transfer (web task → main loop)
-  std::vector<uint8_t> tty0PendingBuffer; // TODO: replace this!
-  std::vector<uint8_t> tty1PendingBuffer; // TODO: replace this!
+  CircularBuffer<uint8_t, MQTT_BUFFER_SIZE> tty0PendingBuffer;
+  CircularBuffer<uint8_t, MQTT_BUFFER_SIZE> tty1PendingBuffer;
 
   MqttLog tty0Stream;
   unsigned long tty0LastFlushMillis;

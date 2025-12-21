@@ -189,16 +189,12 @@ void MqttClient::loop() {
     return;
 
   // Transfer pending data from web task to MQTT buffers
-  if (!tty0PendingBuffer.empty()) {
-    tty0Stream.append(types::span<const uint8_t>(tty0PendingBuffer.data(),
-                                                 tty0PendingBuffer.size()));
-    tty0PendingBuffer.clear();
+  while (!tty0PendingBuffer.empty()) {
+    tty0Stream.append(tty0PendingBuffer.popFront());
   }
 
-  if (!tty1PendingBuffer.empty()) {
-    tty1Stream.append(types::span<const uint8_t>(tty1PendingBuffer.data(),
-                                                 tty1PendingBuffer.size()));
-    tty1PendingBuffer.clear();
+  while (!tty1PendingBuffer.empty()) {
+    tty1Stream.append(tty1PendingBuffer.popFront());
   }
 
   const bool wasConnected = connected;
@@ -252,14 +248,12 @@ bool MqttClient::publishInfo(const types::string &data) {
 
 void MqttClient::appendToTty0Buffer(const types::span<const uint8_t> &data) {
   // Accumulate only - main loop transfers to MQTT
-  tty0PendingBuffer.insert(tty0PendingBuffer.end(), data.data(),
-                           data.data() + data.size());
+  tty0PendingBuffer.append(data);
 }
 
 void MqttClient::appendToTty1Buffer(const types::span<const uint8_t> &data) {
   // Accumulate only - main loop transfers to MQTT
-  tty1PendingBuffer.insert(tty1PendingBuffer.end(), data.data(),
-                           data.data() + data.size());
+  tty1PendingBuffer.append(data);
 }
 
 void MqttClient::mqttCallback(char *topic, byte *payload, unsigned int length) {
