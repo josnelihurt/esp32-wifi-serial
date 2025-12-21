@@ -27,7 +27,7 @@ public:
   static constexpr size_t MAX_FILESYSTEM_SIZE = 512 * 1024;    // 512KB max
 
   WebConfigServer(PreferencesStorageDefault &storage);
-  ~WebConfigServer();
+  ~WebConfigServer() = default;
 
   void setup(SerialWriteCallback tty0Callback,
              SerialWriteCallback tty1Callback);
@@ -51,7 +51,8 @@ private:
   SerialWriteCallback tty0;
   SerialWriteCallback tty1;
 
-  AsyncWebServer *server;
+  AsyncWebServer server{HTTP_PORT};
+  bool isServerStarted{false};
   bool apMode;
   IPAddress apIP;
 

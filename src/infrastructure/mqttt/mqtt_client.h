@@ -67,8 +67,6 @@ private:
   void subscribeToConfiguredTopics();
   void handleConnectionStateChange(bool wasConnected);
   void flushBuffersIfNeeded();
-  void flushBuffer(std::vector<char> &buffer, const types::string &topic,
-                   unsigned long &lastFlushMillis, const char *bufferName);
   void setTopics(const types::string &tty0Rx, const types::string &tty0Tx,
                  const types::string &tty1Rx, const types::string &tty1Tx);
   void mqttCallback(char *topic, byte *payload, unsigned int length);

@@ -21,13 +21,10 @@ Application::Application()
       tty1Broadcaster(webServer.getTty1Stream(), mqttClient.getTty1Stream(),
                       sshServer.getStream()),
       otaManager(preferencesStorage, otaEnabled),
-      specialCharacterHandler(systemInfo, preferencesStorage) {
+      specialCharacterHandler(systemInfo, preferencesStorage), serial1(1) {
   // Set static instance for MQTT callbacks
   s_instance = this;
   systemInfo.logSystemInformation();
-
-  // Setup serial1 hardware
-  setupSerial1();
 
   // Initialize SSH server (runs in its own FreeRTOS task)
   sshServer.setSerialWriteCallback([](const types::span<const uint8_t> &data) {
@@ -35,27 +32,20 @@ Application::Application()
       String dataString((const char *)data.data(), data.size());
       LOG_INFO("$ssh->ttyS1$%s", dataString.c_str());
     }
-    if (s_instance->serial1) {
-      s_instance->serial1->write(data.data(), data.size());
-    }
+    s_instance->serial1.write(data.data(), data.size());
   });
-}
 
-Application::~Application() {}
-
-void Application::setupSerial1() {
   int baudRate = preferencesStorage.baudRateTty1;
   if (baudRate <= 1) {
     LOG_ERROR("%s: baudRateTty1 is %d (<= 1), using default 115200",
-                __PRETTY_FUNCTION__, baudRate);
+              __PRETTY_FUNCTION__, baudRate);
     baudRate = DEFAULT_BAUD_RATE_TTY1;
   }
   LOG_INFO("%s: Initializing serial1 with baud rate: %d, RX: %d, TX: %d, "
            "config: 0x%x",
            __PRETTY_FUNCTION__, baudRate, SERIAL1_RX_PIN, SERIAL1_TX_PIN,
            SERIAL_8N1);
-  serial1 = new HardwareSerial(1);
-  serial1->begin(baudRate, SERIAL_8N1, SERIAL1_RX_PIN, SERIAL1_TX_PIN);
+  serial1.begin(baudRate, SERIAL_8N1, SERIAL1_RX_PIN, SERIAL1_TX_PIN);
 }
 
 void Application::setup() {
@@ -76,9 +66,7 @@ void Application::setup() {
           String dataString(data.data(), data.size());
           LOG_INFO("$mqtt->ttyS1$%s", dataString.c_str());
         }
-        if (s_instance->serial1) {
-          s_instance->serial1->write(data.data(), data.size());
-        }
+        s_instance->serial1.write(data.data(), data.size());
         s_instance->sshServer.sendToSSHClients(data);
       });
   preferencesStorage.save();
@@ -108,9 +96,7 @@ void Application::setup() {
           LOG_INFO_RAW("$web->ttyS1$%s", dataString.c_str());
         }
         s_instance->mqttClient.appendToTty1Buffer(data);
-        if (s_instance->serial1) {
-          s_instance->serial1->write(data.data(), data.size());
-        }
+        s_instance->serial1.write(data.data(), data.size());
         s_instance->sshServer.sendToSSHClients(data);
       });
 
@@ -191,7 +177,7 @@ void Application::handleSerialPort0() {
       Serial.write(byte);
     }
     if (preferencesStorage.tty02tty1Bridge) {
-      writeToSerial1(byte);
+      serial1.write(byte);
     }
     // Broadcast to all tty0 subscribers via type-erased broadcaster
     tty0Broadcaster.append(byte);
@@ -199,14 +185,9 @@ void Application::handleSerialPort0() {
 }
 
 void Application::handleSerialPort1() {
-  if (serial1 == nullptr) {
-    LOG_ERROR("%s: serial1 is nullptr", __PRETTY_FUNCTION__);
-    return;
-  }
-
   // Read from hardware Serial1 and broadcast to all subscribers
-  while (serial1->available() > 0) {
-    uint8_t byte = serial1->read();
+  while (serial1.available() > 0) {
+    uint8_t byte = serial1.read();
 
     // Local echo (if debug enabled)
     if (preferencesStorage.tty02tty1Bridge) {
@@ -218,11 +199,4 @@ void Application::handleSerialPort1() {
   }
 }
 
-void Application::writeToSerial1(uint8_t byte) {
-  if (serial1 == nullptr) {
-    LOG_ERROR("%s: serial1 is nullptr", __PRETTY_FUNCTION__);
-    return;
-  }
-  serial1->write(byte);
-}
 } // namespace jrb::wifi_serial

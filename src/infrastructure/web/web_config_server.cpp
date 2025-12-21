@@ -62,21 +62,15 @@ void handleSerialSend(AsyncWebServerRequest *request,
 
 WebConfigServer::WebConfigServer(PreferencesStorageDefault &storage)
     : preferencesStorage(storage), serial0Log(), serial1Log(), tty0(tty0),
-      tty1(tty1), server(nullptr), apMode(false), otaInProgress(false),
-      otaExpectedSize(0), otaReceivedSize(0), otaExpectedHash(""),
-      otaCalculatedHash(""), otaRequirePassword(false) {
+      tty1(tty1), apMode(false), otaInProgress(false), otaExpectedSize(0),
+      otaReceivedSize(0), otaExpectedHash(""), otaCalculatedHash(""),
+      otaRequirePassword(false) {
 #ifndef DISABLE_DEFAULT_OTA_PASSWORD
   otaRequirePassword = true;
 #else
   otaRequirePassword = false;
 #endif
   LOG_DEBUG(__PRETTY_FUNCTION__);
-}
-
-WebConfigServer::~WebConfigServer() {
-  if (server) {
-    delete server;
-  }
 }
 
 void WebConfigServer::setWiFiConfig(const types::string &ssid,
@@ -98,7 +92,11 @@ void WebConfigServer::setAPIP(const IPAddress &ip) {
 
 void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
                             WebConfigServer::SerialWriteCallback onTtyS1Write) {
-  // Initialize LittleFS
+  if (isServerStarted) {
+    LOG_ERROR("Web server already running");
+    return;
+  }
+  isServerStarted = true;
   tty0 = onTtyS0Write;
   tty1 = onTtyS1Write;
   if (!LittleFS.begin(true)) {
@@ -107,17 +105,9 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
   }
   LOG_INFO("LittleFS mounted successfully");
 
-  // Stop and delete old server if exists
-  if (server) {
-    delete server;
-    server = nullptr;
-  }
-
   LOG_INFO(__PRETTY_FUNCTION__, "Creating async web server");
-  server = new AsyncWebServer(80);
-
   // Serve index.html with template processor
-  server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
+  server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if (!request->authenticate(preferencesStorage.webUser.c_str(),
                                preferencesStorage.webPassword.c_str())) {
       return request->requestAuthentication();
@@ -128,23 +118,23 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
   });
 
   // Serve static CSS file (no template processing)
-  server->on("/style.css", HTTP_GET, [this](AsyncWebServerRequest *request) {
+  server.on("/style.css", HTTP_GET, [this](AsyncWebServerRequest *request) {
     LOG_DEBUG("%s: Handling /style.css request", __PRETTY_FUNCTION__);
     request->send(LittleFS, "/style.css", "text/css");
   });
 
   // Serve static JavaScript file (no template processing)
-  server->on("/script.js", HTTP_GET, [this](AsyncWebServerRequest *request) {
+  server.on("/script.js", HTTP_GET, [this](AsyncWebServerRequest *request) {
     LOG_DEBUG("%s: Handling /script.js request", __PRETTY_FUNCTION__);
     request->send(LittleFS, "/script.js", "application/javascript");
   });
-  server->on("/favicon.svg", HTTP_GET, [this](AsyncWebServerRequest *request) {
+  server.on("/favicon.svg", HTTP_GET, [this](AsyncWebServerRequest *request) {
     LOG_DEBUG("%s: Handling /favicon.svg request", __PRETTY_FUNCTION__);
     request->send(LittleFS, "/favicon.svg", "image/svg+xml");
   });
 
   // Serve OTA Firmware HTML with template processor
-  server->on("/ota.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
+  server.on("/ota.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if (!request->authenticate(preferencesStorage.webUser.c_str(),
                                preferencesStorage.webPassword.c_str())) {
       return request->requestAuthentication();
@@ -155,7 +145,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
   });
 
   // Serve OTA Filesystem HTML with template processor
-  server->on("/ota-fs.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
+  server.on("/ota-fs.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if (!request->authenticate(preferencesStorage.webUser.c_str(),
                                preferencesStorage.webPassword.c_str())) {
       return request->requestAuthentication();
@@ -166,7 +156,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
   });
 
   // Serve About HTML with template processor
-  server->on("/about.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
+  server.on("/about.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if (!request->authenticate(preferencesStorage.webUser.c_str(),
                                preferencesStorage.webPassword.c_str())) {
       return request->requestAuthentication();
@@ -177,7 +167,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
   });
 
   // Handle configuration save
-  server->on("/save", HTTP_POST, [this](AsyncWebServerRequest *request) {
+  server.on("/save", HTTP_POST, [this](AsyncWebServerRequest *request) {
     if (!request->authenticate(preferencesStorage.webUser.c_str(),
                                preferencesStorage.webPassword.c_str())) {
       return request->requestAuthentication();
@@ -189,7 +179,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
       int baudRate = request->getParam("speed0", true)->value().toInt();
       if (baudRate <= 1) {
         LOG_ERROR("Invalid baud rate %d (must be > 1), using default 115200",
-                    baudRate);
+                  baudRate);
         preferencesStorage.baudRateTty1 = DEFAULT_BAUD_RATE_TTY1;
       } else {
         preferencesStorage.baudRateTty1 = baudRate;
@@ -261,7 +251,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
   });
 
   // Handle device reset
-  server->on("/reset", HTTP_POST, [this](AsyncWebServerRequest *request) {
+  server.on("/reset", HTTP_POST, [this](AsyncWebServerRequest *request) {
     if (!request->authenticate(preferencesStorage.webUser.c_str(),
                                preferencesStorage.webPassword.c_str())) {
       return request->requestAuthentication();
@@ -273,25 +263,25 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
   });
 
   // Serial0 polling - simplified for async
-  server->on("/serial0/poll", HTTP_GET, [this](AsyncWebServerRequest *request) {
+  server.on("/serial0/poll", HTTP_GET, [this](AsyncWebServerRequest *request) {
     LOG_DEBUG("%s: Handling /serial0/poll request", __PRETTY_FUNCTION__);
     handleSerialPoll(request, serial0Log, preferencesStorage);
   });
 
   // Serial1 polling - simplified for async
-  server->on("/serial1/poll", HTTP_GET, [this](AsyncWebServerRequest *request) {
+  server.on("/serial1/poll", HTTP_GET, [this](AsyncWebServerRequest *request) {
     LOG_DEBUG("%s: Handling /serial1/poll request", __PRETTY_FUNCTION__);
     handleSerialPoll(request, serial1Log, preferencesStorage);
   });
 
   // Serial0 send
-  server->on("/serial0/send", HTTP_POST, [&](AsyncWebServerRequest *request) {
+  server.on("/serial0/send", HTTP_POST, [&](AsyncWebServerRequest *request) {
     LOG_DEBUG("%s: Handling /serial0/send request", __PRETTY_FUNCTION__);
     handleSerialSend(request, tty0, preferencesStorage);
   });
 
   // Serial1 send
-  server->on("/serial1/send", HTTP_POST, [&](AsyncWebServerRequest *request) {
+  server.on("/serial1/send", HTTP_POST, [&](AsyncWebServerRequest *request) {
     LOG_DEBUG("%s: Handling /serial1/send request", __PRETTY_FUNCTION__);
     handleSerialSend(request, tty1, preferencesStorage);
   });
@@ -299,7 +289,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
   // Setup OTA endpoints
   setupOTAEndpoints();
 
-  server->begin();
+  server.begin();
   LOG_INFO("Async web server started");
 }
 
@@ -410,7 +400,7 @@ void WebConfigServer::setupOTAEndpoints() {
   LOG_INFO("Setting up OTA endpoints");
 
   // Handle OTA status request
-  server->on("/ota/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
+  server.on("/ota/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
     if (!request->authenticate(preferencesStorage.webUser.c_str(),
                                preferencesStorage.webPassword.c_str())) {
       return request->requestAuthentication();
@@ -424,7 +414,7 @@ void WebConfigServer::setupOTAEndpoints() {
   });
 
   // Handle firmware upload
-  server->on(
+  server.on(
       "/ota/firmware/upload", HTTP_POST,
       [this](AsyncWebServerRequest *request) {
         // Final response handler - called after upload completes
@@ -551,7 +541,7 @@ void WebConfigServer::setupOTAEndpoints() {
       });
 
   // Handle filesystem upload
-  server->on(
+  server.on(
       "/ota/filesystem/upload", HTTP_POST,
       [this](AsyncWebServerRequest *request) {
         // Final response handler

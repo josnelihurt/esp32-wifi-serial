@@ -42,7 +42,7 @@ namespace jrb::wifi_serial {
 class Application final {
 public:
   Application();
-  ~Application();
+  ~Application() = default;
 
   /**
    * @brief Run one-time setup routines.
@@ -75,28 +75,22 @@ private:
   SystemInfo systemInfo;
   SSHServer sshServer;
   SpecialCharacterHandler specialCharacterHandler;
+  HardwareSerial serial1;
 
   WebConfigServer webServer;
   Broadcaster<SerialLog, MqttLog> tty0Broadcaster;
   Broadcaster<SerialLog, MqttLog, SshLog>
       tty1Broadcaster;
 
-  // Serial hardware (heap-allocated to control initialization timing)
-  HardwareSerial *serial1{nullptr};
-
   // Heap objects (lazy init in constructor)
   ButtonHandler buttonHandler;
   OTAManager otaManager;
-
-  // Helper methods for setup
-  void setupSerial1();
 
   // Helper methods for loop processing
   void handleSerialPort0();
   void handleSerialPort1();
   void reconnectMqttIfNeeded();
   void publishInfoIfNeeded();
-  void writeToSerial1(uint8_t byte);
 
   static Application *s_instance;
 };

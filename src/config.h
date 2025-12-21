@@ -36,4 +36,6 @@ namespace jrb::wifi_serial {
 #define DEFAULT_TOPIC_TTY0 "wifi_serial/%s/ttyS0"
 #define DEFAULT_TOPIC_TTY1 "wifi_serial/%s/ttyS1"
 
+#define HTTP_PORT 80
+
 } // namespace jrb::wifi_serial
