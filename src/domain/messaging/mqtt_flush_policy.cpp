@@ -19,7 +19,7 @@ void MqttFlushPolicy::flush(const types::span<const uint8_t> &buffer,
     return;
 
   if (topic.length() == 0) {
-    Log.errorln("MqttFlushPolicy::flush: topic is empty for buffer '%s'", name);
+    LOG_ERROR("MqttFlushPolicy::flush: topic is empty for buffer '%s'", name);
     return;
   }
 
@@ -27,7 +27,7 @@ void MqttFlushPolicy::flush(const types::span<const uint8_t> &buffer,
                 topic.c_str());
   bool result = mqttClient.publish(topic.c_str(), buffer.data(), buffer.size());
   if (!result) {
-    Log.errorln("MQTT publish failed for topic: %s", topic.c_str());
+    LOG_ERROR("MQTT publish failed for topic: %s", topic.c_str());
   }
 }
 } // namespace jrb::wifi_serial

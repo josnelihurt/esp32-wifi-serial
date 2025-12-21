@@ -48,7 +48,7 @@ bool SpecialCharacterHandler::handle(char c) {
     ESP.restart();
     break;
   default:
-    Log.errorln("Unknown special character: %c", c);
+    LOG_ERROR("Unknown special character: %c", c);
     break;
   }
   return false;

@@ -30,15 +30,15 @@ void OTAManager::setup() {
 
   ArduinoOTA.onError([](ota_error_t error) {
     if (error == OTA_AUTH_ERROR) {
-      Log.errorln("OTA Error[%u]: Auth Failed", error);
+      LOG_ERROR("OTA Error[%u]: Auth Failed", error);
     } else if (error == OTA_BEGIN_ERROR) {
-      Log.errorln("OTA Error[%u]: Begin Failed", error);
+      LOG_ERROR("OTA Error[%u]: Begin Failed", error);
     } else if (error == OTA_CONNECT_ERROR) {
-      Log.errorln("OTA Error[%u]: Connect Failed", error);
+      LOG_ERROR("OTA Error[%u]: Connect Failed", error);
     } else if (error == OTA_RECEIVE_ERROR) {
-      Log.errorln("OTA Error[%u]: Receive Failed", error);
+      LOG_ERROR("OTA Error[%u]: Receive Failed", error);
     } else if (error == OTA_END_ERROR) {
-      Log.errorln("OTA Error[%u]: End Failed", error);
+      LOG_ERROR("OTA Error[%u]: End Failed", error);
     }
   });
 

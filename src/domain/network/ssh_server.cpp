@@ -21,7 +21,7 @@ SSHServer::SSHServer(PreferencesStorageDefault &storage, SystemInfo &sysInfo,
   // Create FreeRTOS queue for thread-safe serial→SSH data transfer
   serialToSSHQueue = xQueueCreate(SSH_QUEUE_SIZE, SSH_QUEUE_ITEM_SIZE);
   if (!serialToSSHQueue) {
-    Log.errorln("SSH: Failed to create serialToSSH queue");
+    LOG_ERROR("SSH: Failed to create serialToSSH queue");
   } else {
     LOG_INFO("SSH: Queue created successfully (size=%d, item_size=%d)",
              SSH_QUEUE_SIZE, SSH_QUEUE_ITEM_SIZE);
@@ -252,14 +252,14 @@ void SSHServer::handleSSHSession(void *session) {
 
   ssh_channel channel = nullptr;
   if (!waitForChannelSession(session, (void **)&channel)) {
-    Log.errorln("SSH: No channel session requested");
+    LOG_ERROR("SSH: No channel session requested");
     return;
   }
 
   LOG_INFO("SSH: Channel opened");
 
   if (!waitForShellRequest(session, channel)) {
-    Log.errorln("SSH: No shell requested");
+    LOG_ERROR("SSH: No shell requested");
     ssh_channel_close(channel);
     ssh_channel_free(channel);
     return;
@@ -344,7 +344,7 @@ void SSHServer::setup() {
   LOG_INFO("%s: please wait this may take a while...", __PRETTY_FUNCTION__);
 
   if (WiFi.status() != WL_CONNECTED) {
-    Log.errorln("%s: WiFi not connected, cannot setup SSH server",
+    LOG_ERROR("%s: WiFi not connected, cannot setup SSH server",
                 __PRETTY_FUNCTION__);
     return;
   }
@@ -355,14 +355,14 @@ void SSHServer::setup() {
   LOG_INFO("%s: Initializing libssh", __PRETTY_FUNCTION__);
   int rc = ssh_init();
   if (rc != SSH_OK) {
-    Log.errorln("%s: Failed to initialize libssh: %d", __PRETTY_FUNCTION__, rc);
+    LOG_ERROR("%s: Failed to initialize libssh: %d", __PRETTY_FUNCTION__, rc);
     return;
   }
 
   LOG_INFO("%s: Creating SSH bind (server listener)", __PRETTY_FUNCTION__);
   sshBind = ssh_bind_new();
   if (!sshBind) {
-    Log.errorln("%s: Failed to create SSH bind", __PRETTY_FUNCTION__);
+    LOG_ERROR("%s: Failed to create SSH bind", __PRETTY_FUNCTION__);
     ssh_finalize();
     return;
   }
@@ -374,7 +374,7 @@ void SSHServer::setup() {
   ssh_key tempHostkey = nullptr;
   rc = ssh_pki_generate(SSH_KEYTYPE_RSA, SSH_RSA_KEY_BITS, &tempHostkey);
   if (rc != SSH_OK || !tempHostkey) {
-    Log.errorln("%s: Failed to generate RSA host key", __PRETTY_FUNCTION__);
+    LOG_ERROR("%s: Failed to generate RSA host key", __PRETTY_FUNCTION__);
     ssh_bind_free((ssh_bind)sshBind);
     sshBind = nullptr;
     ssh_finalize();
@@ -385,7 +385,7 @@ void SSHServer::setup() {
   rc = ssh_bind_options_set((ssh_bind)sshBind, SSH_BIND_OPTIONS_IMPORT_KEY,
                             tempHostkey);
   if (rc != SSH_OK) {
-    Log.errorln("%s: Failed to set host key", __PRETTY_FUNCTION__);
+    LOG_ERROR("%s: Failed to set host key", __PRETTY_FUNCTION__);
     ssh_key_free(tempHostkey);
     ssh_bind_free((ssh_bind)sshBind);
     sshBind = nullptr;
@@ -399,7 +399,7 @@ void SSHServer::setup() {
 
   LOG_INFO("%s: Starting listening", __PRETTY_FUNCTION__);
   if (ssh_bind_listen((ssh_bind)sshBind) < 0) {
-    Log.errorln("SSH Server: Failed to listen on port 22: %s",
+    LOG_ERROR("SSH Server: Failed to listen on port 22: %s",
                 ssh_get_error((ssh_bind)sshBind));
     ssh_bind_free((ssh_bind)sshBind);
     sshBind = nullptr;
@@ -423,7 +423,7 @@ void SSHServer::setup() {
   if (sshTaskHandle) {
     LOG_INFO("%s: Task created successfully", __PRETTY_FUNCTION__);
   } else {
-    Log.errorln("%s: Failed to create task", __PRETTY_FUNCTION__);
+    LOG_ERROR("%s: Failed to create task", __PRETTY_FUNCTION__);
     running = false;
   }
 }
@@ -461,7 +461,7 @@ void SSHServer::runSSHTask() {
     LOG_INFO("SSH Task: New connection accepted");
 
     if (ssh_handle_key_exchange(newSession) != SSH_OK) {
-      Log.errorln("SSH Task: Key exchange failed: %s",
+      LOG_ERROR("SSH Task: Key exchange failed: %s",
                   ssh_get_error(newSession));
       ssh_disconnect(newSession);
       ssh_free(newSession);

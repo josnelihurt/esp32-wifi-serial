@@ -102,7 +102,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
   tty0 = onTtyS0Write;
   tty1 = onTtyS1Write;
   if (!LittleFS.begin(true)) {
-    Log.errorln("LittleFS mount failed");
+    LOG_ERROR("LittleFS mount failed");
     return;
   }
   LOG_INFO("LittleFS mounted successfully");
@@ -188,7 +188,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
     if (request->hasParam("speed0", true)) {
       int baudRate = request->getParam("speed0", true)->value().toInt();
       if (baudRate <= 1) {
-        Log.errorln("Invalid baud rate %d (must be > 1), using default 115200",
+        LOG_ERROR("Invalid baud rate %d (must be > 1), using default 115200",
                     baudRate);
         preferencesStorage.baudRateTty1 = DEFAULT_BAUD_RATE_TTY1;
       } else {
@@ -455,7 +455,7 @@ void WebConfigServer::setupOTAEndpoints() {
         // Require password verification
         if (index == 0 && otaRequirePassword &&
             preferencesStorage.webPassword.length() == 0) {
-          Log.errorln("OTA: Password not configured");
+          LOG_ERROR("OTA: Password not configured");
           return;
         }
 #endif
@@ -466,7 +466,7 @@ void WebConfigServer::setupOTAEndpoints() {
 
           // Validate filename
           if (!filename.endsWith(".bin")) {
-            Log.errorln("OTA: Invalid firmware file extension");
+            LOG_ERROR("OTA: Invalid firmware file extension");
             return;
           }
 
@@ -485,7 +485,7 @@ void WebConfigServer::setupOTAEndpoints() {
           // Begin update
           if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH)) {
             Update.printError(Serial);
-            Log.errorln("OTA: Update.begin() failed");
+            LOG_ERROR("OTA: Update.begin() failed");
             return;
           }
 
@@ -499,7 +499,7 @@ void WebConfigServer::setupOTAEndpoints() {
         if (len) {
           if (Update.write(data, len) != len) {
             Update.printError(Serial);
-            Log.errorln("OTA: Update.write() failed");
+            LOG_ERROR("OTA: Update.write() failed");
             return;
           }
 
@@ -529,9 +529,9 @@ void WebConfigServer::setupOTAEndpoints() {
           // Verify hash if provided
           if (otaExpectedHash.length() > 0 &&
               otaCalculatedHash != otaExpectedHash) {
-            Log.errorln("OTA: Hash verification failed!");
-            Log.errorln("  Expected: %s", otaExpectedHash.c_str());
-            Log.errorln("  Calculated: %s", otaCalculatedHash.c_str());
+            LOG_ERROR("OTA: Hash verification failed!");
+            LOG_ERROR("  Expected: %s", otaExpectedHash.c_str());
+            LOG_ERROR("  Calculated: %s", otaCalculatedHash.c_str());
             Update.abort();
             otaInProgress = false;
             return;
@@ -540,7 +540,7 @@ void WebConfigServer::setupOTAEndpoints() {
           // Complete update
           if (!Update.end(true)) {
             Update.printError(Serial);
-            Log.errorln("OTA: Update.end() failed");
+            LOG_ERROR("OTA: Update.end() failed");
             otaInProgress = false;
             return;
           }
@@ -582,7 +582,7 @@ void WebConfigServer::setupOTAEndpoints() {
         // Require password verification
         if (index == 0 && otaRequirePassword &&
             preferencesStorage.webPassword.length() == 0) {
-          Log.errorln("OTA: Password not configured");
+          LOG_ERROR("OTA: Password not configured");
           return;
         }
 #endif
@@ -607,7 +607,7 @@ void WebConfigServer::setupOTAEndpoints() {
           // Use U_SPIFFS for LittleFS partition update
           if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_SPIFFS)) {
             Update.printError(Serial);
-            Log.errorln("OTA: Filesystem Update.begin() failed");
+            LOG_ERROR("OTA: Filesystem Update.begin() failed");
             return;
           }
 
@@ -621,7 +621,7 @@ void WebConfigServer::setupOTAEndpoints() {
         if (len) {
           if (Update.write(data, len) != len) {
             Update.printError(Serial);
-            Log.errorln("OTA: Filesystem Update.write() failed");
+            LOG_ERROR("OTA: Filesystem Update.write() failed");
             return;
           }
 
@@ -651,9 +651,9 @@ void WebConfigServer::setupOTAEndpoints() {
           // Verify hash if provided
           if (otaExpectedHash.length() > 0 &&
               otaCalculatedHash != otaExpectedHash) {
-            Log.errorln("OTA: Hash verification failed!");
-            Log.errorln("  Expected: %s", otaExpectedHash.c_str());
-            Log.errorln("  Calculated: %s", otaCalculatedHash.c_str());
+            LOG_ERROR("OTA: Hash verification failed!");
+            LOG_ERROR("  Expected: %s", otaExpectedHash.c_str());
+            LOG_ERROR("  Calculated: %s", otaCalculatedHash.c_str());
             Update.abort();
             otaInProgress = false;
             return;
@@ -662,7 +662,7 @@ void WebConfigServer::setupOTAEndpoints() {
           // Complete update
           if (!Update.end(true)) {
             Update.printError(Serial);
-            Log.errorln("OTA: Filesystem Update.end() failed");
+            LOG_ERROR("OTA: Filesystem Update.end() failed");
             otaInProgress = false;
             return;
           }

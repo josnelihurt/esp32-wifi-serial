@@ -107,7 +107,7 @@ bool MqttClient::connect(const char *broker, int port, const char *user,
 
   connected = result;
   if (!result) {
-    Log.errorln("MQTT connection failed! State: %d", mqttClient->state());
+    LOG_ERROR("MQTT connection failed! State: %d", mqttClient->state());
     return false;
   }
 
@@ -220,12 +220,12 @@ void MqttClient::loop() {
 
 bool MqttClient::publishInfo(const types::string &data) {
   if (!mqttClient) {
-    Log.errorln("MQTT publishInfo failed: mqttClient is null");
+    LOG_ERROR("MQTT publishInfo failed: mqttClient is null");
     return false;
   }
 
   if (topicInfo.length() == 0) {
-    Log.errorln("MQTT publishInfo failed: topicInfo is empty");
+    LOG_ERROR("MQTT publishInfo failed: topicInfo is empty");
     return false;
   }
 
@@ -241,7 +241,7 @@ bool MqttClient::publishInfo(const types::string &data) {
   bool result = mqttClient->publish(topicInfo.c_str(), (uint8_t *)data.c_str(),
                                     data.length(), false);
   if (!result) {
-    Log.errorln("MQTT publishInfo failed! State: %d", mqttClient->state());
+    LOG_ERROR("MQTT publishInfo failed! State: %d", mqttClient->state());
     connected = mqttClient->connected();
   } else {
     Log.traceln("MQTT info published successfully");
@@ -275,7 +275,7 @@ void MqttClient::mqttCallback(char *topic, byte *payload, unsigned int length) {
     onTty1Callback(payloadSpan);
     return;
   } else {
-    Log.errorln("MQTT callback received for unknown topic: %s", topic);
+    LOG_ERROR("MQTT callback received for unknown topic: %s", topic);
     return;
   }
 }

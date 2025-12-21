@@ -46,7 +46,7 @@ Application::~Application() {}
 void Application::setupSerial1() {
   int baudRate = preferencesStorage.baudRateTty1;
   if (baudRate <= 1) {
-    Log.errorln("%s: baudRateTty1 is %d (<= 1), using default 115200",
+    LOG_ERROR("%s: baudRateTty1 is %d (<= 1), using default 115200",
                 __PRETTY_FUNCTION__, baudRate);
     baudRate = DEFAULT_BAUD_RATE_TTY1;
   }
@@ -200,7 +200,7 @@ void Application::handleSerialPort0() {
 
 void Application::handleSerialPort1() {
   if (serial1 == nullptr) {
-    Log.errorln("%s: serial1 is nullptr", __PRETTY_FUNCTION__);
+    LOG_ERROR("%s: serial1 is nullptr", __PRETTY_FUNCTION__);
     return;
   }
 
@@ -220,7 +220,7 @@ void Application::handleSerialPort1() {
 
 void Application::writeToSerial1(uint8_t byte) {
   if (serial1 == nullptr) {
-    Log.errorln("%s: serial1 is nullptr", __PRETTY_FUNCTION__);
+    LOG_ERROR("%s: serial1 is nullptr", __PRETTY_FUNCTION__);
     return;
   }
   serial1->write(byte);

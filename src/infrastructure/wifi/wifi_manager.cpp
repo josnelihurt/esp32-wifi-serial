@@ -17,7 +17,7 @@ void WiFiManager::setup() {
   Log.traceln(__PRETTY_FUNCTION__);
 
   if (preferencesStorage.ssid.length() == 0 || !connect()) {
-    Log.errorln("%s: %s", __PRETTY_FUNCTION__,
+    LOG_ERROR("%s: %s", __PRETTY_FUNCTION__,
                 "No WiFi connection found, setting up AP");
     setupAP();
   }
@@ -87,7 +87,7 @@ bool WiFiManager::connect() {
 
     // If we see NO_SSID_AVAIL, the network isn't visible - bail out early
     if (status == WL_NO_SSID_AVAIL && attempts > 5) {
-      Log.errorln("%s: SSID '%s' not found. Is it a 2.4GHz network? ESP32-C3 "
+      LOG_ERROR("%s: SSID '%s' not found. Is it a 2.4GHz network? ESP32-C3 "
                   "doesn't support 5GHz",
                   __PRETTY_FUNCTION__, preferencesStorage.ssid.c_str());
       break;
