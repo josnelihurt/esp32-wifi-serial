@@ -4,7 +4,6 @@
 #include <ArduinoLog.h>
 #include <array>
 #include <cstdint>
-#include <nonstd/span.hpp>
 
 namespace jrb::wifi_serial {
 
@@ -46,7 +45,7 @@ public:
     }
   }
 
-  void append(const nonstd::span<const uint8_t> &data) {
+  void append(const types::span<const uint8_t> &data) {
     if (data.empty())
       return;
 
@@ -67,14 +66,14 @@ public:
     // Construye un span de los datos
     if (head > tail || full()) {
       // Contiguous segment
-      nonstd::span<const uint8_t> span(&buffer[tail], size);
+      types::span<const uint8_t> span(&buffer[tail], size);
       flusher.flush(span, name);
     } else {
       // Wrapped segment: send two chunks
-      nonstd::span<const uint8_t> span1(&buffer[tail], MQTT_BUFFER_SIZE - tail);
+      types::span<const uint8_t> span1(&buffer[tail], MQTT_BUFFER_SIZE - tail);
       flusher.flush(span1, name);
       if (head > 0) {
-        nonstd::span<const uint8_t> span2(&buffer[0], head);
+        types::span<const uint8_t> span2(&buffer[0], head);
         flusher.flush(span2, name);
       }
     }

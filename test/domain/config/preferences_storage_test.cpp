@@ -46,10 +46,10 @@ TEST_F(PreferencesStorageTest, ConstructorGeneratesDefaultTopics) {
   EXPECT_EQ(storage.topicTty1Tx.find("wifi_serial/"), 0);
 
   // Topics should end with /rx or /tx
-  EXPECT_NE(storage.topicTty0Rx.find("/rx"), std::string::npos);
-  EXPECT_NE(storage.topicTty0Tx.find("/tx"), std::string::npos);
-  EXPECT_NE(storage.topicTty1Rx.find("/rx"), std::string::npos);
-  EXPECT_NE(storage.topicTty1Tx.find("/tx"), std::string::npos);
+  EXPECT_NE(storage.topicTty0Rx.find("/rx"), types::string::npos);
+  EXPECT_NE(storage.topicTty0Tx.find("/tx"), types::string::npos);
+  EXPECT_NE(storage.topicTty1Rx.find("/rx"), types::string::npos);
+  EXPECT_NE(storage.topicTty1Tx.find("/tx"), types::string::npos);
 }
 
 // ============================================================================
@@ -131,21 +131,21 @@ TEST_F(PreferencesStorageTest, SerializeCreatesValidJSON) {
   storage.deviceName = "test-device";
   storage.mqttBroker = "mqtt.example.com";
 
-  std::string json = storage.serialize("192.168.1.100", "AA:BB:CC:DD:EE:FF",
+  types::string json = storage.serialize("192.168.1.100", "AA:BB:CC:DD:EE:FF",
                                        "TestNetwork");
 
   // Should contain JSON structure
-  EXPECT_NE(json.find("{"), std::string::npos);
-  EXPECT_NE(json.find("}"), std::string::npos);
+  EXPECT_NE(json.find("{"), types::string::npos);
+  EXPECT_NE(json.find("}"), types::string::npos);
 
   // Should contain key fields
-  EXPECT_NE(json.find("deviceName"), std::string::npos);
-  EXPECT_NE(json.find("test-device"), std::string::npos);
-  EXPECT_NE(json.find("mqttBroker"), std::string::npos);
-  EXPECT_NE(json.find("ipAddress"), std::string::npos);
-  EXPECT_NE(json.find("192.168.1.100"), std::string::npos);
-  EXPECT_NE(json.find("macAddress"), std::string::npos);
-  EXPECT_NE(json.find("AA:BB:CC:DD:EE:FF"), std::string::npos);
+  EXPECT_NE(json.find("deviceName"), types::string::npos);
+  EXPECT_NE(json.find("test-device"), types::string::npos);
+  EXPECT_NE(json.find("mqttBroker"), types::string::npos);
+  EXPECT_NE(json.find("ipAddress"), types::string::npos);
+  EXPECT_NE(json.find("192.168.1.100"), types::string::npos);
+  EXPECT_NE(json.find("macAddress"), types::string::npos);
+  EXPECT_NE(json.find("AA:BB:CC:DD:EE:FF"), types::string::npos);
 }
 
 TEST_F(PreferencesStorageTest, SerializeMasksPasswords) {
@@ -155,15 +155,15 @@ TEST_F(PreferencesStorageTest, SerializeMasksPasswords) {
   storage.password = "wifisecret";
   storage.webPassword = "websecret";
 
-  std::string json = storage.serialize("", "", "");
+  types::string json = storage.serialize("", "", "");
 
   // Passwords should be masked
-  EXPECT_EQ(json.find("secret123"), std::string::npos);
-  EXPECT_EQ(json.find("wifisecret"), std::string::npos);
-  EXPECT_EQ(json.find("websecret"), std::string::npos);
+  EXPECT_EQ(json.find("secret123"), types::string::npos);
+  EXPECT_EQ(json.find("wifisecret"), types::string::npos);
+  EXPECT_EQ(json.find("websecret"), types::string::npos);
 
   // Should contain masked indicators
-  EXPECT_NE(json.find("********"), std::string::npos);
+  EXPECT_NE(json.find("********"), types::string::npos);
 }
 
 // ============================================================================

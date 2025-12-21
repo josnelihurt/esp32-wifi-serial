@@ -6,7 +6,6 @@
 #include <WiFi.h>
 #include <libssh/libssh.h>
 #include <libssh/server.h>
-#include <nonstd/span.hpp>
 
 namespace jrb::wifi_serial {
 
@@ -50,7 +49,7 @@ void SSHServer::setSerialWriteCallback(SerialWriteCallback writeCallback) {
   serialWrite = writeCallback;
 }
 
-void SSHServer::sendToSSHClients(const nonstd::span<const uint8_t> &data) {
+void SSHServer::sendToSSHClients(const types::span<const uint8_t> &data) {
   if (!running || !serialToSSHQueue || data.empty() || !activeSSHSession)
     return;
 
@@ -121,7 +120,7 @@ void SSHServer::sendWelcomeMessage(void *channel) {
   ssh_channel_write(chan, sysInfoBuf, strlen(sysInfoBuf));
 }
 
-std::string SSHServer::handleSpecialCharacter(char c) {
+types::string SSHServer::handleSpecialCharacter(char c) {
   if (c == CMD_PREFIX) {
     specialCharacterMode = true;
     return
@@ -142,7 +141,7 @@ std::string SSHServer::handleSpecialCharacter(char c) {
   case CMD_RESET:
     return "RESET";
   default:
-    return std::string("Unknown special character: ") + c;
+    return types::string("Unknown special character: ") + c;
   }
 }
 
@@ -285,12 +284,12 @@ void SSHServer::handleSSHSession(void *session) {
     int nbytes = ssh_channel_read_nonblocking(channel, sshToSerialBuffer,
                                               sizeof(sshToSerialBuffer), 0);
     if (nbytes > 0 && serialWrite) {
-      std::string specialCharacterResponse =
+      types::string specialCharacterResponse =
           handleSpecialCharacter(sshToSerialBuffer[0]);
       // Replace \n with \r\n for SSH
       size_t pos = 0;
       while ((pos = specialCharacterResponse.find("\n", pos)) !=
-             std::string::npos) {
+             types::string::npos) {
         if (pos == 0 || specialCharacterResponse[pos - 1] != '\r') {
           specialCharacterResponse.replace(pos, 1, "\r\n");
           pos += 2;
@@ -320,8 +319,8 @@ void SSHServer::handleSSHSession(void *session) {
       Log.verboseln("$ssh->ttyS1$: %d bytes", nbytes);
       ssh_channel_write(channel, sshToSerialBuffer,
                         nbytes); // echo back to SSH client
-      serialWrite(nonstd::span<const uint8_t>(sshToSerialBuffer,
-                                              static_cast<size_t>(nbytes)));
+      serialWrite(types::span<const uint8_t>(sshToSerialBuffer,
+                                             static_cast<size_t>(nbytes)));
     }
 
     if (serialToSSHQueue &&

@@ -4,10 +4,10 @@
 namespace jrb::wifi_serial {
 
 MqttFlushPolicy::MqttFlushPolicy(PubSubClient &mqttClient,
-                                 const std::string &topic)
+                                 const types::string &topic)
     : mqttClient{mqttClient}, topic{topic} {}
 
-void MqttFlushPolicy::flush(const nonstd::span<const uint8_t> &buffer,
+void MqttFlushPolicy::flush(const types::span<const uint8_t> &buffer,
                             const char *name) {
   if (buffer.empty())
     return;

@@ -2,13 +2,13 @@
 
 #include "domain/config/preferences_storage_policy.h"
 #include "domain/serial/serial_log.hpp"
+#include "infrastructure/types.hpp"
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
 #include <Update.h>
 #include <functional>
 #include <mbedtls/sha256.h>
-#include <nonstd/span.hpp>
 
 namespace jrb::wifi_serial {
 
@@ -18,7 +18,7 @@ public:
   // std::function is fancy add additional overhead. I have tried using zero
   // cost abstaction applying policy based design, but it was getting messy. So
   // back to old school.
-  using SerialWriteCallback = void (*)(const nonstd::span<const uint8_t> &);
+  using SerialWriteCallback = void (*)(const types::span<const uint8_t> &);
 
   // OTA Web constants
   static constexpr size_t OTA_CHUNK_SIZE = 16 * 1024;          // 16KB chunks
@@ -31,11 +31,11 @@ public:
   void setup(SerialWriteCallback tty0Callback,
              SerialWriteCallback tty1Callback);
 
-  void setWiFiConfig(const std::string &ssid, const std::string &password,
-                     const std::string &deviceName,
-                     const std::string &mqttBroker, int mqttPort,
-                     const std::string &mqttUser,
-                     const std::string &mqttPassword);
+  void setWiFiConfig(const types::string &ssid, const types::string &password,
+                     const types::string &deviceName,
+                     const types::string &mqttBroker, int mqttPort,
+                     const types::string &mqttUser,
+                     const types::string &mqttPassword);
 
   void setAPMode(bool apMode);
   void setAPIP(const IPAddress &ip);
@@ -64,7 +64,7 @@ private:
   mbedtls_sha256_context sha256Ctx;
 
   String processor(const String &var);
-  std::string escapeHTML(const std::string &str);
+  types::string escapeHTML(const types::string &str);
 
   // OTA Web methods
   void setupOTAEndpoints();

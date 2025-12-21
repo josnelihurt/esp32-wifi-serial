@@ -1,7 +1,7 @@
 #pragma once
 #include "config.h"
+#include "infrastructure/types.hpp"
 #include <Arduino.h>
-#include <nonstd/span.hpp>
 #include <tuple>
 #include <utility>
 
@@ -60,7 +60,7 @@ public:
    *
    * Uses C++17 fold expression - fully inlined, zero overhead
    */
-  void append(const nonstd::span<const uint8_t> &buffer) {
+  void append(const types::span<const uint8_t> &buffer) {
     std::apply(
         [&buffer](auto &...subs) {
           (subs.get().append(buffer),

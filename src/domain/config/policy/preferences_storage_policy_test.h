@@ -1,9 +1,9 @@
 #pragma once
 
+#include "infrastructure/types.hpp"
 #include <cstdint>
 #include <map>
 #include <sstream>
-#include <string>
 #include <variant>
 
 namespace jrb::wifi_serial {
@@ -20,7 +20,7 @@ namespace jrb::wifi_serial {
 class TestStoragePolicy {
 private:
   // Static storage to simulate persistent storage across instances
-  static std::map<std::string, std::variant<std::string, int32_t>> storage;
+  static std::map<types::string, std::variant<types::string, int32_t>> storage;
   bool isReadOnly = false;
 
 public:
@@ -50,11 +50,11 @@ public:
    * @param defaultVal Default value if key doesn't exist
    * @return The stored value or default
    */
-  std::string getString(const char *key, const std::string &defaultVal) {
+  types::string getString(const char *key, const types::string &defaultVal) {
     auto it = storage.find(key);
     if (it != storage.end()) {
-      if (std::holds_alternative<std::string>(it->second)) {
-        return std::get<std::string>(it->second);
+      if (std::holds_alternative<types::string>(it->second)) {
+        return std::get<types::string>(it->second);
       }
     }
     return defaultVal;
@@ -81,7 +81,7 @@ public:
    * @param key The key to store
    * @param value The value to store
    */
-  void putString(const char *key, const std::string &value) {
+  void putString(const char *key, const types::string &value) {
     if (!isReadOnly) {
       storage[key] = value;
     }
@@ -120,7 +120,7 @@ public:
    * @param key The key to check
    * @return true if key exists
    */
-  bool hasKey(const std::string &key) const {
+  bool hasKey(const types::string &key) const {
     return storage.find(key) != storage.end();
   }
 
@@ -133,16 +133,16 @@ public:
    * @brief Serializes configuration data to JSON string using
    * std::ostringstream.
    */
-  std::string
-  serializeJson(const std::string &deviceName, const std::string &mqttBroker,
-                int32_t mqttPort, const std::string &mqttUser,
-                const std::string &mqttPassword, const std::string &topicTty0Rx,
-                const std::string &topicTty0Tx, const std::string &topicTty1Rx,
-                const std::string &topicTty1Tx, const std::string &ipAddress,
-                const std::string &macAddress, const std::string &ssid,
-                const std::string &password, const std::string &webUser,
-                const std::string &webPassword, bool debugEnabled,
-                bool tty02tty1Bridge) const {
+  types::string serializeJson(
+      const types::string &deviceName, const types::string &mqttBroker,
+      int32_t mqttPort, const types::string &mqttUser,
+      const types::string &mqttPassword, const types::string &topicTty0Rx,
+      const types::string &topicTty0Tx, const types::string &topicTty1Rx,
+      const types::string &topicTty1Tx, const types::string &ipAddress,
+      const types::string &macAddress, const types::string &ssid,
+      const types::string &password, const types::string &webUser,
+      const types::string &webPassword, bool debugEnabled,
+      bool tty02tty1Bridge) const {
     std::ostringstream oss;
     oss << "{\n"
         << "  \"deviceName\": \"" << deviceName << "\",\n"

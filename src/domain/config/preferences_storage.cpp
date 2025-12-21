@@ -60,8 +60,8 @@ void PreferencesStorage<StoragePolicy>::generateDefaultTopics() {
   snprintf(baseTopic1, sizeof(baseTopic1), DEFAULT_TOPIC_TTY1,
            deviceName.c_str());
 
-  std::string base0 = std::string(baseTopic0);
-  std::string base1 = std::string(baseTopic1);
+  types::string base0 = types::string(baseTopic0);
+  types::string base1 = types::string(baseTopic1);
 
   // Ensure topics start with "wifi_serial/"
   if (base0.find("wifi_serial/") != 0) {
@@ -101,10 +101,10 @@ void PreferencesStorage<StoragePolicy>::generateDefaultTopics() {
 // ============================================================================
 
 template <typename StoragePolicy>
-std::string
-PreferencesStorage<StoragePolicy>::serialize(const std::string &ipAddress,
-                                             const std::string &macAddress,
-                                             const std::string &ssid) const {
+types::string
+PreferencesStorage<StoragePolicy>::serialize(const types::string &ipAddress,
+                                             const types::string &macAddress,
+                                             const types::string &ssid) const {
 
   // Delegate to the policy's JSON serialization implementation
   return storage.serializeJson(

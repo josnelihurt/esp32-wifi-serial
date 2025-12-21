@@ -2,6 +2,7 @@
 #include "config.h"
 #include "domain/config/preferences_storage.h"
 #include "domain/serial/serial_log.hpp"
+#include "infrastructure/types.hpp"
 #include <Arduino.h>
 #include <ArduinoLog.h>
 #include <ESPAsyncWebServer.h>
@@ -30,12 +31,12 @@ WebConfigServer::~WebConfigServer() {
   }
 }
 
-void WebConfigServer::setWiFiConfig(const std::string &ssid,
-                                    const std::string &password,
-                                    const std::string &deviceName,
-                                    const std::string &mqttBroker, int mqttPort,
-                                    const std::string &mqttUser,
-                                    const std::string &mqttPassword) {}
+void WebConfigServer::setWiFiConfig(const types::string &ssid,
+                                    const types::string &password,
+                                    const types::string &deviceName,
+                                    const types::string &mqttBroker,
+                                    int mqttPort, const types::string &mqttUser,
+                                    const types::string &mqttPassword) {}
 
 void WebConfigServer::setAPMode(bool apMode) {
   Log.infoln(__PRETTY_FUNCTION__, "apMode: %s", apMode ? "true" : "false");
@@ -266,7 +267,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
     }
     const String &data = request->getParam("data", true)->value();
     if (tty0) {
-      const nonstd::span<const uint8_t> span(
+      const types::span<const uint8_t> span(
           reinterpret_cast<const uint8_t *>(data.c_str()), data.length());
       tty0(span);
     }
@@ -286,7 +287,7 @@ void WebConfigServer::setup(WebConfigServer::SerialWriteCallback onTtyS0Write,
     }
     const String &data = request->getParam("data", true)->value();
     if (tty1) {
-      const nonstd::span<const uint8_t> span(
+      const types::span<const uint8_t> span(
           reinterpret_cast<const uint8_t *>(data.c_str()), data.length());
       tty1(span);
     }
@@ -371,31 +372,31 @@ String WebConfigServer::processor(const String &var) {
   return String(); // Return empty string for unknown variables
 }
 
-std::string WebConfigServer::escapeHTML(const std::string &str) {
-  std::string escaped = str;
+types::string WebConfigServer::escapeHTML(const types::string &str) {
+  types::string escaped = str;
   size_t pos = 0;
   // Replace & first to avoid double-escaping
-  while ((pos = escaped.find("&", pos)) != std::string::npos) {
+  while ((pos = escaped.find("&", pos)) != types::string::npos) {
     escaped.replace(pos, 1, "&amp;");
     pos += 5;
   }
   pos = 0;
-  while ((pos = escaped.find("<", pos)) != std::string::npos) {
+  while ((pos = escaped.find("<", pos)) != types::string::npos) {
     escaped.replace(pos, 1, "&lt;");
     pos += 4;
   }
   pos = 0;
-  while ((pos = escaped.find(">", pos)) != std::string::npos) {
+  while ((pos = escaped.find(">", pos)) != types::string::npos) {
     escaped.replace(pos, 1, "&gt;");
     pos += 4;
   }
   pos = 0;
-  while ((pos = escaped.find("\"", pos)) != std::string::npos) {
+  while ((pos = escaped.find("\"", pos)) != types::string::npos) {
     escaped.replace(pos, 1, "&quot;");
     pos += 6;
   }
   pos = 0;
-  while ((pos = escaped.find("'", pos)) != std::string::npos) {
+  while ((pos = escaped.find("'", pos)) != types::string::npos) {
     escaped.replace(pos, 1, "&#39;");
     pos += 5;
   }

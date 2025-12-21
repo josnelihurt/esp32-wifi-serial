@@ -5,7 +5,7 @@
 namespace jrb::wifi_serial {
 
 // Static storage definition for TestStoragePolicy
-std::map<std::string, std::variant<std::string, int32_t>>
+std::map<types::string, std::variant<types::string, int32_t>>
     TestStoragePolicy::storage;
 
 // Explicit template instantiation for test environment

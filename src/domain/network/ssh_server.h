@@ -7,7 +7,6 @@
 #include <freertos/queue.h>
 #include <freertos/task.h>
 #include <functional>
-#include <nonstd/span.hpp>
 
 namespace jrb::wifi_serial {
 
@@ -26,7 +25,7 @@ class SystemInfo;
  */
 class SSHServer final {
 public:
-  using SerialWriteCallback = void (*)(const nonstd::span<const uint8_t> &);
+  using SerialWriteCallback = void (*)(const types::span<const uint8_t> &);
 
 private:
   PreferencesStorageDefault &preferencesStorage;
@@ -88,7 +87,7 @@ public:
    *
    * @param data Data to send to SSH clients
    */
-  void sendToSSHClients(const nonstd::span<const uint8_t> &data);
+  void sendToSSHClients(const types::span<const uint8_t> &data);
 
   /**
    * @brief Check if SSH server is running
@@ -103,7 +102,7 @@ private:
   void handleSSHSession(void *session);
   bool authenticateUser(const char *user, const char *password);
   void sendWelcomeMessage(void *channel);
-  std::string handleSpecialCharacter(char c);
+  types::string handleSpecialCharacter(char c);
   bool authenticateSession(void *session);
   bool waitForChannelSession(void *session, void **channel);
   bool waitForShellRequest(void *session, void *channel);

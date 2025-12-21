@@ -29,7 +29,7 @@ Application::Application()
   setupSerial1();
 
   // Initialize SSH server (runs in its own FreeRTOS task)
-  sshServer.setSerialWriteCallback([](const nonstd::span<const uint8_t> &data) {
+  sshServer.setSerialWriteCallback([](const types::span<const uint8_t> &data) {
     if (s_instance->preferencesStorage.debugEnabled) {
       String dataString((const char *)data.data(), data.size());
       Log.infoln("$ssh->ttyS1$%s", dataString.c_str());
@@ -66,11 +66,11 @@ void Application::setup() {
   systemInfo.logSystemInformation();
 
   mqttClient.setCallbacks(
-      [](const nonstd::span<const uint8_t> &data) {
+      [](const types::span<const uint8_t> &data) {
         Serial.write(data.data(), data.size());
         s_instance->tty0Broadcaster.append(data);
       },
-      [](const nonstd::span<const uint8_t> &data) {
+      [](const types::span<const uint8_t> &data) {
         if (s_instance->preferencesStorage.debugEnabled) {
           String dataString(data.data(), data.size());
           Log.infoln("$mqtt->ttyS1$%s", dataString.c_str());
@@ -92,7 +92,7 @@ void Application::setup() {
     webServer.setAPIP(wifiManager.getAPIP());
   }
   webServer.setup(
-      [](const nonstd::span<const uint8_t> &data) {
+      [](const types::span<const uint8_t> &data) {
         // Handle web to serial and mqtt
         if (s_instance->preferencesStorage.debugEnabled) {
           String dataString(data.data(), data.size());
@@ -100,7 +100,7 @@ void Application::setup() {
         }
         s_instance->mqttClient.appendToTty0Buffer(data);
       },
-      [](const nonstd::span<const uint8_t> &data) {
+      [](const types::span<const uint8_t> &data) {
         // Handle web to serial and mqtt
         if (s_instance->preferencesStorage.debugEnabled) {
           String dataString(data.data(), data.size());
@@ -163,12 +163,12 @@ void Application::publishInfoIfNeeded() {
     static constexpr unsigned long INFO_PUBLISH_INTERVAL_MS = 30000;
 
     if (millis() - lastInfoPublish >= INFO_PUBLISH_INTERVAL_MS) {
-      std::string macAddress = WiFi.macAddress().c_str();
-      std::string ipAddress = WiFi.status() == WL_CONNECTED
-                                  ? WiFi.localIP().toString().c_str()
-                                  : "Not connected";
-      std::string ssid = WiFi.status() == WL_CONNECTED ? WiFi.SSID().c_str()
-                                                       : "Not configured";
+      types::string macAddress = WiFi.macAddress().c_str();
+      types::string ipAddress = WiFi.status() == WL_CONNECTED
+                                    ? WiFi.localIP().toString().c_str()
+                                    : "Not connected";
+      types::string ssid = WiFi.status() == WL_CONNECTED ? WiFi.SSID().c_str()
+                                                         : "Not configured";
       mqttClient.publishInfo(
           preferencesStorage.serialize(ipAddress, macAddress, ssid));
       lastInfoPublish = millis();

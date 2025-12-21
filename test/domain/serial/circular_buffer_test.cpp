@@ -1,7 +1,7 @@
 #include "domain/serial/circular_buffer.hpp"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <nonstd/span.hpp>
+
 #include <vector>
 
 namespace jrb::wifi_serial {
@@ -167,7 +167,7 @@ TEST_P(SpanAppendTestSuite, AppendSpanAndVerifyState) {
   CircularBuffer<int, 8> buffer;
   const auto &param = GetParam();
 
-  nonstd::span<const int> span(param.span_data.data(), param.span_data.size());
+  types::span<const int> span(param.span_data.data(), param.span_data.size());
   buffer.append(span);
 
   EXPECT_THAT(buffer, BufferHasExpectedState(param.expected_size,

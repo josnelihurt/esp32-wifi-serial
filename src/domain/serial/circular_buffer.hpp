@@ -3,7 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <nonstd/span.hpp>
+
 #include <type_traits>
 namespace jrb::wifi_serial {
 
@@ -34,7 +34,7 @@ public:
     hasNewData = true;
   }
 
-  void append(const nonstd::span<const T> &data) {
+  void append(const types::span<const T> &data) {
     for (std::size_t i = 0; i < data.size(); ++i) {
       append(data[i]);
     }

@@ -1,6 +1,7 @@
 #include "mqtt_client.h"
 #include "config.h"
 #include "domain/config/preferences_storage.h"
+#include "infrastructure/types.hpp"
 #include <ArduinoLog.h>
 #include <cstring>
 #include <iomanip>
@@ -52,9 +53,10 @@ MqttClient::~MqttClient() {
   // mqttClient is automatically cleaned up by unique_ptr
 }
 
-void MqttClient::setTopics(const std::string &tty0Rx, const std::string &tty0Tx,
-                           const std::string &tty1Rx,
-                           const std::string &tty1Tx) {
+void MqttClient::setTopics(const types::string &tty0Rx,
+                           const types::string &tty0Tx,
+                           const types::string &tty1Rx,
+                           const types::string &tty1Tx) {
   topicTty0Rx = tty0Rx;
   topicTty0Tx = tty0Tx;
   topicTty1Rx = tty1Rx;
@@ -62,12 +64,12 @@ void MqttClient::setTopics(const std::string &tty0Rx, const std::string &tty0Tx,
   // Generate info topic from tty0Rx topic (replace /ttyS0/rx with /info)
   topicInfo = tty0Rx;
   size_t pos = topicInfo.find("/ttyS0/rx");
-  if (pos != std::string::npos) {
+  if (pos != types::string::npos) {
     topicInfo.replace(pos, 9, "/info");
   } else if (topicInfo.size() >= 3 &&
              topicInfo.substr(topicInfo.size() - 3) == "/rx") {
     size_t lastSlash = topicInfo.rfind('/');
-    if (lastSlash != std::string::npos) {
+    if (lastSlash != types::string::npos) {
       topicInfo = topicInfo.substr(0, lastSlash) + "/info";
     }
   }
@@ -75,8 +77,8 @@ void MqttClient::setTopics(const std::string &tty0Rx, const std::string &tty0Tx,
 }
 
 void MqttClient::setCallbacks(
-    void (*tty0)(const nonstd::span<const uint8_t> &),
-    void (*tty1)(const nonstd::span<const uint8_t> &)) {
+    void (*tty0)(const types::span<const uint8_t> &),
+    void (*tty1)(const types::span<const uint8_t> &)) {
   onTty0Callback = tty0;
   onTty1Callback = tty1;
 }
@@ -88,7 +90,7 @@ bool MqttClient::connect(const char *broker, int port, const char *user,
   std::ostringstream oss;
   oss << "ESP32-C3-" << preferencesStorage.deviceName << "-" << std::hex
       << random(0xffff);
-  std::string clientId = oss.str();
+  types::string clientId = oss.str();
 
   Log.infoln("MQTT connecting to %s:%d (ClientID: %s)", broker, port,
              clientId.c_str());
@@ -185,14 +187,14 @@ void MqttClient::loop() {
 
   // Transfer pending data from web task to MQTT buffers
   if (!tty0PendingBuffer.empty()) {
-    tty0Stream.append(nonstd::span<const uint8_t>(tty0PendingBuffer.data(),
-                                                  tty0PendingBuffer.size()));
+    tty0Stream.append(types::span<const uint8_t>(tty0PendingBuffer.data(),
+                                                 tty0PendingBuffer.size()));
     tty0PendingBuffer.clear();
   }
 
   if (!tty1PendingBuffer.empty()) {
-    tty1Stream.append(nonstd::span<const uint8_t>(tty1PendingBuffer.data(),
-                                                  tty1PendingBuffer.size()));
+    tty1Stream.append(types::span<const uint8_t>(tty1PendingBuffer.data(),
+                                                 tty1PendingBuffer.size()));
     tty1PendingBuffer.clear();
   }
 
@@ -213,7 +215,7 @@ void MqttClient::loop() {
   flushBuffersIfNeeded();
 }
 
-bool MqttClient::publishInfo(const std::string &data) {
+bool MqttClient::publishInfo(const types::string &data) {
   if (!mqttClient) {
     Log.errorln("MQTT publishInfo failed: mqttClient is null");
     return false;
@@ -245,13 +247,13 @@ bool MqttClient::publishInfo(const std::string &data) {
   return result;
 }
 
-void MqttClient::appendToTty0Buffer(const nonstd::span<const uint8_t> &data) {
+void MqttClient::appendToTty0Buffer(const types::span<const uint8_t> &data) {
   // Accumulate only - main loop transfers to MQTT
   tty0PendingBuffer.insert(tty0PendingBuffer.end(), data.data(),
                            data.data() + data.size());
 }
 
-void MqttClient::appendToTty1Buffer(const nonstd::span<const uint8_t> &data) {
+void MqttClient::appendToTty1Buffer(const types::span<const uint8_t> &data) {
   // Accumulate only - main loop transfers to MQTT
   tty1PendingBuffer.insert(tty1PendingBuffer.end(), data.data(),
                            data.data() + data.size());
@@ -260,9 +262,9 @@ void MqttClient::appendToTty1Buffer(const nonstd::span<const uint8_t> &data) {
 void MqttClient::mqttCallback(char *topic, byte *payload, unsigned int length) {
   if (length >= MQTT_CALLBACK_BUFFER_SIZE)
     return;
-  std::string_view topicStr(topic); // More efficient than String
+  types::string_view topicStr(topic); // More efficient than String
 
-  nonstd::span<const uint8_t> payloadSpan(payload, length);
+  types::span<const uint8_t> payloadSpan(payload, length);
   if (topicStr == topicTty0Rx) {
     onTty0Callback(payloadSpan);
     return;

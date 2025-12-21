@@ -1,8 +1,8 @@
 #pragma once
 
 #include "config.h"
+#include "infrastructure/types.hpp"
 #include <cstdint>
-#include <string>
 
 namespace jrb::wifi_serial {
 
@@ -33,20 +33,20 @@ public:
   ~PreferencesStorage() = default;
 
   // Configuration fields - using standard C++ types
-  std::string deviceName;
+  types::string deviceName;
   int32_t baudRateTty1;
-  std::string mqttBroker;
+  types::string mqttBroker;
   int32_t mqttPort;
-  std::string mqttUser;
-  std::string mqttPassword;
-  std::string topicTty0Rx;
-  std::string topicTty0Tx;
-  std::string topicTty1Rx;
-  std::string topicTty1Tx;
-  std::string ssid;
-  std::string password;
-  std::string webUser;
-  std::string webPassword;
+  types::string mqttUser;
+  types::string mqttPassword;
+  types::string topicTty0Rx;
+  types::string topicTty0Tx;
+  types::string topicTty1Rx;
+  types::string topicTty1Tx;
+  types::string ssid;
+  types::string password;
+  types::string webUser;
+  types::string webPassword;
   bool debugEnabled;
   bool tty02tty1Bridge;
 
@@ -57,9 +57,9 @@ public:
    * @param ssid The connected SSID
    * @return The configuration as a JSON string.
    */
-  std::string serialize(const std::string &ipAddress,
-                        const std::string &macAddress,
-                        const std::string &ssid) const;
+  types::string serialize(const types::string &ipAddress,
+                          const types::string &macAddress,
+                          const types::string &ssid) const;
 
   /**
    * @brief Saves current configuration to persistent storage.

@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include <string>
+#include "infrastructure/types.hpp"
 
 // App module tests (placeholders until dependencies resolved)
 #include "app/application_test.cpp"

@@ -1,9 +1,9 @@
 #pragma once
 
+#include "infrastructure/types.hpp"
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <Preferences.h>
-#include <string>
 
 namespace jrb::wifi_serial {
 
@@ -12,7 +12,7 @@ namespace jrb::wifi_serial {
  * @brief Storage policy implementation for ESP32 using NVS (Preferences).
  *
  * This policy wraps the ESP32 Preferences library and provides a
- * standard C++ interface, converting between Arduino String and std::string.
+ * standard C++ interface, converting between Arduino String and types::string.
  *
  * Stack-based, zero heap allocation.
  */
@@ -42,9 +42,9 @@ public:
    * @param defaultVal Default value if key doesn't exist
    * @return The stored value or default
    */
-  std::string getString(const char *key, const std::string &defaultVal) {
+  types::string getString(const char *key, const types::string &defaultVal) {
     String result = prefs.getString(key, defaultVal.c_str());
-    return std::string(result.c_str());
+    return types::string(result.c_str());
   }
 
   /**
@@ -62,7 +62,7 @@ public:
    * @param key The key to store
    * @param value The value to store
    */
-  void putString(const char *key, const std::string &value) {
+  void putString(const char *key, const types::string &value) {
     prefs.putString(key, value.c_str());
   }
 
@@ -81,16 +81,16 @@ public:
   /**
    * @brief Serializes configuration data to JSON string using ArduinoJson.
    */
-  std::string
-  serializeJson(const std::string &deviceName, const std::string &mqttBroker,
-                int32_t mqttPort, const std::string &mqttUser,
-                const std::string &mqttPassword, const std::string &topicTty0Rx,
-                const std::string &topicTty0Tx, const std::string &topicTty1Rx,
-                const std::string &topicTty1Tx, const std::string &ipAddress,
-                const std::string &macAddress, const std::string &ssid,
-                const std::string &password, const std::string &webUser,
-                const std::string &webPassword, bool debugEnabled,
-                bool tty02tty1Bridge) const {
+  types::string serializeJson(
+      const types::string &deviceName, const types::string &mqttBroker,
+      int32_t mqttPort, const types::string &mqttUser,
+      const types::string &mqttPassword, const types::string &topicTty0Rx,
+      const types::string &topicTty0Tx, const types::string &topicTty1Rx,
+      const types::string &topicTty1Tx, const types::string &ipAddress,
+      const types::string &macAddress, const types::string &ssid,
+      const types::string &password, const types::string &webUser,
+      const types::string &webPassword, bool debugEnabled,
+      bool tty02tty1Bridge) const {
     String output;
     StaticJsonDocument<1024> obj;
     obj["deviceName"] = deviceName.c_str();
@@ -113,7 +113,7 @@ public:
     obj["debugEnabled"] = debugEnabled;
     obj["tty02tty1Bridge"] = tty02tty1Bridge;
     serializeJsonPretty(obj, output);
-    return std::string(output.c_str());
+    return types::string(output.c_str());
   }
 };
 

@@ -11,7 +11,7 @@ void SSHSubscriber::append(uint8_t byte) {
   flushIfNeeded();
 }
 
-void SSHSubscriber::append(const nonstd::span<const uint8_t> &data) {
+void SSHSubscriber::append(const types::span<const uint8_t> &data) {
   if (data.empty())
     return;
 
@@ -23,7 +23,7 @@ void SSHSubscriber::flushIfNeeded() {
   // Flush on newline or threshold
   if (!buffer.empty() &&
       (buffer.back() == '\n' || buffer.size() >= FLUSH_THRESHOLD)) {
-    nonstd::span<const uint8_t> view(buffer.data(), buffer.size());
+    types::span<const uint8_t> view(buffer.data(), buffer.size());
     sshServer.sendToSSHClients(view);
     buffer.clear();
   }

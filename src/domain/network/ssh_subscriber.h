@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ssh_server.h"
-#include <nonstd/span.hpp>
+
 #include <vector>
 
 namespace jrb::wifi_serial {
@@ -17,7 +17,7 @@ public:
   explicit SSHSubscriber(SSHServer &server);
 
   void append(uint8_t byte);
-  void append(const nonstd::span<const uint8_t> &data);
+  void append(const types::span<const uint8_t> &data);
 
 private:
   SSHServer &sshServer;

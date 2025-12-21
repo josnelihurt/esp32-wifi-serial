@@ -1,9 +1,9 @@
 #pragma once
 
 #include "domain/config/preferences_storage_policy.h"
+#include "infrastructure/types.hpp"
 #include <Arduino.h>
 #include <WiFi.h>
-#include <string>
 
 namespace jrb::wifi_serial {
 
@@ -15,8 +15,8 @@ private:
 public:
   SystemInfo(const PreferencesStorageDefault &storage, bool &ota);
 
-  std::string getSpecialCharacterSettings() const;
-  std::string getWelcomeString() const;
+  types::string getSpecialCharacterSettings() const;
+  types::string getWelcomeString() const;
   void logSystemInformation() const;
 };
 
