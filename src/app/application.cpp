@@ -1,6 +1,7 @@
 #include "application.h"
 #include "infrastructure/logging/logger.h"
 #include "infrastructure/mqttt/mqtt_client.h"
+#include <algorithm>
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 #include <HardwareSerial.h>
@@ -29,8 +30,8 @@ Application::Application()
   // Initialize SSH server (runs in its own FreeRTOS task)
   sshServer.setSerialWriteCallback([](const types::span<const uint8_t> &data) {
     if (s_instance->preferencesStorage.debugEnabled) {
-      String dataString((const char *)data.data(), data.size());
-      LOG_INFO("$ssh->ttyS1$%s", dataString.c_str());
+      auto logMsg = types::make_log_string(data);
+      LOG_INFO("$ssh->ttyS1$%s", logMsg.c_str());
     }
     s_instance->serial1.write(data.data(), data.size());
   });
@@ -63,8 +64,8 @@ void Application::setup() {
       },
       [](const types::span<const uint8_t> &data) {
         if (s_instance->preferencesStorage.debugEnabled) {
-          String dataString(data.data(), data.size());
-          LOG_INFO("$mqtt->ttyS1$%s", dataString.c_str());
+          auto logMsg = types::make_log_string(data);
+          LOG_INFO("$mqtt->ttyS1$%s", logMsg.c_str());
         }
         s_instance->serial1.write(data.data(), data.size());
         s_instance->sshServer.sendToSSHClients(data);
@@ -84,16 +85,16 @@ void Application::setup() {
       [](const types::span<const uint8_t> &data) {
         // Handle web to serial and mqtt
         if (s_instance->preferencesStorage.debugEnabled) {
-          String dataString(data.data(), data.size());
-          LOG_INFO_RAW("$web->ttyS0$%s", dataString.c_str());
+          auto logMsg = types::make_log_string(data);
+          LOG_INFO_RAW("$web->ttyS0$%s", logMsg.c_str());
         }
         s_instance->mqttClient.appendToTty0Buffer(data);
       },
       [](const types::span<const uint8_t> &data) {
         // Handle web to serial and mqtt
         if (s_instance->preferencesStorage.debugEnabled) {
-          String dataString(data.data(), data.size());
-          LOG_INFO_RAW("$web->ttyS1$%s", dataString.c_str());
+          auto logMsg = types::make_log_string(data);
+          LOG_INFO_RAW("$web->ttyS1$%s", logMsg.c_str());
         }
         s_instance->mqttClient.appendToTty1Buffer(data);
         s_instance->serial1.write(data.data(), data.size());
