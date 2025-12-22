@@ -51,90 +51,41 @@
 // Helper macro to add timestamp (optional, can be removed for simpler output)
 #define LOG_PREFIX(level) printf("[%s] ", level)
 
-#define LOG_VERBOSE(...)                                                       \
-  do {                                                                         \
-    LOG_PREFIX("VERBOSE");                                                     \
-    printf(__VA_ARGS__);                                                       \
-    printf("\n");                                                              \
-    fflush(stdout);                                                            \
-  } while (0)
+// ============================================================================
+// Simple Code Duplication Elimination - More Maintainable Approach
+// ============================================================================
 
-#define LOG_DEBUG(...)                                                         \
-  do {                                                                         \
-    LOG_PREFIX("DEBUG");                                                       \
-    printf(__VA_ARGS__);                                                       \
-    printf("\n");                                                              \
-    fflush(stdout);                                                            \
-  } while (0)
+// Define common logging pattern once
+#define LOG_PATTERN(str, ...) \
+    do { \
+        LOG_PREFIX(str); \
+        printf(__VA_ARGS__); \
+        printf("\n"); \
+        fflush(stdout); \
+    } while (0)
 
-#define LOG_INFO(...)                                                          \
-  do {                                                                         \
-    LOG_PREFIX("INFO");                                                        \
-    printf(__VA_ARGS__);                                                       \
-    printf("\n");                                                              \
-    fflush(stdout);                                                            \
-  } while (0)
+// Define raw logging pattern once
+#define LOG_RAW_PATTERN(...) \
+    do { \
+        printf(__VA_ARGS__); \
+        fflush(stdout); \
+    } while (0)
 
-#define LOG_WARN(...)                                                          \
-  do {                                                                         \
-    LOG_PREFIX("WARN");                                                        \
-    printf(__VA_ARGS__);                                                       \
-    printf("\n");                                                              \
-    fflush(stdout);                                                            \
-  } while (0)
+// Now define each log level using the patterns - much less duplication
+#define LOG_VERBOSE(...) LOG_PATTERN("VERBOSE", __VA_ARGS__)
+#define LOG_DEBUG(...) LOG_PATTERN("DEBUG", __VA_ARGS__)
+#define LOG_INFO(...) LOG_PATTERN("INFO", __VA_ARGS__)
+#define LOG_WARN(...) LOG_PATTERN("WARN", __VA_ARGS__)
+#define LOG_ERROR(...) LOG_PATTERN("ERROR", __VA_ARGS__)
+#define LOG_FATAL(...) LOG_PATTERN("FATAL", __VA_ARGS__)
 
-#define LOG_ERROR(...)                                                         \
-  do {                                                                         \
-    LOG_PREFIX("ERROR");                                                       \
-    printf(__VA_ARGS__);                                                       \
-    printf("\n");                                                              \
-    fflush(stdout);                                                            \
-  } while (0)
-
-#define LOG_FATAL(...)                                                         \
-  do {                                                                         \
-    LOG_PREFIX("FATAL");                                                       \
-    printf(__VA_ARGS__);                                                       \
-    printf("\n");                                                              \
-    fflush(stdout);                                                            \
-  } while (0)
-
-// Raw versions without newline
-#define LOG_VERBOSE_RAW(...)                                                   \
-  do {                                                                         \
-    printf(__VA_ARGS__);                                                       \
-    fflush(stdout);                                                            \
-  } while (0)
-
-#define LOG_DEBUG_RAW(...)                                                     \
-  do {                                                                         \
-    printf(__VA_ARGS__);                                                       \
-    fflush(stdout);                                                            \
-  } while (0)
-
-#define LOG_INFO_RAW(...)                                                      \
-  do {                                                                         \
-    printf(__VA_ARGS__);                                                       \
-    fflush(stdout);                                                            \
-  } while (0)
-
-#define LOG_WARN_RAW(...)                                                      \
-  do {                                                                         \
-    printf(__VA_ARGS__);                                                       \
-    fflush(stdout);                                                            \
-  } while (0)
-
-#define LOG_ERROR_RAW(...)                                                     \
-  do {                                                                         \
-    printf(__VA_ARGS__);                                                       \
-    fflush(stdout);                                                            \
-  } while (0)
-
-#define LOG_FATAL_RAW(...)                                                     \
-  do {                                                                         \
-    printf(__VA_ARGS__);                                                       \
-    fflush(stdout);                                                            \
-  } while (0)
+// Raw versions
+#define LOG_VERBOSE_RAW(...) LOG_RAW_PATTERN(__VA_ARGS__)
+#define LOG_DEBUG_RAW(...) LOG_RAW_PATTERN(__VA_ARGS__)
+#define LOG_INFO_RAW(...) LOG_RAW_PATTERN(__VA_ARGS__)
+#define LOG_WARN_RAW(...) LOG_RAW_PATTERN(__VA_ARGS__)
+#define LOG_ERROR_RAW(...) LOG_RAW_PATTERN(__VA_ARGS__)
+#define LOG_FATAL_RAW(...) LOG_RAW_PATTERN(__VA_ARGS__)
 
 #endif
 
