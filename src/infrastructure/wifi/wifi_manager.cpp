@@ -2,12 +2,13 @@
 #include "config.h"
 #include "domain/config/preferences_storage.h"
 #include "infrastructure/logging/logger.h"
+#include <Arduino.h>
 #include <Preferences.h>
 #include <WiFi.h>
 namespace jrb::wifi_serial {
 
 WiFiManager::WiFiManager(PreferencesStorage &preferencesStorage)
-    : preferencesStorage{preferencesStorage}, apMode{false} {
+    : preferencesStorage{preferencesStorage}, apMode{false}, apModeStartTime{0} {
   LOG_DEBUG(__PRETTY_FUNCTION__);
 }
 
@@ -23,7 +24,25 @@ void WiFiManager::setup() {
   }
 }
 
-void WiFiManager::loop() {}
+void WiFiManager::loop() {
+  // Only check timeout if we're in AP mode and have stored credentials
+  if (!apMode || preferencesStorage.ssid.length() == 0) {
+    return;
+  }
+
+  unsigned long now = millis();
+  unsigned long apDuration = now - apModeStartTime;
+  unsigned long timeoutMs = AP_MODE_TIMEOUT_MINUTES * 60 * 1000UL;
+
+  // Check if AP timeout has been reached
+  if (apDuration >= timeoutMs) {
+    LOG_INFO("%s: AP mode timeout reached (%d minutes). Restarting device to "
+             "retry connection...",
+             __PRETTY_FUNCTION__, AP_MODE_TIMEOUT_MINUTES);
+    delay(100); // Give time for log to be sent
+    ESP.restart();
+  }
+}
 
 bool WiFiManager::connect() {
   LOG_DEBUG(__PRETTY_FUNCTION__);
@@ -112,6 +131,7 @@ IP address: %s)",
 void WiFiManager::setupAP() {
   LOG_DEBUG(__PRETTY_FUNCTION__);
   apMode = true;
+  apModeStartTime = millis();
   WiFi.mode(WIFI_AP);
 
   String macAddress = WiFi.macAddress();

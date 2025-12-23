@@ -360,6 +360,12 @@ String WebConfigServer::processor(const String &var) {
   if (var == "WEB_PASSWORD_HAS_VALUE") {
     return preferencesStorage.webPassword.length() > 0 ? "1" : "0";
   }
+  if (var == "AP_MODE_TIMEOUT_MESSAGE") {
+    return apMode ? "Note: Device will automatically restart after " +
+                        String(AP_MODE_TIMEOUT_MINUTES) +
+                        " minutes to retry connection."
+                  : "";
+  }
 
   return String(); // Return empty string for unknown variables
 }

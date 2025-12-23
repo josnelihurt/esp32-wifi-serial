@@ -83,6 +83,8 @@
                 placeholder="Leave empty to keep current">
             <input type="hidden" id="mqtt_password_has_value" value="%MQTT_PASSWORD_HAS_VALUE%">
 
+            <div style="font-size:12px;color:#ff6600;margin:10px 0;font-weight:bold;">%AP_MODE_TIMEOUT_MESSAGE%</div>
+
             <div class="button-container">
             <button class="reset-btn" 
                 onclick="if(confirm('Are you sure you want to reset the device? This will restart the ESP32.')){fetch('/reset',{method:'POST'}).then(()=>{alert('Device resetting...');});}">Reset

@@ -20,6 +20,7 @@ private:
   PreferencesStorage &preferencesStorage;
   bool apMode;
   IPAddress apIP;
+  unsigned long apModeStartTime;
 
   void setupAP();
 };
