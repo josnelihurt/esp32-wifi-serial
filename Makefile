@@ -126,20 +126,50 @@ test:
 
 .PHONY: coverage
 coverage: test
-	@echo "Generating coverage report..."
-	@lcov --capture --directory .pio/build/native --output-file coverage.info --ignore-errors gcov,gcov,mismatch >/dev/null 2>&1
+	@echo "=========================================="
+	@echo "Generating comprehensive coverage report"
+	@echo "=========================================="
+	@echo ""
+	@echo "[1/6] Capturing test execution coverage..."
+	@lcov --capture --directory .pio/build/native --output-file coverage.info \
+		--ignore-errors gcov,gcov,mismatch >/dev/null 2>&1
+	@echo "[2/6] Extracting production code coverage..."
 	@lcov --extract coverage.info '*/src/*' --output-file coverage.production.info >/dev/null 2>&1
-	@lcov --remove coverage.production.info '*/googletest/*' '*/span-lite/*' --output-file coverage.filtered.info >/dev/null 2>&1 || true
-	@genhtml coverage.filtered.info --output-directory coverage_report --demangle-cpp >/dev/null 2>&1
-	@echo "Coverage report generated in: coverage_report/index.html"
-	@echo "Coverage summary:"
-	@lcov --summary coverage.filtered.info | grep -E "lines|functions"
+	@echo "[3/6] Filtering out test and library code..."
+	@lcov --remove coverage.production.info '*/googletest/*' '*/span-lite/*' '*/test/*' \
+		--output-file coverage.tested.info >/dev/null 2>&1 || cp coverage.production.info coverage.tested.info
+	@echo "[4/6] Adding zero-coverage baseline for untested files..."
+	@./generate_zero_coverage.sh coverage.tested.info coverage.complete.info
+	@echo "[5/6] Final filtering..."
+	@lcov --remove coverage.complete.info '*/test/*' \
+		--output-file coverage.filtered.info >/dev/null 2>&1 || cp coverage.complete.info coverage.filtered.info
+	@echo "[6/6] Generating HTML report..."
+	@genhtml coverage.filtered.info --output-directory coverage_report \
+		--demangle-cpp --title "ESP32 WiFi Serial - Code Coverage" \
+		--legend >/dev/null 2>&1
+	@echo ""
+	@echo "=========================================="
+	@echo "Coverage Report Summary"
+	@echo "=========================================="
+	@lcov --summary coverage.filtered.info 2>/dev/null | grep -E "lines|functions" || echo "  No coverage data available"
+	@echo ""
+	@echo "Report location: coverage_report/index.html"
+	@echo ""
+	@echo "Note: This report includes ALL source files."
+	@echo "      Files at 0% are ESP-coupled and need"
+	@echo "      integration testing or policy abstraction."
+	@echo "=========================================="
+	@echo ""
+	@echo "Generating git-trackable coverage snapshot..."
+	@./scripts/generate_coverage_summary.sh
 
 .PHONY: clean-coverage
 clean-coverage:
 	@echo "Cleaning coverage files..."
-	@rm -f coverage.info coverage.filtered.info
+	@rm -f coverage.info coverage.production.info coverage.tested.info
+	@rm -f coverage.complete.info coverage.filtered.info
 	@rm -rf coverage_report
+	@echo "Coverage files cleaned!"
 
 .PHONY: view-coverage
 view-coverage: coverage

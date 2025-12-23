@@ -171,4 +171,9 @@ The device supports configuration via:
 
 ## License
 
-This is a fun project for personal use. Use it, modify it, break it, fix it - just enjoy tinkering with your homelab! 🚀
+This is a fun project for personal use. Use it, modify it, break it, fix it - just enjoy tinkering with your homelab!
+
+## Documentation
+
+For detailed information about the testing approach, policy-based design, and zero-cost abstractions used in this project, see:
+- [Testing Strategy & Architecture](docs/README.md#testing-strategy)

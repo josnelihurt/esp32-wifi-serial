@@ -1,0 +1,66 @@
+ESP32 WiFi Serial - Code Coverage Summary
+==========================================
+Generated: 2025-12-22 19:53:08
+
+Overall Coverage:
+  Lines:      26.2%
+  Functions:  37.2%
+
+Coverage Philosophy:
+This report includes ALL source files in the project, including
+ESP-coupled code that cannot be tested in native environment.
+
+Files at 0% are candidates for policy-based abstraction to enable
+native unit testing without hardware dependencies.
+
+Policy-Based Testing Approach:
+- Uses template policies instead of virtual functions (zero-cost)
+- Test policies provide controllable behavior for verification
+- ESP-coupled code shows 0% until abstracted
+- Well-abstracted code shows 90%+ coverage
+
+Detailed File Coverage:
+gtest-internal-inl.h                           |67.9%   112| 0.0%  37|    -    0
+app/application.cpp                            |    -     0|    -   0|    -    0
+app/application.h                              |    -     0|    -   0|    -    0
+config.h                                       |    -     0|    -   0|    -    0
+domain/config/policy/hardware_reset_policy.h   |    -     0|    -   0|    -    0
+domain/config/policy/p...orage_policy_esp32.cpp|    -     0|    -   0|    -    0
+domain/config/policy/p...storage_policy_esp32.h|    -     0|    -   0|    -    0
+domain/config/policy/p..._storage_policy_test.h|22.5%    40| 0.0%   9|    -    0
+domain/config/preferences_storage.cpp          | 6.5%    92| 0.0%   6|    -    0
+domain/config/preferences_storage.h            | 100%     1| 0.0%   1|    -    0
+domain/config/preferences_storage_policy.h     |    -     0|    -   0|    -    0
+domain/config/special_character_handler.cpp    | 6.2%    32| 0.0%   1|    -    0
+domain/config/special_character_handler.h      |66.7%     3| 0.0%   1|    -    0
+domain/messaging/mqtt_buffer.h                 |    -     0|    -   0|    -    0
+domain/messaging/mqtt_flush_policy.cpp         |    -     0|    -   0|    -    0
+domain/messaging/mqtt_flush_policy.h           |    -     0|    -   0|    -    0
+domain/network/ssh_buffer.h                    |    -     0|    -   0|    -    0
+domain/network/ssh_flush_policy.cpp            |    -     0|    -   0|    -    0
+domain/network/ssh_flush_policy.h              |    -     0|    -   0|    -    0
+domain/network/ssh_server.cpp                  |    -     0|    -   0|    -    0
+domain/network/ssh_server.h                    |    -     0|    -   0|    -    0
+infrastructure/hardware/button_handler.cpp     |    -     0|    -   0|    -    0
+infrastructure/hardware/button_handler.h       |    -     0|    -   0|    -    0
+infrastructure/logging/logger.h                |    -     0|    -   0|    -    0
+infrastructure/memory/circular_buffer.hpp      | 181%    31| 0.0%  50|    -    0
+infrastructure/mqttt/mqtt_client.cpp           |    -     0|    -   0|    -    0
+infrastructure/mqttt/mqtt_client.h             |    -     0|    -   0|    -    0
+infrastructure/web/constants.h                 |    -     0|    -   0|    -    0
+infrastructure/web/web_config_server.cpp       |    -     0|    -   0|    -    0
+infrastructure/web/web_config_server.h         |    -     0|    -   0|    -    0
+infrastructure/wifi/wifi_manager.cpp           |    -     0|    -   0|    -    0
+infrastructure/wifi/wifi_manager.h             |    -     0|    -   0|    -    0
+main.cpp                                       |    -     0|    -   0|    -    0
+ota_manager.cpp                                |    -     0|    -   0|    -    0
+ota_manager.h                                  |    -     0|    -   0|    -    0
+system_info.cpp                                |36.4%    22| 0.0%   8|    -    0
+system_info.h                                  |    -     0|    -   0|    -    0
+
+Next Steps:
+- Abstract ESP-coupled files using policy pattern
+- Increase testable surface area
+- Maintain high coverage on policy-based code
+
+For full HTML report: make coverage && make view-coverage

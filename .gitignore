@@ -11,10 +11,13 @@ compile_commands.json
 .ignore
 .opencode/
 test_ota/
+# Coverage - exclude large generated files, keep lightweight summaries
 coverage_report/
-coverage.filtered.info
-coverage.info
-coverage.final.info
-coverage.production.info
-docs/
+coverage.*.info
+
+# Documentation - allow tracking (contains coverage summaries)
+# docs/ directory is tracked to include coverage-summary.txt and coverage-badge.svg
+
 .claude/
+docs/agents/
+coverage.info
