@@ -14,6 +14,7 @@
 #include "infrastructure/wifi/wifi_manager.h"
 #include "ota_manager.h"
 #include "system_info.h"
+#include <PubSubClient.h>
 #include <WiFiClient.h>
 #include <functional>
 #include <vector>
@@ -72,6 +73,7 @@ private:
   WiFiManager wifiManager;
   WiFiClient wifiClient;
   MqttClient mqttClient;
+  PubSubClient pubSubClient;
   SystemInfo systemInfo;
   SSHServer sshServer;
   SpecialCharacterHandler specialCharacterHandler;

@@ -1,17 +1,16 @@
 #include "mqtt_flush_policy.h"
 #include "infrastructure/logging/logger.h"
 
-#include <Arduino.h>
-#include <PubSubClient.h>
-
 namespace jrb::wifi_serial {
-
-MqttFlushPolicy::MqttFlushPolicy(PubSubClient &mqttClient,
-                                 const types::string &topic)
+namespace internal {
+template <typename PubSubClientPolicy>
+MqttFlushPolicy<PubSubClientPolicy>::MqttFlushPolicy(
+    PubSubClientPolicy &mqttClient, const types::string &topic)
     : mqttClient{mqttClient}, topic{topic} {}
 
-void MqttFlushPolicy::flush(const types::span<const uint8_t> &buffer,
-                            const char *name) {
+template <typename PubSubClientPolicy>
+void MqttFlushPolicy<PubSubClientPolicy>::flush(
+    const types::span<const uint8_t> &buffer, const char *name) {
   if (buffer.empty())
     return;
 
@@ -30,4 +29,11 @@ void MqttFlushPolicy::flush(const types::span<const uint8_t> &buffer,
     LOG_ERROR("MQTT publish failed for topic: %s", topic.c_str());
   }
 }
+} // namespace internal
+// Explicit instantiation for production and test builds
+#ifdef ESP_PLATFORM
+template class internal::MqttFlushPolicy<PubSubClient>;
+#else
+template class internal::MqttFlushPolicy<PubSubClientTest>;
+#endif
 } // namespace jrb::wifi_serial

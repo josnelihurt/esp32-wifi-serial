@@ -3,16 +3,19 @@
 #include "domain/config/preferences_storage.h"
 #include "infrastructure/logging/logger.h"
 #include "infrastructure/types.hpp"
-#include <Arduino.h>
-#include <PubSubClient.h>
-#include <WiFi.h>
+#include "infrastructure/mqttt/pub_sub_client_policy.h"
 #include <cstring>
 #include <iomanip>
 #include <sstream>
 #include <string_view>
 
+#ifndef ESP_PLATFORM
+#include "infrastructure/platform/arduino_compat.h"
+#endif
+
 namespace jrb::wifi_serial {
 
+namespace internal {
 // Constants
 namespace {
 constexpr size_t MQTT_CALLBACK_BUFFER_SIZE = 512;
@@ -23,19 +26,15 @@ constexpr uint8_t MQTT_SUBSCRIPTION_DELAY_MS = 10;
 constexpr uint8_t MQTT_LOOP_ITERATIONS = 3;
 } // namespace
 
-// Static pointer to MqttClient instance for C-style callback from PubSubClient.
-// PubSubClient requires a C function pointer, so we use this to access instance
-// data.
-static MqttClient *g_mqttInstance{};
-
-MqttClient::MqttClient(WiFiClient &wifiClient,
-                       PreferencesStorage &preferencesStorage)
-    : mqttClient{wifiClient},
-      wifiClient{wifiClient}, preferencesStorage{preferencesStorage},
+template <typename PubSubClientPolicy>
+MqttClient<PubSubClientPolicy>::MqttClient(
+    PubSubClientPolicy &mqttClient,
+    wifi_serial::PreferencesStorage &preferencesStorage)
+    : mqttClient{mqttClient}, preferencesStorage{preferencesStorage},
       connected{false}, lastReconnectAttempt{0}, onTty0Callback{nullptr},
       onTty1Callback{nullptr},
-      tty0Stream{MqttFlushPolicy{mqttClient, topicTty0Tx}, "tty0"},
-      tty1Stream{MqttFlushPolicy{mqttClient, topicTty1Tx}, "tty1"},
+      tty0Stream{MqttFlushPolicy<PubSubClientPolicy>{mqttClient, topicTty0Tx}, "tty0"},
+      tty1Stream{MqttFlushPolicy<PubSubClientPolicy>{mqttClient, topicTty1Tx}, "tty1"},
       tty0LastFlushMillis{0}, tty1LastFlushMillis{0} {
 
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
@@ -46,20 +45,13 @@ MqttClient::MqttClient(WiFiClient &wifiClient,
   mqttClient.setSocketTimeout(MQTT_SOCKET_TIMEOUT_SEC);
   setTopics(preferencesStorage.topicTty0Rx, preferencesStorage.topicTty0Tx,
             preferencesStorage.topicTty1Rx, preferencesStorage.topicTty1Tx);
-  g_mqttInstance = this;
 }
 
-MqttClient::~MqttClient() {
-  if (g_mqttInstance == this) {
-    g_mqttInstance = nullptr;
-  }
-  // mqttClient is automatically cleaned up by unique_ptr
-}
-
-void MqttClient::setTopics(const types::string &tty0Rx,
-                           const types::string &tty0Tx,
-                           const types::string &tty1Rx,
-                           const types::string &tty1Tx) {
+template <typename PubSubClientPolicy>
+void MqttClient<PubSubClientPolicy>::setTopics(const types::string &tty0Rx,
+                                               const types::string &tty0Tx,
+                                               const types::string &tty1Rx,
+                                               const types::string &tty1Tx) {
   topicTty0Rx = tty0Rx;
   topicTty0Tx = tty0Tx;
   topicTty1Rx = tty1Rx;
@@ -79,15 +71,18 @@ void MqttClient::setTopics(const types::string &tty0Rx,
   LOG_INFO("MQTT info topic set to: %s", topicInfo.c_str());
 }
 
-void MqttClient::setCallbacks(
+template <typename PubSubClientPolicy>
+void MqttClient<PubSubClientPolicy>::setCallbacks(
     void (*tty0)(const types::span<const uint8_t> &),
     void (*tty1)(const types::span<const uint8_t> &)) {
   onTty0Callback = tty0;
   onTty1Callback = tty1;
 }
 
-bool MqttClient::connect(const char *broker, int port, const char *user,
-                         const char *password) {
+template <typename PubSubClientPolicy>
+bool MqttClient<PubSubClientPolicy>::connect(const char *broker, int port,
+                                             const char *user,
+                                             const char *password) {
   mqttClient.setServer(broker, port);
 
   std::ostringstream oss;
@@ -118,7 +113,8 @@ bool MqttClient::connect(const char *broker, int port, const char *user,
   return true;
 }
 
-void MqttClient::disconnect() {
+template <typename PubSubClientPolicy>
+void MqttClient<PubSubClientPolicy>::disconnect() {
   if (!mqttClient.connected()) {
     connected = false;
     return;
@@ -132,7 +128,8 @@ void MqttClient::disconnect() {
 
 // Note: This method updates internal connection state but doesn't perform
 // actual reconnection. To reconnect, call connect() again.
-bool MqttClient::reconnect() {
+template <typename PubSubClientPolicy>
+bool MqttClient<PubSubClientPolicy>::reconnect() {
   if (!mqttClient.connected())
     return false;
 
@@ -140,7 +137,8 @@ bool MqttClient::reconnect() {
   return connected;
 }
 
-void MqttClient::subscribeToConfiguredTopics() {
+template <typename PubSubClientPolicy>
+void MqttClient<PubSubClientPolicy>::subscribeToConfiguredTopics() {
   if (topicTty0Tx.length() > 0) {
     LOG_INFO("Subscribing to tty0Rx: %s", topicTty0Rx.c_str());
     mqttClient.subscribe(topicTty0Rx.c_str(), MQTT_QOS_LEVEL);
@@ -158,7 +156,9 @@ void MqttClient::subscribeToConfiguredTopics() {
   }
 }
 
-void MqttClient::handleConnectionStateChange(bool wasConnected) {
+template <typename PubSubClientPolicy>
+void MqttClient<PubSubClientPolicy>::handleConnectionStateChange(
+    bool wasConnected) {
   if (wasConnected && !connected) {
     LOG_WARN("MQTT connection lost!");
     return;
@@ -170,7 +170,8 @@ void MqttClient::handleConnectionStateChange(bool wasConnected) {
   }
 }
 
-void MqttClient::flushBuffersIfNeeded() {
+template <typename PubSubClientPolicy>
+void MqttClient<PubSubClientPolicy>::flushBuffersIfNeeded() {
   if ((millis() - tty0LastFlushMillis >= MQTT_PUBLISH_INTERVAL_MS)) {
     LOG_VERBOSE("Flushing tty0 buffer due to interval");
     tty0LastFlushMillis = millis();
@@ -184,7 +185,8 @@ void MqttClient::flushBuffersIfNeeded() {
   }
 }
 
-void MqttClient::loop() {
+template <typename PubSubClientPolicy>
+void MqttClient<PubSubClientPolicy>::loop() {
   if (!mqttClient.connected())
     return;
 
@@ -214,7 +216,8 @@ void MqttClient::loop() {
   flushBuffersIfNeeded();
 }
 
-bool MqttClient::publishInfo(const types::string &data) {
+template <typename PubSubClientPolicy>
+bool MqttClient<PubSubClientPolicy>::publishInfo(const types::string &data) {
   if (!mqttClient.connected()) {
     LOG_ERROR("MQTT publishInfo failed: mqttClient is null");
     return false;
@@ -235,7 +238,7 @@ bool MqttClient::publishInfo(const types::string &data) {
             data.length());
 
   bool result = mqttClient.publish(topicInfo.c_str(), (uint8_t *)data.c_str(),
-                                    data.length(), false);
+                                   data.length(), false);
   if (!result) {
     LOG_ERROR("MQTT publishInfo failed! State: %d", mqttClient.state());
     connected = mqttClient.connected();
@@ -246,17 +249,23 @@ bool MqttClient::publishInfo(const types::string &data) {
   return result;
 }
 
-void MqttClient::appendToTty0Buffer(const types::span<const uint8_t> &data) {
+template <typename PubSubClientPolicy>
+void MqttClient<PubSubClientPolicy>::appendToTty0Buffer(
+    const types::span<const uint8_t> &data) {
   // Accumulate only - main loop transfers to MQTT
   tty0PendingBuffer.append(data);
 }
 
-void MqttClient::appendToTty1Buffer(const types::span<const uint8_t> &data) {
+template <typename PubSubClientPolicy>
+void MqttClient<PubSubClientPolicy>::appendToTty1Buffer(
+    const types::span<const uint8_t> &data) {
   // Accumulate only - main loop transfers to MQTT
   tty1PendingBuffer.append(data);
 }
 
-void MqttClient::mqttCallback(char *topic, byte *payload, unsigned int length) {
+template <typename PubSubClientPolicy>
+void MqttClient<PubSubClientPolicy>::mqttCallback(char *topic, uint8_t *payload,
+                                                  unsigned int length) {
   if (length >= MQTT_CALLBACK_BUFFER_SIZE)
     return;
   types::string_view topicStr(topic); // More efficient than String
@@ -273,5 +282,11 @@ void MqttClient::mqttCallback(char *topic, byte *payload, unsigned int length) {
     return;
   }
 }
-
+} // namespace internal
+// Explicit instantiation for production and test builds
+#ifdef ESP_PLATFORM
+template class internal::MqttClient<PubSubClient>;
+#else
+template class internal::MqttClient<PubSubClientTest>;
+#endif
 } // namespace jrb::wifi_serial

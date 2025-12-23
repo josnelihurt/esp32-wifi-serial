@@ -14,7 +14,8 @@ Application *Application::s_instance = nullptr;
 
 Application::Application()
     : preferencesStorage(), wifiManager(preferencesStorage),
-      mqttClient(wifiClient, preferencesStorage),
+      pubSubClient(wifiClient),
+      mqttClient(pubSubClient, preferencesStorage),
       systemInfo(preferencesStorage, otaEnabled),
       sshServer(preferencesStorage, systemInfo, specialCharacterHandler),
       webServer(preferencesStorage),

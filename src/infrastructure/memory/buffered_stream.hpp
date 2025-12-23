@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "infrastructure/logging/logger.h"
+#include "infrastructure/types.hpp"
 #include <array>
 #include <cstdint>
 

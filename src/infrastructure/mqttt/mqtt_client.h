@@ -1,13 +1,13 @@
 #pragma once
 
 #include "config.h"
-#include "domain/config/preferences_storage_policy.h"
 #include "domain/messaging/mqtt_buffer.h"
 #include "infrastructure/memory/circular_buffer.hpp"
+#include "domain/config/preferences_storage_policy.h"
 #include "infrastructure/types.hpp"
+#include <PubSubClient.h>
 #include <functional>
 #include <memory>
-#include <PubSubClient.h>
 
 #include <vector>
 
@@ -15,9 +15,11 @@ class WiFiClient;
 
 namespace jrb::wifi_serial {
 
+namespace internal {
+
 class MqttClient final {
 public:
-  MqttClient(WiFiClient &wifiClient, PreferencesStorage &preferencesStorage);
+  MqttClient(WiFiClient &wifiClient, wifi_serial::PreferencesStorage &preferencesStorage);
   ~MqttClient();
 
   // Registers callbacks for Rx topics.
@@ -43,7 +45,7 @@ public:
 
 private:
   PubSubClient mqttClient;
-  PreferencesStorage &preferencesStorage;
+  wifi_serial::PreferencesStorage &preferencesStorage;
   WiFiClient &wifiClient;
   types::string topicTty0Rx, topicTty0Tx;
   types::string topicTty1Rx, topicTty1Tx;
@@ -70,5 +72,6 @@ private:
                  const types::string &tty1Rx, const types::string &tty1Tx);
   void mqttCallback(char *topic, byte *payload, unsigned int length);
 };
-
+} // namespace internal
+using MqttClient = internal::MqttClient;
 } // namespace jrb::wifi_serial
