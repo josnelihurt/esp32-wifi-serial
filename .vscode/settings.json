@@ -1,0 +1,22 @@
+{
+    "omitEmptyToolCalls": true,
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "C_Cpp.autocomplete": "disabled",
+    "C_Cpp.errorSquiggles": "disabled",
+    "clangd.path": "/usr/bin/clangd",
+    "clangd.arguments": [
+        "--compile-commands-dir=${workspaceFolder}",
+        "--background-index",
+        "--clang-tidy",
+        "--header-insertion=iwyu",
+        "--completion-style=detailed",
+        "--function-arg-placeholders",
+        "--fallback-style=llvm",
+        "--header-insertion-decorators",
+        "--enable-config",
+        "--ranking-model=decision_forest",
+        "--query-driver=/home/jrb/.platformio/packages/toolchain-riscv32-esp/bin/riscv32-esp-elf-g++"
+    ],
+    "clangd.onConfigChanged": "restart",
+    "clangd.checkUpdates": false
+}

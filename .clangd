@@ -1,0 +1,43 @@
+CompileFlags:
+  # Use the compile_commands.json for compile flags
+  CompilationDatabase: .
+
+  # Add additional flags for better compatibility
+  Add:
+    # Disable warnings that clangd doesn't understand from GCC
+    - -Wno-unknown-warning-option
+    # Tell clangd to treat files as C++17
+    - -std=c++17
+    # Include the src directory explicitly
+    - -I/home/jrb/code/espressif/esp32-wifi-serial/src
+    # Add resource directory to help clangd find its built-in headers
+    - -resource-dir=/usr/lib/clang/18
+
+  # Remove problematic flags that clangd doesn't understand
+  Remove:
+    # ESP32-specific architecture flags that clangd won't understand
+    - -march=rv32imc
+    - -fexceptions
+    - -fno-rtti
+    - -nostartfiles
+    - -freorder-blocks
+    - -fstrict-volatile-bitfields
+    - -fno-jump-tables
+    - -fno-tree-switch-conversion
+    - -fprofile-arcs
+    - -ftest-coverage
+    - --coverage
+    # GCC-specific flags
+    - -Wno-error=*
+    - -ggdb
+
+Diagnostics:
+  # Disable some overly strict warnings
+  UnusedIncludes: None
+  MissingIncludes: Relaxed
+  # Suppress warnings about unknown attributes
+  Suppress:
+    - unknown-attributes
+
+Index:
+  Background: Build
