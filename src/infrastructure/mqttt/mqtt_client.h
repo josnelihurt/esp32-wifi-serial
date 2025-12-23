@@ -5,7 +5,6 @@
 #include "infrastructure/memory/circular_buffer.hpp"
 #include "domain/config/preferences_storage_policy.h"
 #include "infrastructure/types.hpp"
-#include <PubSubClient.h>
 #include <functional>
 #include <memory>
 
@@ -17,10 +16,11 @@ namespace jrb::wifi_serial {
 
 namespace internal {
 
+template <typename PubSubClientPolicy>
 class MqttClient final {
 public:
-  MqttClient(WiFiClient &wifiClient, wifi_serial::PreferencesStorage &preferencesStorage);
-  ~MqttClient();
+  MqttClient(PubSubClientPolicy &mqttClient, wifi_serial::PreferencesStorage &preferencesStorage);
+  ~MqttClient() = default;
 
   // Registers callbacks for Rx topics.
   void setCallbacks(void (*tty0)(const types::span<const uint8_t> &),
@@ -44,9 +44,8 @@ public:
   MqttLog &getTty1Stream() { return tty1Stream; }
 
 private:
-  PubSubClient mqttClient;
+  PubSubClientPolicy &mqttClient;
   wifi_serial::PreferencesStorage &preferencesStorage;
-  WiFiClient &wifiClient;
   types::string topicTty0Rx, topicTty0Tx;
   types::string topicTty1Rx, topicTty1Tx;
   types::string topicInfo;
@@ -70,8 +69,13 @@ private:
   void flushBuffersIfNeeded();
   void setTopics(const types::string &tty0Rx, const types::string &tty0Tx,
                  const types::string &tty1Rx, const types::string &tty1Tx);
-  void mqttCallback(char *topic, byte *payload, unsigned int length);
+  void mqttCallback(char *topic, uint8_t *payload, unsigned int length);
 };
 } // namespace internal
-using MqttClient = internal::MqttClient;
+// Type aliases for convenience
+#ifdef ESP_PLATFORM
+using MqttClient = internal::MqttClient<PubSubClient>;
+#else
+using MqttClient = internal::MqttClient<PubSubClientTest>;
+#endif
 } // namespace jrb::wifi_serial
