@@ -7,10 +7,10 @@
 #include "infrastructure/types.hpp"
 #include <functional>
 #include <memory>
+#include <PubSubClient.h>
 
 #include <vector>
 
-class PubSubClient;
 class WiFiClient;
 
 namespace jrb::wifi_serial {
@@ -42,9 +42,9 @@ public:
   MqttLog &getTty1Stream() { return tty1Stream; }
 
 private:
-  std::unique_ptr<PubSubClient> mqttClient;
+  PubSubClient mqttClient;
   PreferencesStorage &preferencesStorage;
-  WiFiClient *wifiClient;
+  WiFiClient &wifiClient;
   types::string topicTty0Rx, topicTty0Tx;
   types::string topicTty1Rx, topicTty1Tx;
   types::string topicInfo;

@@ -30,20 +30,20 @@ static MqttClient *g_mqttInstance{};
 
 MqttClient::MqttClient(WiFiClient &wifiClient,
                        PreferencesStorage &preferencesStorage)
-    : mqttClient{std::make_unique<PubSubClient>(wifiClient)},
-      wifiClient{&wifiClient}, preferencesStorage{preferencesStorage},
+    : mqttClient{wifiClient},
+      wifiClient{wifiClient}, preferencesStorage{preferencesStorage},
       connected{false}, lastReconnectAttempt{0}, onTty0Callback{nullptr},
       onTty1Callback{nullptr},
-      tty0Stream{MqttFlushPolicy{*mqttClient, topicTty0Tx}, "tty0"},
-      tty1Stream{MqttFlushPolicy{*mqttClient, topicTty1Tx}, "tty1"},
+      tty0Stream{MqttFlushPolicy{mqttClient, topicTty0Tx}, "tty0"},
+      tty1Stream{MqttFlushPolicy{mqttClient, topicTty1Tx}, "tty1"},
       tty0LastFlushMillis{0}, tty1LastFlushMillis{0} {
 
-  mqttClient->setBufferSize(MQTT_BUFFER_SIZE);
-  mqttClient->setCallback([&](char *topic, byte *payload, unsigned int length) {
+  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+  mqttClient.setCallback([&](char *topic, byte *payload, unsigned int length) {
     mqttCallback(topic, payload, length);
   });
-  mqttClient->setKeepAlive(MQTT_KEEPALIVE_SEC);
-  mqttClient->setSocketTimeout(MQTT_SOCKET_TIMEOUT_SEC);
+  mqttClient.setKeepAlive(MQTT_KEEPALIVE_SEC);
+  mqttClient.setSocketTimeout(MQTT_SOCKET_TIMEOUT_SEC);
   setTopics(preferencesStorage.topicTty0Rx, preferencesStorage.topicTty0Tx,
             preferencesStorage.topicTty1Rx, preferencesStorage.topicTty1Tx);
   g_mqttInstance = this;
@@ -88,7 +88,7 @@ void MqttClient::setCallbacks(
 
 bool MqttClient::connect(const char *broker, int port, const char *user,
                          const char *password) {
-  mqttClient->setServer(broker, port);
+  mqttClient.setServer(broker, port);
 
   std::ostringstream oss;
   oss << "ESP32-C3-" << preferencesStorage.deviceName << "-" << std::hex
@@ -100,14 +100,14 @@ bool MqttClient::connect(const char *broker, int port, const char *user,
 
   bool result = false;
   if (user && password) {
-    result = mqttClient->connect(clientId.c_str(), user, password);
+    result = mqttClient.connect(clientId.c_str(), user, password);
   } else {
-    result = mqttClient->connect(clientId.c_str());
+    result = mqttClient.connect(clientId.c_str());
   }
 
   connected = result;
   if (!result) {
-    LOG_ERROR("MQTT connection failed! State: %d", mqttClient->state());
+    LOG_ERROR("MQTT connection failed! State: %d", mqttClient.state());
     return false;
   }
 
@@ -119,13 +119,13 @@ bool MqttClient::connect(const char *broker, int port, const char *user,
 }
 
 void MqttClient::disconnect() {
-  if (!mqttClient) {
+  if (!mqttClient.connected()) {
     connected = false;
     return;
   }
 
   LOG_INFO("MQTT disconnecting...");
-  mqttClient->disconnect();
+  mqttClient.disconnect();
   connected = false;
   LOG_INFO("MQTT disconnected");
 }
@@ -133,28 +133,28 @@ void MqttClient::disconnect() {
 // Note: This method updates internal connection state but doesn't perform
 // actual reconnection. To reconnect, call connect() again.
 bool MqttClient::reconnect() {
-  if (!mqttClient)
+  if (!mqttClient.connected())
     return false;
 
-  connected = mqttClient->connected();
+  connected = mqttClient.connected();
   return connected;
 }
 
 void MqttClient::subscribeToConfiguredTopics() {
   if (topicTty0Tx.length() > 0) {
     LOG_INFO("Subscribing to tty0Rx: %s", topicTty0Rx.c_str());
-    mqttClient->subscribe(topicTty0Rx.c_str(), MQTT_QOS_LEVEL);
-    mqttClient->loop();
+    mqttClient.subscribe(topicTty0Rx.c_str(), MQTT_QOS_LEVEL);
+    mqttClient.loop();
     delay(MQTT_SUBSCRIPTION_DELAY_MS);
-    mqttClient->loop();
+    mqttClient.loop();
   }
 
   if (topicTty1Tx.length() > 0) {
     LOG_INFO("Subscribing to tty1Rx: %s", topicTty1Rx.c_str());
-    mqttClient->subscribe(topicTty1Rx.c_str(), MQTT_QOS_LEVEL);
-    mqttClient->loop();
+    mqttClient.subscribe(topicTty1Rx.c_str(), MQTT_QOS_LEVEL);
+    mqttClient.loop();
     delay(MQTT_SUBSCRIPTION_DELAY_MS);
-    mqttClient->loop();
+    mqttClient.loop();
   }
 }
 
@@ -185,7 +185,7 @@ void MqttClient::flushBuffersIfNeeded() {
 }
 
 void MqttClient::loop() {
-  if (!mqttClient)
+  if (!mqttClient.connected())
     return;
 
   // Transfer pending data from web task to MQTT buffers
@@ -201,10 +201,10 @@ void MqttClient::loop() {
 
   // Process pending MQTT messages (PubSubClient requires multiple calls)
   for (uint8_t i = 0; i < MQTT_LOOP_ITERATIONS; i++) {
-    mqttClient->loop();
+    mqttClient.loop();
   }
 
-  connected = mqttClient->connected();
+  connected = mqttClient.connected();
 
   handleConnectionStateChange(wasConnected);
 
@@ -215,7 +215,7 @@ void MqttClient::loop() {
 }
 
 bool MqttClient::publishInfo(const types::string &data) {
-  if (!mqttClient) {
+  if (!mqttClient.connected()) {
     LOG_ERROR("MQTT publishInfo failed: mqttClient is null");
     return false;
   }
@@ -225,7 +225,7 @@ bool MqttClient::publishInfo(const types::string &data) {
     return false;
   }
 
-  connected = mqttClient->connected();
+  connected = mqttClient.connected();
   if (!connected) {
     LOG_WARN("MQTT publishInfo failed: not connected");
     return false;
@@ -234,11 +234,11 @@ bool MqttClient::publishInfo(const types::string &data) {
   LOG_DEBUG("MQTT publishing info to %s (%d bytes)", topicInfo.c_str(),
             data.length());
 
-  bool result = mqttClient->publish(topicInfo.c_str(), (uint8_t *)data.c_str(),
+  bool result = mqttClient.publish(topicInfo.c_str(), (uint8_t *)data.c_str(),
                                     data.length(), false);
   if (!result) {
-    LOG_ERROR("MQTT publishInfo failed! State: %d", mqttClient->state());
-    connected = mqttClient->connected();
+    LOG_ERROR("MQTT publishInfo failed! State: %d", mqttClient.state());
+    connected = mqttClient.connected();
   } else {
     LOG_DEBUG("MQTT info published successfully");
   }
