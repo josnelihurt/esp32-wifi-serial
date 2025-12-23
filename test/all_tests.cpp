@@ -5,6 +5,7 @@
 #include "app/broadcaster_test.cpp"
 #include "domain/config/preferences_storage_policy_test.cpp" // Must come first - defines static storage
 #include "domain/config/preferences_storage_test.cpp"
+#include "domain/config/special_character_handler_policy_test.cpp" // Policy instantiation
 #include "domain/config/special_character_handler_test.cpp"
 #include "domain/messaging/buffered_stream_test.cpp"
 #include "domain/messaging/mqtt_flush_policy_test.cpp"
@@ -18,9 +19,10 @@
 #include "infrastructure/wifi/wifi_manager_test.cpp"
 
 // Root level tests
-// TODO: Fix duplicate test registration issue
-// #include "ota_manager_test.cpp"
+// Note: system_info_test.cpp and ota_manager_test.cpp are auto-discovered by PlatformIO
+// and compiled separately. Including them here causes duplicate test registration.
 // #include "system_info_test.cpp"
+// #include "ota_manager_test.cpp"
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
