@@ -4,6 +4,6 @@
 
 namespace jrb::wifi_serial {
 
-template class PreferencesStorage<ESP32StoragePolicy>;
+template class internal::PreferencesStorage<ESP32StoragePolicy>;
 
 } // namespace jrb::wifi_serial

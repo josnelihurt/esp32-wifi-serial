@@ -2,11 +2,15 @@
 #include "domain/config/preferences_storage.h"
 #include "infrastructure/logging/logger.h"
 #include "infrastructure/types.hpp"
+#include <sstream>
+
+#ifdef ESP_PLATFORM
 #include <Arduino.h>
 #include <WiFi.h>
-#include <sstream>
+#endif
 namespace jrb::wifi_serial {
 namespace {
+#ifdef ESP_PLATFORM
 types::string getSerialString() {
   uint64_t chipId = ESP.getEfuseMac();
   char serialStr[13];
@@ -14,9 +18,25 @@ types::string getSerialString() {
            (uint32_t)chipId);
   return types::string(serialStr);
 }
+types::string getMacAddress() { return WiFi.macAddress().c_str(); }
+types::string getIpAddress() {
+  return (WiFi.status() == WL_CONNECTED) ? WiFi.localIP().toString().c_str()
+                                         : "Not connected";
+}
+types::string getSsid() {
+  return (WiFi.status() == WL_CONNECTED) ? WiFi.SSID().c_str()
+                                         : "Not configured";
+}
+#else
+// TODO: This section needs a proper mock implementation
+types::string getSerialString() { return "TEST12345"; }
+types::string getMacAddress() { return "AA:BB:CC:DD:EE:FF"; }
+types::string getIpAddress() { return "192.168.1.1"; }
+types::string getSsid() { return "TEST_SSID"; }
+#endif
 } // namespace
 
-SystemInfo::SystemInfo(const PreferencesStorageDefault &storage, bool &ota)
+SystemInfo::SystemInfo(const PreferencesStorage &storage, bool &ota)
     : preferencesStorage(storage), otaEnabled(ota) {}
 
 types::string SystemInfo::getSpecialCharacterSettings() const {
@@ -29,21 +49,15 @@ Ctrl+Y n reset the device (operation can be cancelled by hitting any key within 
 }
 
 types::string SystemInfo::getWelcomeString() const {
-  types::string macAddress = WiFi.macAddress().c_str();
-  types::string ipAddress = (WiFi.status() == WL_CONNECTED)
-                                ? WiFi.localIP().toString().c_str()
-                                : "Not connected";
-  types::string ssid =
-      (WiFi.status() == WL_CONNECTED) ? WiFi.SSID().c_str() : "Not configured";
-
   std::ostringstream result;
   result << "\n========================================\n"
          << "Welcome to ESP32-C3 Serial Bridge\n"
          << "========================================\n"
          << "Serial: " << getSerialString() << "\n"
-         << "MAC: " << macAddress << "\n"
          << "Settings JSON: "
-         << preferencesStorage.serialize(ipAddress, macAddress, ssid) << "\n"
+         << preferencesStorage.serialize(getIpAddress(), getMacAddress(),
+                                         getSsid())
+         << "\n"
          << "OTA: " << (otaEnabled ? "Enabled" : "Disabled") << "\n"
          << getSpecialCharacterSettings() << "\n"
          << "========================================\n";

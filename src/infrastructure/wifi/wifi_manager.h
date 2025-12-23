@@ -6,7 +6,7 @@ namespace jrb::wifi_serial {
 
 class WiFiManager final {
 public:
-  WiFiManager(PreferencesStorageDefault &preferencesStorage);
+  WiFiManager(PreferencesStorage &preferencesStorage);
   ~WiFiManager();
 
   void setup();
@@ -17,7 +17,7 @@ public:
   IPAddress getAPIP() const { return apIP; }
 
 private:
-  PreferencesStorageDefault &preferencesStorage;
+  PreferencesStorage &preferencesStorage;
   bool apMode;
   IPAddress apIP;
 

@@ -6,7 +6,7 @@
 #include <WiFi.h>
 namespace jrb::wifi_serial {
 
-WiFiManager::WiFiManager(PreferencesStorageDefault &preferencesStorage)
+WiFiManager::WiFiManager(PreferencesStorage &preferencesStorage)
     : preferencesStorage{preferencesStorage}, apMode{false} {
   LOG_DEBUG(__PRETTY_FUNCTION__);
 }
@@ -18,7 +18,7 @@ void WiFiManager::setup() {
 
   if (preferencesStorage.ssid.length() == 0 || !connect()) {
     LOG_ERROR("%s: %s", __PRETTY_FUNCTION__,
-                "No WiFi connection found, setting up AP");
+              "No WiFi connection found, setting up AP");
     setupAP();
   }
 }
@@ -88,8 +88,8 @@ bool WiFiManager::connect() {
     // If we see NO_SSID_AVAIL, the network isn't visible - bail out early
     if (status == WL_NO_SSID_AVAIL && attempts > 5) {
       LOG_ERROR("%s: SSID '%s' not found. Is it a 2.4GHz network? ESP32-C3 "
-                  "doesn't support 5GHz",
-                  __PRETTY_FUNCTION__, preferencesStorage.ssid.c_str());
+                "doesn't support 5GHz",
+                __PRETTY_FUNCTION__, preferencesStorage.ssid.c_str());
       break;
     }
   }

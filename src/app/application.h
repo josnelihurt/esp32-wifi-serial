@@ -5,8 +5,8 @@
 #include "domain/config/preferences_storage.h"
 #include "domain/config/special_character_handler.h"
 #include "domain/messaging/mqtt_buffer.h"
-#include "domain/network/ssh_server.h"
 #include "domain/network/ssh_buffer.h"
+#include "domain/network/ssh_server.h"
 #include "domain/serial/serial_log.hpp"
 #include "infrastructure/hardware/button_handler.h"
 #include "infrastructure/mqttt/mqtt_client.h"
@@ -68,7 +68,7 @@ private:
   unsigned long lastMqttReconnectAttempt{0};
 
   // Stack objects (order matters - dependencies flow down)
-  PreferencesStorageDefault preferencesStorage;
+  PreferencesStorage preferencesStorage;
   WiFiManager wifiManager;
   WiFiClient wifiClient;
   MqttClient mqttClient;
@@ -79,8 +79,7 @@ private:
 
   WebConfigServer webServer;
   Broadcaster<SerialLog, MqttLog> tty0Broadcaster;
-  Broadcaster<SerialLog, MqttLog, SshLog>
-      tty1Broadcaster;
+  Broadcaster<SerialLog, MqttLog, SshLog> tty1Broadcaster;
 
   // Heap objects (lazy init in constructor)
   ButtonHandler buttonHandler;

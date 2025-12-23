@@ -9,6 +9,6 @@ std::map<types::string, std::variant<types::string, int32_t>>
     TestStoragePolicy::storage;
 
 // Explicit template instantiation for test environment
-template class PreferencesStorage<TestStoragePolicy>;
+template class internal::PreferencesStorage<TestStoragePolicy>;
 
 } // namespace jrb::wifi_serial

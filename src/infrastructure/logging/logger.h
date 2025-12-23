@@ -56,20 +56,20 @@
 // ============================================================================
 
 // Define common logging pattern once
-#define LOG_PATTERN(str, ...) \
-    do { \
-        LOG_PREFIX(str); \
-        printf(__VA_ARGS__); \
-        printf("\n"); \
-        fflush(stdout); \
-    } while (0)
+#define LOG_PATTERN(str, ...)                                                  \
+  do {                                                                         \
+    LOG_PREFIX(str);                                                           \
+    printf(__VA_ARGS__);                                                       \
+    printf("\n");                                                              \
+    fflush(stdout);                                                            \
+  } while (0)
 
 // Define raw logging pattern once
-#define LOG_RAW_PATTERN(...) \
-    do { \
-        printf(__VA_ARGS__); \
-        fflush(stdout); \
-    } while (0)
+#define LOG_RAW_PATTERN(...)                                                   \
+  do {                                                                         \
+    printf(__VA_ARGS__);                                                       \
+    fflush(stdout);                                                            \
+  } while (0)
 
 // Now define each log level using the patterns - much less duplication
 #define LOG_VERBOSE(...) LOG_PATTERN("VERBOSE", __VA_ARGS__)

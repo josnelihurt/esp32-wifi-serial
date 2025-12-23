@@ -7,11 +7,11 @@ namespace jrb::wifi_serial {
 
 class SystemInfo final {
 private:
-  const PreferencesStorageDefault &preferencesStorage;
+  const PreferencesStorage &preferencesStorage;
   bool &otaEnabled;
 
 public:
-  SystemInfo(const PreferencesStorageDefault &storage, bool &ota);
+  SystemInfo(const PreferencesStorage &storage, bool &ota);
 
   types::string getSpecialCharacterSettings() const;
   types::string getWelcomeString() const;

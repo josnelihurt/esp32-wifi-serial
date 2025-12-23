@@ -3,9 +3,11 @@
 
 namespace jrb::wifi_serial {
 
-SshFlushPolicy::SshFlushPolicy(SSHServer &sshServer, const char *name) : sshServer(sshServer), name(name) {}
+SshFlushPolicy::SshFlushPolicy(SSHServer &sshServer, const char *name)
+    : sshServer(sshServer), name(name) {}
 
-void SshFlushPolicy::flush(const types::span<const uint8_t> &buffer, const char *name) {
+void SshFlushPolicy::flush(const types::span<const uint8_t> &buffer,
+                           const char *name) {
   sshServer.sendToSSHClients(buffer);
 }
 

@@ -20,7 +20,7 @@ protected:
 // ============================================================================
 
 TEST_F(PreferencesStorageTest, ConstructorLoadsDefaults) {
-  PreferencesStorageDefault storage;
+  PreferencesStorage storage;
 
   EXPECT_EQ(storage.deviceName, DEFAULT_DEVICE_NAME);
   EXPECT_EQ(storage.baudRateTty1, DEFAULT_BAUD_RATE_TTY1);
@@ -31,7 +31,7 @@ TEST_F(PreferencesStorageTest, ConstructorLoadsDefaults) {
 }
 
 TEST_F(PreferencesStorageTest, ConstructorGeneratesDefaultTopics) {
-  PreferencesStorageDefault storage;
+  PreferencesStorage storage;
 
   // Topics should be generated based on device name
   EXPECT_FALSE(storage.topicTty0Rx.empty());
@@ -57,7 +57,7 @@ TEST_F(PreferencesStorageTest, ConstructorGeneratesDefaultTopics) {
 // ============================================================================
 
 TEST_F(PreferencesStorageTest, SaveStoresAllFields) {
-  PreferencesStorageDefault storage;
+  PreferencesStorage storage;
 
   // Modify all fields
   storage.deviceName = "test-device";
@@ -81,7 +81,7 @@ TEST_F(PreferencesStorageTest, SaveStoresAllFields) {
   EXPECT_NO_THROW(storage.save());
 
   // Create new instance - should load saved values
-  PreferencesStorageDefault storage2;
+  PreferencesStorage storage2;
 
   EXPECT_EQ(storage2.deviceName, "test-device");
   EXPECT_EQ(storage2.baudRateTty1, 115200);
@@ -100,7 +100,7 @@ TEST_F(PreferencesStorageTest, SaveStoresAllFields) {
 // ============================================================================
 
 TEST_F(PreferencesStorageTest, ClearResetsToDefaults) {
-  PreferencesStorageDefault storage;
+  PreferencesStorage storage;
 
   // Modify fields
   storage.deviceName = "modified";
@@ -126,7 +126,7 @@ TEST_F(PreferencesStorageTest, ClearResetsToDefaults) {
 // ============================================================================
 
 TEST_F(PreferencesStorageTest, SerializeCreatesValidJSON) {
-  PreferencesStorageDefault storage;
+  PreferencesStorage storage;
 
   storage.deviceName = "test-device";
   storage.mqttBroker = "mqtt.example.com";
@@ -149,7 +149,7 @@ TEST_F(PreferencesStorageTest, SerializeCreatesValidJSON) {
 }
 
 TEST_F(PreferencesStorageTest, SerializeMasksPasswords) {
-  PreferencesStorageDefault storage;
+  PreferencesStorage storage;
 
   storage.mqttPassword = "secret123";
   storage.password = "wifisecret";
@@ -171,11 +171,11 @@ TEST_F(PreferencesStorageTest, SerializeMasksPasswords) {
 // ============================================================================
 
 TEST_F(PreferencesStorageTest, GeneratesTopicsWithWifiSerialPrefix) {
-  PreferencesStorageDefault storage;
+  PreferencesStorage storage;
 
   storage.deviceName = "custom-device";
   // Force regeneration by creating new instance
-  PreferencesStorageDefault storage2;
+  PreferencesStorage storage2;
   storage2.deviceName = "custom-device";
   storage2.topicTty0Rx = "";
   storage2.topicTty0Tx = "";
@@ -190,12 +190,12 @@ TEST_F(PreferencesStorageTest, GeneratesTopicsWithWifiSerialPrefix) {
 }
 
 TEST_F(PreferencesStorageTest, PreservesCustomTopicsWithPrefix) {
-  PreferencesStorageDefault storage;
+  PreferencesStorage storage;
 
   storage.topicTty0Rx = "wifi_serial/custom/rx";
   storage.save();
 
-  PreferencesStorageDefault storage2;
+  PreferencesStorage storage2;
   EXPECT_EQ(storage2.topicTty0Rx, "wifi_serial/custom/rx");
 }
 
@@ -204,7 +204,7 @@ TEST_F(PreferencesStorageTest, PreservesCustomTopicsWithPrefix) {
 // ============================================================================
 
 TEST_F(PreferencesStorageTest, HandlesEmptyStrings) {
-  PreferencesStorageDefault storage;
+  PreferencesStorage storage;
 
   storage.mqttBroker = "";
   storage.mqttUser = "";
@@ -215,14 +215,14 @@ TEST_F(PreferencesStorageTest, HandlesEmptyStrings) {
 }
 
 TEST_F(PreferencesStorageTest, HandlesSpecialCharacters) {
-  PreferencesStorageDefault storage;
+  PreferencesStorage storage;
 
   storage.deviceName = "device-with_special.chars";
   storage.mqttUser = "user@domain.com";
 
   EXPECT_NO_THROW(storage.save());
 
-  PreferencesStorageDefault storage2;
+  PreferencesStorage storage2;
   EXPECT_EQ(storage2.deviceName, "device-with_special.chars");
   EXPECT_EQ(storage2.mqttUser, "user@domain.com");
 }

@@ -2,12 +2,12 @@
 
 #include "domain/config/preferences_storage_policy.h"
 #include "domain/config/special_character_handler.h"
+#include "ssh_buffer.h"
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <freertos/task.h>
 #include <functional>
-#include "ssh_buffer.h"
 
 namespace jrb::wifi_serial {
 
@@ -29,7 +29,7 @@ public:
   using SerialWriteCallback = void (*)(const types::span<const uint8_t> &);
 
 private:
-  PreferencesStorageDefault &preferencesStorage;
+  PreferencesStorage &preferencesStorage;
   SystemInfo &systemInfo;
   void *sshBind; // Opaque pointer to libssh bind
   void *hostKey; // Opaque pointer to ssh_key (must outlive sshBind)
@@ -58,7 +58,7 @@ private:
   SshLog sshLog;
 
 public:
-  SSHServer(PreferencesStorageDefault &storage, SystemInfo &sysInfo,
+  SSHServer(PreferencesStorage &storage, SystemInfo &sysInfo,
             SpecialCharacterHandler &specialCharacterHandler);
   ~SSHServer();
 

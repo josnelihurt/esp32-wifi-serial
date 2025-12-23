@@ -17,8 +17,7 @@ namespace jrb::wifi_serial {
 
 class MqttClient final {
 public:
-  MqttClient(WiFiClient &wifiClient,
-             PreferencesStorageDefault &preferencesStorage);
+  MqttClient(WiFiClient &wifiClient, PreferencesStorage &preferencesStorage);
   ~MqttClient();
 
   // Registers callbacks for Rx topics.
@@ -44,7 +43,7 @@ public:
 
 private:
   std::unique_ptr<PubSubClient> mqttClient;
-  PreferencesStorageDefault &preferencesStorage;
+  PreferencesStorage &preferencesStorage;
   WiFiClient *wifiClient;
   types::string topicTty0Rx, topicTty0Tx;
   types::string topicTty1Rx, topicTty1Tx;

@@ -9,7 +9,7 @@
 
 namespace jrb::wifi_serial {
 
-SSHServer::SSHServer(PreferencesStorageDefault &storage, SystemInfo &sysInfo,
+SSHServer::SSHServer(PreferencesStorage &storage, SystemInfo &sysInfo,
                      SpecialCharacterHandler &specialCharacterHandler)
     : preferencesStorage(storage), systemInfo(sysInfo), sshBind(nullptr),
       hostKey(nullptr), running(false), sshTaskHandle(nullptr),
@@ -58,8 +58,7 @@ void SSHServer::sendToSSHClients(const types::span<const uint8_t> &data) {
                         ? data.size()
                         : SSH_QUEUE_PAYLOAD_SIZE;
   if (copySize < data.size()) {
-    LOG_WARN("SSH: Truncating %d bytes to %d", (int)data.size(),
-                  (int)copySize);
+    LOG_WARN("SSH: Truncating %d bytes to %d", (int)data.size(), (int)copySize);
   }
 
   uint8_t queueItem[SSH_QUEUE_ITEM_SIZE] = {0};
@@ -204,8 +203,7 @@ bool SSHServer::waitForChannelSession(void *session, void **channel) {
     ssh_message_free(message);
   }
 
-  LOG_WARN("SSH: Channel session timeout after %d ms",
-                SSH_CHANNEL_TIMEOUT_MS);
+  LOG_WARN("SSH: Channel session timeout after %d ms", SSH_CHANNEL_TIMEOUT_MS);
   return false;
 }
 
@@ -346,7 +344,7 @@ void SSHServer::setup() {
 
   if (WiFi.status() != WL_CONNECTED) {
     LOG_ERROR("%s: WiFi not connected, cannot setup SSH server",
-                __PRETTY_FUNCTION__);
+              __PRETTY_FUNCTION__);
     return;
   }
 
@@ -401,7 +399,7 @@ void SSHServer::setup() {
   LOG_INFO("%s: Starting listening", __PRETTY_FUNCTION__);
   if (ssh_bind_listen((ssh_bind)sshBind) < 0) {
     LOG_ERROR("SSH Server: Failed to listen on port 22: %s",
-                ssh_get_error((ssh_bind)sshBind));
+              ssh_get_error((ssh_bind)sshBind));
     ssh_bind_free((ssh_bind)sshBind);
     sshBind = nullptr;
     ssh_finalize();
@@ -462,8 +460,7 @@ void SSHServer::runSSHTask() {
     LOG_INFO("SSH Task: New connection accepted");
 
     if (ssh_handle_key_exchange(newSession) != SSH_OK) {
-      LOG_ERROR("SSH Task: Key exchange failed: %s",
-                  ssh_get_error(newSession));
+      LOG_ERROR("SSH Task: Key exchange failed: %s", ssh_get_error(newSession));
       ssh_disconnect(newSession);
       ssh_free(newSession);
       continue;

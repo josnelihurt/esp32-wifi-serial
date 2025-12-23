@@ -1,14 +1,11 @@
 #include "special_character_handler.h"
+#include "domain/config/preferences_storage.h"
 #include "infrastructure/logging/logger.h"
-
+#include "system_info.h"
 namespace jrb::wifi_serial {
-
-SpecialCharacterHandler::SpecialCharacterHandler(
-    SystemInfo &systemInfo, PreferencesStorageDefault &preferencesStorage)
-    : systemInfo(systemInfo), preferencesStorage(preferencesStorage),
-      specialCharacterMode(false) {}
-
-bool SpecialCharacterHandler::handle(char c) {
+namespace internal {
+template <typename ResetPolicy>
+bool SpecialCharacterHandler<ResetPolicy>::handle(char c) {
   if (c == CMD_PREFIX) {
     specialCharacterMode = true;
     LOG_INFO("%s", systemInfo.getSpecialCharacterSettings().c_str());
@@ -36,16 +33,16 @@ bool SpecialCharacterHandler::handle(char c) {
   case CMD_RESET:
     for (int i = 5; i > 0; i--) {
       LOG_INFO("%s: Resetting... %d any key to cancel", __PRETTY_FUNCTION__, i);
-      delay(1000);
-      if (Serial.available() > 0) {
-        Serial.read();
+      resetPolicy.delay(1000);
+      if (resetPolicy.isSerialDataAvailable()) {
+        resetPolicy.readSerialData();
         LOG_INFO("%s: Reset cancelled by user", __PRETTY_FUNCTION__);
         return false;
       }
     }
     LOG_INFO("%s: Resetting see you later alligator :P...",
              __PRETTY_FUNCTION__);
-    ESP.restart();
+    resetPolicy.resetDevice();
     break;
   default:
     LOG_ERROR("Unknown special character: %c", c);
@@ -53,4 +50,8 @@ bool SpecialCharacterHandler::handle(char c) {
   }
   return false;
 }
+} // namespace internal
+
+template class internal::SpecialCharacterHandler<HardwareResetPolicy>;
+
 } // namespace jrb::wifi_serial

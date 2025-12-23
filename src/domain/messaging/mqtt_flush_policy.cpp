@@ -24,7 +24,7 @@ void MqttFlushPolicy::flush(const types::span<const uint8_t> &buffer,
   }
 
   LOG_VERBOSE("MQTT publishing %d bytes to topic: %s", buffer.size(),
-                topic.c_str());
+              topic.c_str());
   bool result = mqttClient.publish(topic.c_str(), buffer.data(), buffer.size());
   if (!result) {
     LOG_ERROR("MQTT publish failed for topic: %s", topic.c_str());

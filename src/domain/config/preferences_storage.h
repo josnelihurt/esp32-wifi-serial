@@ -5,7 +5,20 @@
 #include <cstdint>
 
 namespace jrb::wifi_serial {
-
+/**
+ * This namespace contains the template class definition for specific classes.
+ * All template implementation details are encapsulated here to provide a clean
+ * public API while maintaining zero-cost abstraction through policy-based
+ * design.
+ *
+ * Usage Guidelines:
+ * - DO NOT use types from this namespace directly in application code
+ * - Use the public class type alias instead
+ * - Direct template access is only intended for:
+ *   1. Test files requiring explicit template instantiation
+ *   2. Implementation files (.cpp) that define template methods
+ */
+namespace internal {
 /**
  * @class PreferencesStorage
  * @brief A template-based class to manage device configuration preferences.
@@ -82,16 +95,5 @@ private:
    */
   void generateDefaultTopics();
 };
-
-// Forward declarations of policy implementations
-class ESP32StoragePolicy;
-class TestStoragePolicy;
-
-// Type aliases for convenience
-using PreferencesStorageESP32 = PreferencesStorage<ESP32StoragePolicy>;
-using PreferencesStorageTest = PreferencesStorage<TestStoragePolicy>;
-
-// PreferencesStorageDefault is defined in preferences_storage_policy.h
-// based on ESP_PLATFORM
-
+} // namespace internal
 } // namespace jrb::wifi_serial

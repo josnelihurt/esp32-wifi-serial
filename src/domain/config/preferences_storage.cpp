@@ -3,7 +3,7 @@
 #include "infrastructure/logging/logger.h"
 #include "preferences_storage_policy.h"
 
-namespace jrb::wifi_serial {
+namespace jrb::wifi_serial::internal {
 
 // ============================================================================
 // Constructor
@@ -159,4 +159,4 @@ void PreferencesStorage<StoragePolicy>::clear() {
   tty02tty1Bridge = false;
 }
 
-} // namespace jrb::wifi_serial
+} // namespace jrb::wifi_serial::internal

@@ -29,7 +29,7 @@ constexpr uint8_t MQTT_LOOP_ITERATIONS = 3;
 static MqttClient *g_mqttInstance{};
 
 MqttClient::MqttClient(WiFiClient &wifiClient,
-                       PreferencesStorageDefault &preferencesStorage)
+                       PreferencesStorage &preferencesStorage)
     : mqttClient{std::make_unique<PubSubClient>(wifiClient)},
       wifiClient{&wifiClient}, preferencesStorage{preferencesStorage},
       connected{false}, lastReconnectAttempt{0}, onTty0Callback{nullptr},
@@ -232,7 +232,7 @@ bool MqttClient::publishInfo(const types::string &data) {
   }
 
   LOG_DEBUG("MQTT publishing info to %s (%d bytes)", topicInfo.c_str(),
-              data.length());
+            data.length());
 
   bool result = mqttClient->publish(topicInfo.c_str(), (uint8_t *)data.c_str(),
                                     data.length(), false);

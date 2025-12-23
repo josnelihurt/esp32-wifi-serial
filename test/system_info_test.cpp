@@ -1,6 +1,4 @@
-// Placeholder test file
-// TODO: Implement once Arduino dependencies are abstracted
-
+#include "system_info.cpp"
 #include <gtest/gtest.h>
 
 namespace jrb::wifi_serial {

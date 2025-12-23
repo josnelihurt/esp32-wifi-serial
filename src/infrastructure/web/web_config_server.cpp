@@ -16,7 +16,7 @@ namespace jrb::wifi_serial {
 
 namespace {
 void handleSerialPoll(AsyncWebServerRequest *request, SerialLog &log,
-                      const PreferencesStorageDefault &prefs) {
+                      const PreferencesStorage &prefs) {
   if (!request->authenticate(prefs.webUser.c_str(),
                              prefs.webPassword.c_str())) {
     request->requestAuthentication();
@@ -38,7 +38,7 @@ void handleSerialPoll(AsyncWebServerRequest *request, SerialLog &log,
 
 void handleSerialSend(AsyncWebServerRequest *request,
                       WebConfigServer::SerialWriteCallback &callback,
-                      const PreferencesStorageDefault &prefs) {
+                      const PreferencesStorage &prefs) {
   if (!request->authenticate(prefs.webUser.c_str(),
                              prefs.webPassword.c_str())) {
     return request->requestAuthentication();
@@ -60,7 +60,7 @@ void handleSerialSend(AsyncWebServerRequest *request,
 
 } // namespace
 
-WebConfigServer::WebConfigServer(PreferencesStorageDefault &storage)
+WebConfigServer::WebConfigServer(PreferencesStorage &storage)
     : preferencesStorage(storage), serial0Log(), serial1Log(), tty0(tty0),
       tty1(tty1), apMode(false), otaInProgress(false), otaExpectedSize(0),
       otaReceivedSize(0), otaExpectedHash(""), otaCalculatedHash(""),

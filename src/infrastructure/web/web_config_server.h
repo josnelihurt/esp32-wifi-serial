@@ -26,7 +26,7 @@ public:
   static constexpr size_t MAX_FIRMWARE_SIZE = 2 * 1024 * 1024; // 2MB max
   static constexpr size_t MAX_FILESYSTEM_SIZE = 512 * 1024;    // 512KB max
 
-  WebConfigServer(PreferencesStorageDefault &storage);
+  WebConfigServer(PreferencesStorage &storage);
   ~WebConfigServer() = default;
 
   void setup(SerialWriteCallback tty0Callback,
@@ -45,7 +45,7 @@ public:
   SerialLog &getTty1Stream() { return serial1Log; }
 
 private:
-  PreferencesStorageDefault &preferencesStorage;
+  PreferencesStorage &preferencesStorage;
   SerialLog serial0Log;
   SerialLog serial1Log;
   SerialWriteCallback tty0;

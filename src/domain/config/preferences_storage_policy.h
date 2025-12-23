@@ -22,13 +22,15 @@
 namespace jrb::wifi_serial {
 
 // Forward declaration of the template class
+namespace internal {
 template <typename StoragePolicy> class PreferencesStorage;
+}
 
 // Type aliases for convenience
 #ifdef ESP_PLATFORM
-using PreferencesStorageDefault = PreferencesStorage<ESP32StoragePolicy>;
+using PreferencesStorage = internal::PreferencesStorage<ESP32StoragePolicy>;
 #else
-using PreferencesStorageDefault = PreferencesStorage<TestStoragePolicy>;
+using PreferencesStorage = internal::PreferencesStorage<TestStoragePolicy>;
 #endif
 
 } // namespace jrb::wifi_serial

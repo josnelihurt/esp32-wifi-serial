@@ -1,11 +1,11 @@
 #include "application.h"
 #include "infrastructure/logging/logger.h"
 #include "infrastructure/mqttt/mqtt_client.h"
-#include <algorithm>
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 #include <HardwareSerial.h>
 #include <WiFi.h>
+#include <algorithm>
 
 namespace jrb::wifi_serial {
 
